@@ -1,0 +1,15 @@
+language: cpp
+compiler: g++
+
+before_script:
+    - sudo apt-get -qq update
+    - echo "deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list
+    - sudo apt-get -qq update
+    - sudo apt-get -y -qq install make cmake build-essential libglew-dev nvidia-opencl-dev libfreeimage-dev
+    - sudo apt-get -y --allow-unauthenticated install libglfw3-dev
+
+script:
+     - mkdir build
+     - cd build
+     - cmake ..
+     - make

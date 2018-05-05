@@ -355,7 +355,7 @@ float3 radiance(
 						}
 
 						ray->origin = m_sample.p;
-#if 1
+#if 0
 						hg_sample_fast(&ray->dir, 0.8f, seed0, seed1);
 #else
 						ray->dir = randomSphereDirection(seed0, seed1);

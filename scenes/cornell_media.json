@@ -1,0 +1,115 @@
+{
+  "global_medium": {
+    "density": 0.3,
+    "sigmaA": 0.4,
+    "sigmaS": 1.0
+  },
+  "settings": {
+    "MAX_BOUNCES": 12,
+    "MAX_DIFF_BOUNCES": 4,
+    "MAX_SPEC_BOUNCES": 4,
+    "MAX_TRANS_BOUNCES": 12,
+    "MAX_SCATTERING_EVENTS": 12,
+
+    "LIGHT_BOUNCES":  2,
+
+    "MARCHING_STEPS": 128,
+    "SHADOW_MARCHING_STEPS": 64
+  },
+  "scene": {
+    "obj": {
+      "path": "suzanne2.obj",
+      "material": {
+        "color": [ 0.8, 0.5, 0.9 ],
+        "type": 1
+      }
+    },
+    "quads": [
+      {
+        "vertices": [
+          -2.0,0.0,-2.0,
+          -2.0,2.0,-2.0,
+          2.0,2.0,-2.0,
+          2.0,0.0,-2.0
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,0.0,2.0,
+          -2.0,2.0,2.0,
+          2.0,2.0,2.0,
+          2.0,0.0,2.0
+        ],
+        "flip_normal": false,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,0.0,-2.0,
+          -2.0,0.0,2.0,
+          2.0,0.0,2.0,
+          2.0,0.0,-2.0
+        ],
+        "flip_normal": false,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,2.0,-2.0,
+          -2.0,2.0,2.0,
+          2.0,2.0,2.0,
+          2.0,2.0,-2.0
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,0.0,-2.0,
+          -2.0,2.0,-2.0,
+          -2.0,2.0,2.0,
+          -2.0,0.0,2.0
+        ],
+        "flip_normal": false,
+        "material": {
+          "color": [ 1.0, 0.1, 0.1 ]
+        }
+      },
+      {
+        "vertices": [
+          2.0,0.0,-2.0,
+          2.0,2.0,-2.0,
+          2.0,2.0,2.0,
+          2.0,0.0,2.0
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 0.1, 1.0, 0.1 ]
+        }
+      },
+      {
+        "vertices": [
+          -0.2,1.99999,-0.2,
+          -0.2,1.99999,0.2,
+          0.2,1.99999,0.2,
+          0.2,1.99999,-0.2
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 4.0, 5.0, 6.0 ],
+          "type": 0
+        }
+      }
+    ]
+  }
+}

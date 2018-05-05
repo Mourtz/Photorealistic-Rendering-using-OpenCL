@@ -1,0 +1,108 @@
+{
+  "settings": {
+    "MAX_BOUNCES": 12,
+    "MAX_DIFF_BOUNCES": 4,
+    "MAX_SPEC_BOUNCES": 6,
+    "MAX_TRANS_BOUNCES": 12,
+    "MAX_SCATTERING_EVENTS": 12,
+
+    "MARCHING_STEPS": 128,
+    "SHADOW_MARCHING_STEPS": 64
+  },
+  "scene": {
+    "obj": {
+      "path": "dragon.obj",
+      "material": {
+        "color": [ 0.15, 0.65, 0.5 ],
+        "type": 7
+      }
+    },
+    "quads": [
+      {
+        "vertices": [
+          -2.0,0.0,-2.0,
+          -2.0,2.0,-2.0,
+          2.0,2.0,-2.0,
+          2.0,0.0,-2.0
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,0.0,2.0,
+          -2.0,2.0,2.0,
+          2.0,2.0,2.0,
+          2.0,0.0,2.0
+        ],
+        "flip_normal": false,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,0.0,-2.0,
+          -2.0,0.0,2.0,
+          2.0,0.0,2.0,
+          2.0,0.0,-2.0
+        ],
+        "flip_normal": false,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,2.0,-2.0,
+          -2.0,2.0,2.0,
+          2.0,2.0,2.0,
+          2.0,2.0,-2.0
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 1.0, 1.0, 1.0 ]
+        }
+      },
+      {
+        "vertices": [
+          -2.0,0.0,-2.0,
+          -2.0,2.0,-2.0,
+          -2.0,2.0,2.0,
+          -2.0,0.0,2.0
+        ],
+        "flip_normal": false,
+        "material": {
+          "color": [ 1.0, 0.1, 0.1 ]
+        }
+      },
+      {
+        "vertices": [
+          2.0,0.0,-2.0,
+          2.0,2.0,-2.0,
+          2.0,2.0,2.0,
+          2.0,0.0,2.0
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 0.1, 1.0, 0.1 ]
+        }
+      },
+      {
+        "vertices": [
+          -0.2,1.99999,-0.2,
+          -0.2,1.99999,0.2,
+          0.2,1.99999,0.2,
+          0.2,1.99999,-0.2
+        ],
+        "flip_normal": true,
+        "material": {
+          "color": [ 8.0, 8.5, 9.5 ],
+          "type": 0
+        }
+      }
+    ]
+  }
+}

@@ -301,6 +301,16 @@ float3 radiance(
 					ray->dir = randomSphereDirection(seed0, seed1);
 
 					if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;
+
+					//russian roulette
+					float roulettePdf = fmax3(mask);
+					if (roulettePdf < 0.1f) {
+						if (get_random(seed0, seed1) < roulettePdf)
+							mask = native_divide(mask, roulettePdf);
+						else
+							break;
+					}
+
 					if (++scatters > max_scatters) {
 						break;
 					}
@@ -362,6 +372,16 @@ float3 radiance(
 #endif
 
 						if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;
+
+						//russian roulette
+						float roulettePdf = fmax3(mask);
+						if (roulettePdf < 0.1f) {
+							if (get_random(seed0, seed1) < roulettePdf)
+								mask = native_divide(mask, roulettePdf);
+							else
+								break;
+						}
+
 						if (++scatters > max_scatters) {
 							break;
 						}
@@ -407,22 +427,20 @@ float3 radiance(
 		}
 #endif
 
-		float roulettePdf = fmax3(mask);
-
 		/* terminate if necessary */
 		if (DIFF_BOUNCES >= MAX_DIFF_BOUNCES || 
 			SPEC_BOUNCES >= MAX_SPEC_BOUNCES ||
 			TRANS_BOUNCES >= MAX_TRANS_BOUNCES || 
-			SCATTERING_EVENTS >= MAX_SCATTERING_EVENTS ||
-			roulettePdf == 0.0f
+			SCATTERING_EVENTS >= MAX_SCATTERING_EVENTS
 		) { 
 			break;
 		}
 
 		//russian roulette
+		float roulettePdf = fmax3(mask);
 		if (roulettePdf < 0.1f && bounce > 2) {
 			if (get_random(seed0, seed1) < roulettePdf)
-				mask /= roulettePdf;
+				mask = native_divide(mask,roulettePdf);
 			else
 				break;
 		}

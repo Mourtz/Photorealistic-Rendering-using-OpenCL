@@ -97,7 +97,7 @@ bool shadow_sdf(__constant Mesh* meshes, Ray* ray, const uint* mesh_count) {
 
 /* sdf intersection */
 bool intesect_sdf(__constant Mesh* meshes, Ray* ray, int* mesh_id, const uint* mesh_count) {
-	float t = EPS*2.0f;
+	float t = EPS*10.0f;
 	int id;
 
 	for (int i = 0; i < MARCHING_STEPS; ++i) {

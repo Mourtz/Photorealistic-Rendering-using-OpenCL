@@ -5,7 +5,8 @@
 #define EPS2	1e-2f
 #define EPS3	1e-3f
 #define EPS4	1e-4f
-#define EPS		EPS4
+#define EPS5	1e-5f
+#define EPS		EPS5
 /* Infinity */
 #define INF		2e1f
 

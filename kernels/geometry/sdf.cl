@@ -82,9 +82,22 @@ float3 calcNormal(__constant Mesh* meshes, const float3 pos) {
 	);
 }
 
+bool shadow_sdf(__constant Mesh* meshes, Ray* ray, const uint* mesh_count) {
+	float t = EPS * 100.0f;
+	int id;
+
+	for (int i = 0; i < SHADOW_MARCHING_STEPS; ++i) {
+		float h = fabs(map(meshes, ray->t, (ray->origin + ray->dir * t), &id, mesh_count));
+		t += h;
+		if (h < EPS || t > ray->t) break;
+	}
+
+	return (t <= ray->t);
+}
+
 /* sdf intersection */
 bool intesect_sdf(__constant Mesh* meshes, Ray* ray, int* mesh_id, const uint* mesh_count) {
-	float t = EPS*10.0f;
+	float t = EPS*2.0f;
 	int id;
 
 	for (int i = 0; i < MARCHING_STEPS; ++i) {

@@ -248,29 +248,29 @@ bool shadow(
 	}
 #endif
 
-	uint fl = mesh_count[0] + mesh_count[1];
 #ifdef __SDF__
-	for (uint i = mesh_count[0]; i < fl; ++i) {
-		if (s_map(&meshes[i], ray->origin) < maxDist) return false;
+	/* if there are any sdfs in the scene raymarch them */
+	if (mesh_count[1]) {
+		if (shadow_sdf(meshes, ray, mesh_count)) {
+			return false;
+		}
 	}
 #endif
 
+	uint fl = mesh_count[0] + mesh_count[1];
 #ifdef __BOX__
 	for (uint i = 0; i < mesh_count[2]; ++i) {
-
-		if (intersect_box(&meshes[fl], ray)) {
+		if (intersect_box(&meshes[fl++], ray)) {
 			if (ray->t < maxDist) return false;
 		}
-		fl++;
 	}
 #endif
 
 #ifdef __QUAD__
 	for (uint i = 0; i < mesh_count[3]; ++i) {
-		if (intersect_quad(&meshes[fl], ray)) {
+		if (intersect_quad(&meshes[fl++], ray)) {
 			if (ray->t < maxDist) return false;
 		}
-		fl++;
 	}
 #endif
 
@@ -290,7 +290,6 @@ bool intersect_scene(
 
 	*mesh_id = -1;
 	bool checkSide = true;
-	uint fl;
 
 #ifdef __BVH__
 	if (scene->NUM_NODES) {
@@ -316,7 +315,6 @@ bool intersect_scene(
 #ifdef __SDF__
 	/* if there are any sdfs in the scene raymarch them */
 	if (mesh_count[1]) {
-
 		if (intesect_sdf(meshes, ray, mesh_id, mesh_count)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			ray->normal = calcNormal(&meshes[*mesh_id], ray->pos);
@@ -324,7 +322,7 @@ bool intersect_scene(
 	}
 #endif
 
-	fl = mesh_count[0] + mesh_count[1];
+	uint fl = mesh_count[0] + mesh_count[1];
 #ifdef __BOX__
 	for (uint i = 0; i < mesh_count[2]; ++i) {
 		

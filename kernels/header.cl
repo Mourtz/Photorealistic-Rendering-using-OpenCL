@@ -97,25 +97,25 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 #define ABS_REFR2	#ABS_REFR2#
 
 typedef struct {
-	float3 origin;	// origin
-	float3 dir;		// direction
-	float3 incomingRayDir; // incoming ray direction
-	float3 normal;	// normal
-	float2 uv;		// uv
-	float3 pos;		// position
-	float t;		// dist from origin
-	bool backside;	// inside?
-	int hitFace;	// hitface id
+	float3 origin;			// origin
+	float3 dir;				// direction
+	float3 incomingRayDir;	// incoming ray direction
+	float3 normal;			// normal
+	float2 uv;				// uv
+	float3 pos;				// position
+	float t;				// dist from origin
+	bool backside;			// inside?
+	int hitFace;			// hitface id
 } Ray;
 
 //------------- MATERIAL -------------
 
 typedef struct {
-	float3 color;
-	float roughness;
-	int t;
-	int tex;
-	bool b;
+	float3 color;		// albedo/specular
+	float roughness;	// surface roughness
+	int t;				// mesh type
+	int tex;			// asigned texture/s
+	bool b;				// backface culling
 } Material;
 
 //------------- BVH -------------
@@ -144,16 +144,10 @@ typedef struct {
 //------------- MESH -------------
 
 typedef struct {
-	Material mat;
-	float3 pos;
-	float16 joker;
-	int t;
+	Material mat;	// assigned material
+	float3 pos;		// position
+	float16 joker;	// generic data
+	int t;			// type
 } Mesh;
-
-typedef struct {
-	float3 d;
-	float dist;
-	float pdf;
-} LightSample;
 
 #endif

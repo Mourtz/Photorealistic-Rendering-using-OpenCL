@@ -92,6 +92,8 @@ float3 f_schlick(float v_dot_h, float3 f0) {
 	);
 }
 
+/*---------------------------------- GGX ----------------------------------*/
+
 float3 importance_sample_ggx(float2 random, float3 normal, float alpha2) {
 	float3 tangent, binormal;
 	calc_binormals(normal, &tangent, &binormal);
@@ -115,12 +117,6 @@ float g_smith_joint(float l_dot_n, float v_dot_n, float alpha2) {
 	return native_recip(1.0f + lambda_l + lambda_v);
 }
 
-/*------------------------------------------------------------------------------*/
-
-/* active materials */
-#FILE:bxdf/diffuse.cl
-
-/*---------------------------------- SPECULAR ----------------------------------*/
 bool sampleGGX(Ray * ray, float3* res, const Material* mat, const uint* seed0, const uint* seed1) {
 
 	float roughness = fmax(mat->roughness, 1e-3f);
@@ -153,6 +149,13 @@ bool sampleGGX(Ray * ray, float3* res, const Material* mat, const uint* seed0, c
 
 	return true;
 }
+
+/*------------------------------------------------------------------------------*/
+
+/* active materials */
+#FILE:bxdf/diffuse.cl
+
+/*---------------------------------- DIFFUSE ----------------------------------*/
 
 #ifdef __DIFFUSE__
 	float3 SampleDiffuse(Ray* ray, const Material* mat, uint* seed0, uint* seed1) {

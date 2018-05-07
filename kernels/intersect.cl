@@ -325,13 +325,12 @@ bool intersect_scene(
 	uint fl = mesh_count[0] + mesh_count[1];
 #ifdef __BOX__
 	for (uint i = 0; i < mesh_count[2]; ++i) {
-		
 		if (intersect_box(&meshes[fl], ray)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			*mesh_id = fl;
 			checkSide = false;
 		}
-		fl++;
+		++fl;
 	}
 #endif
 
@@ -341,7 +340,7 @@ bool intersect_scene(
 			*mesh_id = fl;
 			checkSide = false;
 		}
-		fl++;
+		++fl;
 	}
 #endif
 

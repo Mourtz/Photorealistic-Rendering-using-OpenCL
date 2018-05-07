@@ -28,6 +28,25 @@ float3 refract(const float3 dir, const float3 nl, const float eta) {
 		return eta * dir - (eta * dot(nl, dir) + sqrt(k)) * nl;
 }
 
+// From "PHYSICALLY BASED LIGHTING CALCULATIONS FOR COMPUTER GRAPHICS" by Peter Shirley
+// http://www.cs.virginia.edu/~jdl/bib/globillum/shirley_thesis.pdf
+float conductorReflectance(float eta, float k, float cosThetaI){
+	float cosThetaISq = cosThetaI * cosThetaI;
+	float sinThetaISq = fmax(1.0f - cosThetaISq, 0.0f);
+	float sinThetaIQu = sinThetaISq * sinThetaISq;
+
+	float innerTerm = eta * eta - k * k - sinThetaISq;
+	float aSqPlusBSq = native_sqrt(fmax(innerTerm*innerTerm + 4.0f*eta*eta*k*k, 0.0f));
+	float a = native_sqrt(fmax((aSqPlusBSq + innerTerm)*0.5f, 0.0f));
+
+	float Rs = ((aSqPlusBSq + cosThetaISq) - (2.0f*a*cosThetaI)) /
+		((aSqPlusBSq + cosThetaISq) + (2.0f*a*cosThetaI));
+	float Rp = ((cosThetaISq*aSqPlusBSq + sinThetaIQu) - (2.0f*a*cosThetaI*sinThetaISq)) /
+		((cosThetaISq*aSqPlusBSq + sinThetaIQu) + (2.0f*a*cosThetaI*sinThetaISq));
+
+	return 0.5f*(Rs + Rs * Rp);
+}
+
 float3 randomSphereDirection(uint* seed0, uint* seed1){
 	float2 r = (float2)(get_random(seed0, seed1), get_random(seed0, seed1)) * TWO_PI;
 	return (float3)(native_sin(r.x) * (float2)(native_sin(r.y), native_cos(r.y)), native_cos(r.x));
@@ -69,7 +88,9 @@ float3 randomDirectionInHemisphere(const float3 n, uint* seed0, uint* seed1){
 #FILE:bxdf/diffuse.cl
 
 /*---------------------------------- SPECULAR ----------------------------------*/
-float3 sampleSpecular(Ray * ray, float* pdf, const Material* mat, const uint* seed0, const uint* seed1) {
+bool sampleSpecular(Ray * ray, float4* res, const Material* mat, const uint* seed0, const uint* seed1) {
+
+	ray->origin = ray->pos + ray->normal * EPS;
 
 #ifdef __GGX__
 	if (mat->roughness) {
@@ -78,27 +99,25 @@ float3 sampleSpecular(Ray * ray, float* pdf, const Material* mat, const uint* se
 		float cosTheta;
 		float3 wh = SampleGGX(ray->normal, mat->roughness, &cosTheta, seed0, seed1);
 
-		ray->origin = ray->pos + ray->normal * EPS;
 		ray->dir = reflect(-wo, wh);
 
-		if (dot(ray->dir, ray->normal) * dot(wo, ray->normal) < 0.0f) return F3_ZERO;
+		if (dot(ray->dir, ray->normal) * dot(wo, ray->normal) < 0.0f) return false;
 
 		float D = DistributionGGX(cosTheta, mat->roughness);
-		*pdf = D * cosTheta / (4.0f * dot(wo, wh));
+		float F = conductorReflectance(1.0f / 1.5f, 1.2f, dot(ray->dir, wh));
 
-		return D / (4.0f * dot(wo, ray->normal)) * mat->color;
+		*res = (float4)(D*F / (4.0f * dot(wo, ray->normal)) * mat->color, D * cosTheta / (4.0f * dot(wo, wh)));
+		return true;
 	}
 	else {
-		ray->origin = ray->pos + ray->normal * EPS;
 		ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
-		*pdf = 1.0f;
-		return mat->color;
+		*res = (float4)(mat->color, 1.0f);
+		return true;
 	}
 #else
-	ray->origin = ray->pos + ray->normal * EPS;
 	ray->dir = fast_normalize(mat->roughness * randomDirectionInHemisphere(ray->normal, seed0, seed1) + reflect(ray->dir, ray->normal));
-	*pdf = 1.0f;
-	return mat->color;
+	*res = (float4)(mat->color, 1.0f);
+	return true;
 #endif
 
 }

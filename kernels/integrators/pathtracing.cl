@@ -194,11 +194,11 @@ float3 radiance(
 			}
 			/*-------------------- GLOSSY/SPECULAR --------------------*/
 			else if (mat.t & GLOSSY) {
-				float pdf = 0.0f;
-				float3 f = sampleSpecular(ray, &pdf, &mat, seed0, seed1);
-				if (pdf <= 0.0f) break;
+				float4 res;
+				if (!sampleSpecular(ray, &res, &mat, seed0, seed1))
+					break;
 
-				mask *= f / pdf;
+				mask *= res.xyz / res.w;
 
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;

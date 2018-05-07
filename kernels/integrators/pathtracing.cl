@@ -194,11 +194,11 @@ float3 radiance(
 			}
 			/*-------------------- GLOSSY/SPECULAR --------------------*/
 			else if (mat.t & GLOSSY) {
-				float4 res;
-				if (!sampleSpecular(ray, &res, &mat, seed0, seed1))
-					break;
+				float3 res;
+				if (!sampleGGX(ray, &res, &mat, seed0, seed1))
+					continue;
 
-				mask *= res.xyz / res.w;
+				mask *= res;
 
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;
@@ -211,40 +211,38 @@ float3 radiance(
 				float3 wh = ray->normal;
 
 				if (mat.roughness) {
-					float cosTheta;
-					wh = SampleGGX(ray->normal, mat.roughness, &cosTheta, seed0, seed1);
-					float D = DistributionGGX(cosTheta, mat.roughness);
-					float pdf = D * cosTheta / (4.0f * dot(-ray->dir, wh));
-					if (pdf <= 0.0f) {
-						break;
-					}
+					wh = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
 				}
 
 				const bool ABS1 = mat.t & ABS_REFR, ABS2 = mat.t & ABS_REFR2;
-
-				/* absorption */
-				mask *= (ABS1 | ABS2) ? (ray->backside ? fmax(exp(-ray->t * ((ABS1) ? mat.color : 1.0f) * 10.0f), 0.01f) : 1.0f) : 1.0f;
 
 				const float nnt = ray->backside ? nt / nc : nc / nt;
 				const float3 tdir = refract(ray->dir, wh, nnt);
 
 				/* reflect */
 				if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < fresnel(ray->dir, wh, nc, nt, tdir)) {
-					ray->dir = reflect(ray->dir, wh);
-					if (dot(ray->dir, ray->normal) < 0.0f) break;
-					ray->origin = ray->pos + ray->normal * EPS;
+					float3 newDir = reflect(ray->dir, wh);
+					if (dot(newDir, ray->normal) < 0.0f) continue;
+					ray->origin = ray->pos + wh * EPS;
+					ray->dir = newDir;
+
 					++SPEC_BOUNCES;
 				}
 				/* refract */
 				else {
-					ray->dir = fast_normalize(tdir);
-					if (dot(ray->dir, ray->normal) > 0.0f) break;
-					ray->origin = ray->pos - ray->normal * EPS;
+					float3 newDir = fast_normalize(tdir);
+					if (dot(newDir, ray->normal) >= 0.0f) continue;
+					ray->origin = ray->pos - wh * EPS;
+					ray->dir = newDir;
 
 					if (!ABS1) mask *= ((ABS2) ? 1.0f - mat.color : mat.color);
 
 					++TRANS_BOUNCES;
 				}
+
+				/* absorption */
+				mask *= (ABS1 | ABS2) ? (ray->backside ? fmax(exp(-ray->t * ((ABS1) ? mat.color : 1.0f) * 10.0f), 0.01f) : 1.0f) : 1.0f;
+
 				bounceIsSpecular = true;
 			}
 			/*-------------------- COAT --------------------*/

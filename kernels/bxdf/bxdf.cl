@@ -80,46 +80,78 @@ float3 randomDirectionInHemisphere(const float3 n, uint* seed0, uint* seed1){
 	return dot(dr, n) * dr;
 }
 
+float f_schlick_f32(float v_dot_h, float f0) {
+	return f0 + (1.0f - f0) * pown(1.0f - v_dot_h, 5);
+}
+
+float3 f_schlick(float v_dot_h, float3 f0) {
+	return (float3)(
+		f_schlick_f32(v_dot_h, f0.x),
+		f_schlick_f32(v_dot_h, f0.y),
+		f_schlick_f32(v_dot_h, f0.z)
+	);
+}
+
+float3 importance_sample_ggx(float2 random, float3 normal, float alpha2) {
+	float3 tangent, binormal;
+	calc_binormals(normal, &tangent, &binormal);
+
+	float phi = TWO_PI * random.x;
+	float cos_theta = native_sqrt((1.0f - random.y) / (1.0f + (alpha2 - 1.0f) * random.y));
+	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
+
+	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
+	return tangent * h.x + binormal * h.y + normal * h.z;
+}
+
+float g_smith_joint_lambda(float x_dot_n, float alpha2){
+	float a = native_recip(x_dot_n * x_dot_n) - 1.0f;
+	return (0.5f * native_sqrt(1.0f + alpha2 * a) - 0.5f);
+}
+
+float g_smith_joint(float l_dot_n, float v_dot_n, float alpha2) {
+	float lambda_l = g_smith_joint_lambda(l_dot_n, alpha2);
+	float lambda_v = g_smith_joint_lambda(v_dot_n, alpha2);
+	return native_recip(1.0f + lambda_l + lambda_v);
+}
 
 /*------------------------------------------------------------------------------*/
 
 /* active materials */
-#FILE:bxdf/ggx.cl
 #FILE:bxdf/diffuse.cl
 
 /*---------------------------------- SPECULAR ----------------------------------*/
-bool sampleSpecular(Ray * ray, float4* res, const Material* mat, const uint* seed0, const uint* seed1) {
+bool sampleGGX(Ray * ray, float3* res, const Material* mat, const uint* seed0, const uint* seed1) {
 
-	ray->origin = ray->pos + ray->normal * EPS;
+	float roughness = fmax(mat->roughness, 1e-3f);
 
-#ifdef __GGX__
-	if (mat->roughness) {
-		const float3 wo = -ray->dir;
+	float alpha2 = roughness * roughness;
+	float3 hlf = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, alpha2);
+	float3 new_dir = reflect(ray->dir, hlf);
 
-		float cosTheta;
-		float3 wh = SampleGGX(ray->normal, mat->roughness, &cosTheta, seed0, seed1);
-
-		ray->dir = reflect(-wo, wh);
-
-		if (dot(ray->dir, ray->normal) * dot(wo, ray->normal) < 0.0f) return false;
-
-		float D = DistributionGGX(cosTheta, mat->roughness);
-		float F = conductorReflectance(1.0f / 1.5f, 1.2f, dot(ray->dir, wh));
-
-		*res = (float4)(D*F / (4.0f * dot(wo, ray->normal)) * mat->color, D * cosTheta / (4.0f * dot(wo, wh)));
-		return true;
+	if (dot(ray->normal, new_dir) < EPS) {
+		return false;
 	}
 	else {
-		ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
-		*res = (float4)(mat->color, 1.0f);
-		return true;
-	}
-#else
-	ray->dir = fast_normalize(mat->roughness * randomDirectionInHemisphere(ray->normal, seed0, seed1) + reflect(ray->dir, ray->normal));
-	*res = (float4)(mat->color, 1.0f);
-	return true;
-#endif
+		float3 view = -ray->dir;
+		float v_dot_n = clamp(dot(view, ray->normal), 0.0f, 1.0f);
+		float l_dot_n = clamp(dot(new_dir, ray->normal), 0.0f, 1.0f);
+		float v_dot_h = clamp(dot(view, hlf), 0.0f, 1.0f);
+		float h_dot_n = clamp(dot(hlf, ray->normal), 0.0f, 1.0f);
 
+		// Masking-shadowing
+		float g = g_smith_joint(l_dot_n, v_dot_n, alpha2);
+
+		float3 f = f_schlick(v_dot_h, mat->color);
+
+		float3 weight = f * clamp(g * v_dot_h / (h_dot_n * v_dot_n), 0.0f, 1.0f);
+		*res = mat->color*weight;
+
+		ray->origin = ray->pos + ray->normal * EPS;
+		ray->dir = new_dir;
+	}
+
+	return true;
 }
 
 #ifdef __DIFFUSE__

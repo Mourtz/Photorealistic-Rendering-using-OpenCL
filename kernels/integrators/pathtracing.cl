@@ -211,7 +211,8 @@ float3 radiance(
 				float3 wh = ray->normal;
 
 				if (mat.roughness) {
-					wh = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
+					wh = importance_sample_beckmann((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
+					//wh = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
 				}
 
 				const bool ABS1 = mat.t & ABS_REFR, ABS2 = mat.t & ABS_REFR2;
@@ -222,7 +223,7 @@ float3 radiance(
 				/* reflect */
 				if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < fresnel(ray->dir, wh, nc, nt, tdir)) {
 					float3 newDir = reflect(ray->dir, wh);
-					if (dot(newDir, ray->normal) < 0.0f) continue;
+					//if (dot(newDir, ray->normal) < 0.0f) continue;
 					ray->origin = ray->pos + wh * EPS;
 					ray->dir = newDir;
 
@@ -231,7 +232,7 @@ float3 radiance(
 				/* refract */
 				else {
 					float3 newDir = fast_normalize(tdir);
-					if (dot(newDir, ray->normal) >= 0.0f) continue;
+					//if (dot(newDir, ray->normal) >= 0.0f) continue;
 					ray->origin = ray->pos - wh * EPS;
 					ray->dir = newDir;
 

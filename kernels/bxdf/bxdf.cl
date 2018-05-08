@@ -92,17 +92,39 @@ float3 f_schlick(float v_dot_h, float3 f0) {
 	);
 }
 
+/*---------------------------------- BECKMANN ----------------------------------*/
+
+float D_Beckmann(float3 normal, float3 wh, float alpha2) {
+	float cosTheta2 = dot(normal, wh);
+	cosTheta2 *= cosTheta2;
+
+	return exp(-(1.0f / cosTheta2 - 1.0f) / alpha2) * INV_PI / (alpha2 * cosTheta2 * cosTheta2);
+}
+
+float3 importance_sample_beckmann(float2 random, float3 normal, float alpha2) {
+	float phi = TWO_PI * random.x;
+	float cos_theta = native_sqrt(1.0f / (1.0f - alpha2 * log(random.y)));
+	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
+
+	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
+
+	float3 tangent, binormal;
+	calc_binormals(normal, &tangent, &binormal);
+	return tangent * h.x + binormal * h.y + normal * h.z;
+}
+
+
 /*---------------------------------- GGX ----------------------------------*/
 
 float3 importance_sample_ggx(float2 random, float3 normal, float alpha2) {
-	float3 tangent, binormal;
-	calc_binormals(normal, &tangent, &binormal);
-
 	float phi = TWO_PI * random.x;
 	float cos_theta = native_sqrt((1.0f - random.y) / (1.0f + (alpha2 - 1.0f) * random.y));
 	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
 
 	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
+
+	float3 tangent, binormal;
+	calc_binormals(normal, &tangent, &binormal);
 	return tangent * h.x + binormal * h.y + normal * h.z;
 }
 

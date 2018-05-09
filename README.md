@@ -38,8 +38,9 @@ __Prtsc__ - Export to png format
   - Burley BRDF
   - Specular BRDF
   - Specular BSDF
-  - Refractive (GGX) + Absorption
+  - Rough Dielectric (Beckmann) + Absorption
   - GGX Microfacet BRDF
+  - Beckmann Microfacet BRDF
   - Specular Subsurface Scattering
 
 ## Possible Future work

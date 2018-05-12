@@ -26,6 +26,7 @@ __Prtsc__ - Export to png format
 - Volumetric pathtracing (homogeneous, exponential medium)
 - SDF Raymarching
 - Thin lens camera
+- Image-based lighting
 - Media
   - Homogeneous
   - Exponential
@@ -44,6 +45,7 @@ __Prtsc__ - Export to png format
   - Specular Subsurface Scattering
 
 ## Possible Future work
+- Quasi Monte Carlo
 - Volumetric pathtracing (heterogeneous medium)
 - Volumetric pathtracing (SDF density map)
 - Photon Mapping

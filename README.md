@@ -46,6 +46,7 @@ __Prtsc__ - Export to png format
 
 ## Possible Future work
 - Quasi Monte Carlo
+- Disney's principled, layered BRDF
 - Volumetric pathtracing (heterogeneous medium)
 - Volumetric pathtracing (SDF density map)
 - Photon Mapping

@@ -55,7 +55,6 @@ float3 caustics(
 float3 calcDirectLight(
 	__constant Mesh* meshes,
 	const Ray* ray,
-	const float3* pos, 
 	const Scene* scene,
 	const uint* light_index,
 	const uint* mesh_count,
@@ -67,13 +66,13 @@ float3 calcDirectLight(
 	const Mesh light = meshes[*light_index];
 
 	Ray shadowRay;
-	shadowRay.origin = *pos;
+	shadowRay.origin = ray->origin;
 
 #ifdef __SPHERE__
 	if (light.t & SPHERE) {
 		const float3 randPointOnLight = light.pos + randomSphereDirection(seed0, seed1) * light.joker.x;
 
-		*wi = randPointOnLight - *pos;
+		*wi = randPointOnLight - shadowRay.origin;
 		shadowRay.dir = fast_normalize(*wi);
 
 		if (ray->backside) {
@@ -111,7 +110,7 @@ float3 calcDirectLight(
 			mix(verts[2], verts[5], get_random(seed0, seed1))
 		);
 
-		*wi = randPointOnLight - *pos;
+		*wi = randPointOnLight - shadowRay.origin;
 		shadowRay.dir = fast_normalize(*wi);
 
 		if (ray->backside) {
@@ -138,6 +137,7 @@ float3 radiance(
 	__constant Mesh* meshes,
 	const uint* mesh_count,
 	const Scene* scene,
+	__read_only image2d_t env_map,
 	Ray* ray,
 	uint* seed0, uint* seed1
 ){
@@ -162,7 +162,15 @@ float3 radiance(
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
 #endif
 
-	while (didHit && ++bounce < MAX_BOUNCES) {
+	while (++bounce < MAX_BOUNCES) {
+
+		if (!didHit) {
+			if (!bounceIsSpecular)
+				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
+
+			acc += mask * sampleImage(env_map, envMapEquirect(ray->dir));
+			break;
+		}
 
 /*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
@@ -179,8 +187,7 @@ float3 radiance(
 #endif
 		{
 			if (mat.t & LIGHT) {
-				if (bounceIsSpecular)
-				{
+				if (bounceIsSpecular) {
 					acc += mask * mat.color;
 				}
 
@@ -399,7 +406,7 @@ float3 radiance(
 
 					if (fast_distance(ray->origin, meshes[index].pos) >= INF) continue;
 
-					float3 dLight = calcDirectLight(meshes, ray, &ray->origin, scene, &index, mesh_count, &wi, seed0, seed1, mesh_id);
+					float3 dLight = calcDirectLight(meshes, ray, scene, &index, mesh_count, &wi, seed0, seed1, mesh_id);
 					acc += dLight * mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 				}
 			}
@@ -414,7 +421,7 @@ float3 radiance(
 
 				if (fast_distance(ray->origin, meshes[index].pos) >= INF) continue;
 
-				float3 dLight = caustics(meshes, ray, &ray->origin, scene, &index, mesh_count, &vwi, seed0, seed1, mesh_id);
+				float3 dLight = caustics(meshes, ray, scene, &index, mesh_count, &vwi, seed0, seed1, mesh_id);
 				// @ToFix - im 100% sure this is wrong
 				acc += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			}

@@ -48,13 +48,18 @@ namespace clw = cl_help;
 const string models_directory = "../resources/models/";
 const string kernel_filepath = "../kernels/main.cl";
 
+// every pixel in the image has its own thread or "work item",
+// so the total amount of work items equals the number of pixels
+std::size_t global_work_size = window_width * window_height;
+std::size_t local_work_size;
+
 // OpenCL objects
 clw::Buffer cl_output;
 clw::Buffer cl_meshes;
 clw::Buffer cl_camera;
 clw::Buffer cl_accumbuffer;
 clw::ImageGL cl_screen;
-clw::ImageGL cl_cubemap;
+clw::ImageGL cl_env_map;
 vector<clw::Memory> cl_screens;
 
 cl_uint BVH_NUM_NODES(0);
@@ -346,6 +351,8 @@ void initCLKernel(){
 	kernel.setArg(15, mBufVertices);
 	kernel.setArg(16, mBufNormals);
 	kernel.setArg(17, mBufMaterial);
+
+	kernel.setArg(18, cl_env_map);
 }
 
 //---------------------------------------------------------------------------------------
@@ -355,15 +362,6 @@ double acc_time(0);
 #endif
 
 void runKernel(){
-	// every pixel in the image has its own thread or "work item",
-	// so the total amount of work items equals the number of pixels
-	std::size_t global_work_size = window_width * window_height;
-	std::size_t local_work_size = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device);
-
-	// Ensure the global work size is a multiple of local work size
-	if (global_work_size % local_work_size != 0)
-		global_work_size = (global_work_size / local_work_size + 1) * local_work_size;
-
 	//Make sure OpenGL is done using the VBOs
 	glFinish();
 
@@ -524,6 +522,10 @@ int main(int argc, char** argv){
 		OPENCL_EXPECTED_ERROR("Images are not supported on this device!");
 	}
 
+	//Texture* cubemap = loadHDR("../resources/images/kiara_7_late-afternoon_4k.hdr");
+	//cl_env_map = cl::Image2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, cl::ImageFormat( CL_RGBA, CL_HALF_FLOAT ), cubemap->width, cubemap->height, 0, cubemap->data, &err);
+	cl_env_map = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex1, &err);
+	cl_screens.push_back(cl_env_map);
 	cl_screen = clw::ImageGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex0, &err);
 	cl_screens.push_back(cl_screen);
 
@@ -532,6 +534,14 @@ int main(int argc, char** argv){
 
 	// intitialise the kernel
 	initCLKernel();
+
+	// every pixel in the image has its own thread or "work item",
+	// so the total amount of work items equals the number of pixels
+	local_work_size = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device);
+
+	// Ensure the global work size is a multiple of local work size
+	if (global_work_size % local_work_size != 0)
+		global_work_size = (global_work_size / local_work_size + 1) * local_work_size;
 
 	// render loop
 	while (!glfwWindowShouldClose(window)) {

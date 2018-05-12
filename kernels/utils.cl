@@ -22,7 +22,11 @@
 
 /* equirectangular mapping */
 float2 envMapEquirect(const float3 dir) {
-	return (float2)((atan2(dir.z, dir.x) / TWO_PI) + 0.5f, acos(dir.y) / PI);
+	return (float2)((atan2(dir.z, dir.x) * INV_TWO_PI) + 0.5f, acos(dir.y) * INV_PI);
+}
+
+float3 sampleImage(__read_only image2d_t img, float2 uv) {
+	return read_imagef(img, samplerA, uv).xyz;
 }
 
 /// Translate cartesian coordinates to spherical system

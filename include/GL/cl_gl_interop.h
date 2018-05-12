@@ -5,6 +5,7 @@
 #include <math.h>
 #include <vector>
 
+#include <Texture/texture.h>
 #include <Texture/lodepng.h>
 #include <GL/user_interaction.h>
 
@@ -21,6 +22,7 @@ const GLfloat quad_vertices[] = { -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1
 
 // display texture
 GLuint tex0;
+GLuint tex1;
 
 // OpenGL vertex buffer object
 GLuint vbo;
@@ -78,12 +80,23 @@ bool initGL(){
 
 	// generate tex0
 	glGenTextures(1, &tex0);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, window_width, window_height, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//32 bit color depth
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, window_width, window_height, 0, GL_RGBA, GL_FLOAT, NULL);
 
+	Texture* cubemap = loadHDR("../resources/hdr/blue_grotto_8k.hdr");
+	glGenTextures(1, &tex1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, tex1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, cubemap->width, cubemap->height, 0, GL_RGB, GL_FLOAT, cubemap->data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	// Create and compile the vertex shader
 	string vertStr = readFile(vert_filepath);

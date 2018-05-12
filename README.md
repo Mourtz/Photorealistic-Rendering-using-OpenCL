@@ -61,7 +61,7 @@ __Prtsc__ - Export to png format
 
 ### Windows
 1. Download GLFW from [here](http://www.glfw.org/download.html)
-2. Download AMD_APP_SDK from [here](https://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)
+2. Download AMD_APP_SDK from [here](https://drive.google.com/open?id=1Usg9hSx-EjntZ9paoJx51MZWYDqI83Lh)
 3. Use CMake GUI to configure and generate the project
 
 ### Linux

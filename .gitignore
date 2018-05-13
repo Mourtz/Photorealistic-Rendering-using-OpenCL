@@ -30,3 +30,4 @@
 *.log
 *.mtl
 kernels/bxdf/disney.cl
+*.hdr

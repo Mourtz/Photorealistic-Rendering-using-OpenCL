@@ -479,14 +479,23 @@ int main(int argc, char** argv){
 	scene = new host_scene();
 	scene->load();
 
+	cl_int err;
+
 	// initialise OpenCL
 	initOpenCL();
+
+#ifdef __DEBUG__
+	if (!device.getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err)) {
+		OPENCL_EXPECTED_ERROR("Images are not supported on this device!");
+	}
+
+	cout << "max image2D size (" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(&err) << "x" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>(&err) << ")" << std::endl;
+#endif
+
 	glfwShowWindow(window);
 
 	//make sure OpenGL is finished before we proceed
 	glFinish();
-
-	cl_int err;
 
 	if (scene->BUILD_BVH) {
 		mBufMaterial = clw::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
@@ -520,17 +529,19 @@ int main(int argc, char** argv){
 	// camera's CL memory buffer
 	cl_camera = clw::Buffer(context, CL_MEM_READ_ONLY, sizeof(Camera));
 	queue.enqueueWriteBuffer(cl_camera, CL_TRUE, 0, sizeof(Camera), hostRendercam);
-	
-	if(!device.getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err)){
-		OPENCL_EXPECTED_ERROR("Images are not supported on this device!");
-	}
 
-	//Texture* cubemap = loadHDR("../resources/images/kiara_7_late-afternoon_4k.hdr");
-	//cl_env_map = cl::Image2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, cl::ImageFormat( CL_RGBA, CL_HALF_FLOAT ), cubemap->width, cubemap->height, 0, cubemap->data, &err);
+#if 0
+	Texture* cubemap = loadHDR(env_map_filepath.c_str());
+	cl_env_map = cl::Image2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, cl::ImageFormat( CL_RGBA, CL_HALF_FLOAT ), cubemap->width, cubemap->height, 0, cubemap->data, &err);
+#else
 	cl_env_map = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex1, &err);
 	cl_screens.push_back(cl_env_map);
+#endif
+	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
+
 	cl_screen = clw::ImageGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex0, &err);
 	cl_screens.push_back(cl_screen);
+	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// reserve memory buffer on OpenCL device to hold image buffer for accumulated samples
 	cl_accumbuffer = clw::Buffer(context, CL_MEM_WRITE_ONLY, window_width * window_height * sizeof(cl_float4));

@@ -13,7 +13,7 @@
 
 #include <Scene/geometry.h>
 
-string scene_filepath = "../scenes/cornell.json";
+string scene_filepath = "../scenes/test.json";
 
 struct Medium {
 	cl_float density;

@@ -467,6 +467,9 @@ int main(int argc, char** argv){
 		} else if (arg == "-height") { // window height
 			window_height = atoi(argv[++i]);
 		}
+		else if (arg == "-hdr") {// hdr enviroment map
+			env_map_filepath = argv[++i];
+		}
 	}
 
 	// initialise OpenGL (GLEW and GLUT window + callback functions)

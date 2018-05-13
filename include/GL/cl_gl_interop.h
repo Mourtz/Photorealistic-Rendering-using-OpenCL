@@ -96,6 +96,8 @@ bool initGL(){
 	if (!env_map_filepath.empty()) {
 		Texture* cubemap = loadHDR(env_map_filepath.c_str());
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, cubemap->width, cubemap->height, 0, GL_RGB, GL_FLOAT, &cubemap->data[0]);
+		stbi_image_free(cubemap->data);
+		delete cubemap;
 
 	} else {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 1, 1, 0, GL_RGB, GL_FLOAT, NULL);

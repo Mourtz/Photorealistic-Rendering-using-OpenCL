@@ -19,7 +19,9 @@ __Prtsc__ - Export to png format
 -width  "window's width"
 -height "window's height"
 -scene  "filepath of the scene you want to render"
+-hdr    "filepath of the hdr you want to use"
 ```
+> [**hdrihaven**](https://hdrihaven.com/hdris/) is a great site for downloading free hi-res HDR images.
 
 ## Features
 - SAH BVH

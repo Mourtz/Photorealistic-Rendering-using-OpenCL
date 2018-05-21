@@ -67,6 +67,17 @@ __Prtsc__ - Export to png format
 3. Use CMake GUI to configure and generate the project
 
 ### Linux
+1. for Ubuntu *xenial* (16.04LTS) and later run
+```bash
+sudo apt-get update
+sudo apt-get -y install make cmake build-essential libglew-dev libglfw3-dev nvidia-opencl-dev
+
+mkdir build
+cd build
+cmake ..
+make
+```
+2. for older versions run
 ```bash
 echo "deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list
 sudo apt-get update

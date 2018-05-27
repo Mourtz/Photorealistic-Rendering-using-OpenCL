@@ -13,9 +13,11 @@ vec3 filmicToneMapping(vec3 color){
 	return color;
 }
 
+#define col tex.rgb
+
 void main()
 {
-	vec3 col = texture(u_tex, gl_FragCoord.xy / u_resolution).rgb;
+	vec4 tex = texture(u_tex, gl_FragCoord.xy / u_resolution);
 
 #ifndef FILMIC
 
@@ -38,5 +40,5 @@ void main()
 	col = filmicToneMapping(col);
 #endif
 
-	FragColor = vec4(col, 1.0);
+	FragColor = tex;
 }

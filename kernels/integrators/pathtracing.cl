@@ -168,7 +168,7 @@ float3 radiance(
 			if (!bounceIsSpecular)
 				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
 
-			acc += mask * sampleImage(env_map, envMapEquirect(ray->dir));
+			acc += mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz;
 			break;
 		}
 

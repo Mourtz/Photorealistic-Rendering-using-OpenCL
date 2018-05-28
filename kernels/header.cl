@@ -42,6 +42,8 @@
 
 //#define DEBUG
 
+#ALPHA_TESTING#
+
 /* Volumetric Pathtracing */
 #GLOBAL_MEDIUM#
 #ifdef GLOBAL_MEDIUM

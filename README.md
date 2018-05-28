@@ -20,6 +20,7 @@ __Prtsc__ - Export to png format
 -height "window's height"
 -scene  "filepath of the scene you want to render"
 -hdr    "filepath of the hdr you want to use"
+-alpha  "enable alpha channel"
 ```
 > [**hdrihaven**](https://hdrihaven.com/hdris/) is a great site for downloading free hi-res HDR images.
 
@@ -29,6 +30,7 @@ __Prtsc__ - Export to png format
 - SDF Raymarching
 - Thin lens camera
 - Image-based lighting
+- Alpha testing
 - Media
   - Homogeneous
   - Exponential

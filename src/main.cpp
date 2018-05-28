@@ -466,9 +466,10 @@ int main(int argc, char** argv){
 			window_width = atoi(argv[++i]);
 		} else if (arg == "-height") { // window height
 			window_height = atoi(argv[++i]);
-		}
-		else if (arg == "-hdr") {// hdr enviroment map
+		} else if (arg == "-hdr") {// hdr enviroment map
 			env_map_filepath = argv[++i];
+		} else if (arg == "-alpha") {// hdr enviroment map
+			ALPHA_TESTING = true;
 		}
 	}
 

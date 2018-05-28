@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <Texture/texture.h>
-#include <Texture/lodepng.h>
 #include <GL/user_interaction.h>
 
 // OpenGL window
@@ -71,7 +70,8 @@ bool initGL(){
 	else return false;
 
 	// initialise OpenGL
-	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glMatrixMode(GL_PROJECTION);
 	gluOrtho2D(0.0, window_width, 0.0, window_height);
 
@@ -84,7 +84,7 @@ bool initGL(){
 	glGenTextures(1, &tex0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, window_width, window_height, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, window_width, window_height, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -138,32 +138,22 @@ bool initGL(){
 	glEnableVertexAttribArray(posAttrib);
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-
 	cout << "OpenGL initialized \n";
+
+	stbi_flip_vertically_on_write(true);
 
 	return true;
 }
 
 void saveImage() {
-	unsigned int tex_size = 3 * window_width * window_height;
+	double tStart = glfwGetTime();
 
-	GLubyte* pixels = new GLubyte[tex_size];
-	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	GLubyte* pixels = new GLubyte[4 * window_width * window_height];
+	glReadPixels(0, 0, window_width, window_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	stbi_write_png("render.png", window_width, window_height, 4, pixels, 0);
+	delete pixels;
 
-	vector<unsigned char> image;
-	image.reserve(tex_size);
-	for (unsigned int i = tex_size; i > 0;) {
-		image.push_back((unsigned char)(pixels[--i]));
-		image.push_back((unsigned char)(pixels[--i]));
-		image.push_back((unsigned char)(pixels[--i]));
-		image.push_back((unsigned char)(255.0f));
-	}
-
-	unsigned error = lodepng::encode("render.png", image, window_width, window_height);
-	if (error)
-		cout << "encoder error " << error << ": " << lodepng_error_text(error) << endl;
-	else
-		cout << "\nsuccesfully rendered to texture" << endl;
+	cout << std::endl << "succesfully saved in ( " << glfwGetTime() - tStart << "s )" << std::endl;
 }
 
 void createVBO(GLuint* vbo){

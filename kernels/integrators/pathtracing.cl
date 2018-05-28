@@ -133,7 +133,7 @@ float3 calcDirectLight(
 	return F3_ZERO;
 }
 
-float3 radiance(
+float4 radiance(
 	__constant Mesh* meshes,
 	const uint* mesh_count,
 	const Scene* scene,
@@ -141,12 +141,22 @@ float3 radiance(
 	Ray* ray,
 	uint* seed0, uint* seed1
 ){
+	int mesh_id;
+
+	if (!intersect_scene(meshes, ray, &mesh_id, mesh_count, scene)) {
+#ifdef ALPHA_TESTING
+		return (float4)(0.0f);
+#else
+		return (float4)(read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
+#endif
+	}
+
 	uint DIFF_BOUNCES = 0, SPEC_BOUNCES = 0, TRANS_BOUNCES = 0, SCATTERING_EVENTS = 0, bounce = 0;
 
-	float3 acc = (float3)(0.0f), mask = (float3)(1.0f);
-	int mesh_id = -1;
+	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
+	float3 mask = (float3)(1.0f);
 
-	bool didHit = intersect_scene(meshes, ray, &mesh_id, mesh_count, scene), bounceIsSpecular = true;
+	bool bounceIsSpecular = true;
 
 #ifdef GLOBAL_MEDIUM
 	const float gm_hg_g = 0.5f;
@@ -164,14 +174,6 @@ float3 radiance(
 
 	while (++bounce < MAX_BOUNCES) {
 
-		if (!didHit) {
-			if (!bounceIsSpecular)
-				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
-
-			acc += mask * sampleImage(env_map, envMapEquirect(ray->dir));
-			break;
-		}
-
 /*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
 		sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
@@ -188,7 +190,7 @@ float3 radiance(
 		{
 			if (mat.t & LIGHT) {
 				if (bounceIsSpecular) {
-					acc += mask * mat.color;
+					acc.xyz += mask * mat.color;
 				}
 
 				break;
@@ -203,7 +205,7 @@ float3 radiance(
 			else if (mat.t & GLOSSY) {
 				float3 res;
 				if (!sampleGGX(ray, &res, &mat, seed0, seed1))
-					continue;
+					break;
 
 				mask *= res;
 
@@ -245,7 +247,7 @@ float3 radiance(
 
 					if (!ABS1) mask *= ((ABS2) ? 1.0f - mat.color : mat.color);
 
-					++TRANS_BOUNCES;
+					++SCATTERING_EVENTS;
 				}
 
 				/* absorption */
@@ -407,7 +409,7 @@ float3 radiance(
 					if (fast_distance(ray->origin, meshes[index].pos) >= INF) continue;
 
 					float3 dLight = calcDirectLight(meshes, ray, scene, &index, mesh_count, &wi, seed0, seed1, mesh_id);
-					acc += dLight * mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
+					acc.xyz += dLight * mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 				}
 			}
 		}
@@ -423,7 +425,7 @@ float3 radiance(
 
 				float3 dLight = caustics(meshes, ray, scene, &index, mesh_count, &vwi, seed0, seed1, mesh_id);
 				// @ToFix - im 100% sure this is wrong
-				acc += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
+				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			}
 
 			/* Henyey-Greenstein phase function */
@@ -451,7 +453,17 @@ float3 radiance(
 				break;
 		}
 
-		didHit = intersect_scene(meshes, ray, &mesh_id, mesh_count, scene);
+		if (!intersect_scene(meshes, ray, &mesh_id, mesh_count, scene)) {
+			if (!bounceIsSpecular)
+				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
+#ifdef ALPHA_TESTING
+			else if ((DIFF_BOUNCES | TRANS_BOUNCES) == 0) 
+				return (float4)(0.0f);
+#endif
+			acc.xyz += mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz;
+
+			break;
+		}
 	}
 
 	return acc;

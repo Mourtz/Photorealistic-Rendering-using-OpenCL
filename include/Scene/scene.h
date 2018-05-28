@@ -14,8 +14,9 @@
 #include <Scene/geometry.h>
 
 string scene_filepath = "../scenes/cornell.json";
+bool ALPHA_TESTING(false);
 
-struct Medium {
+struct cl_medium {
 	cl_float density;
 	cl_float sigmaA;
 	cl_float sigmaS;
@@ -48,7 +49,7 @@ struct host_scene {
 
 	// Volumetric pathtracing
 	cl_bool HAS_GLOBAL_MEDIUM = false;
-	Medium GLOBAL_MEDIUM;
+	cl_medium GLOBAL_MEDIUM;
 
 	// raymarching
 	cl_int MARCHING_STEPS = 128;

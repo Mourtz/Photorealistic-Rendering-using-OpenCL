@@ -31,7 +31,7 @@ __kernel void render_kernel(
 	const int random0, const int random1,
 
 	/* accumulation buffer */
-	__global float3* accumbuffer,
+	__global float4* accumbuffer,
 
 	/* Wang Hashed framenumber */
 	const uint hashedframenumber,
@@ -64,9 +64,7 @@ __kernel void render_kernel(
 	Ray ray = createCamRay(i_coord, width, height, cam, &seed0, &seed1);
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
 	accumbuffer[work_item_id] += radiance(meshes, &mesh_count, &scene, env_map, &ray, &seed0, &seed1);
-	/* averaged colour: divide colour by the number of calculated frames so far */
-	float3 tempcolor = accumbuffer[work_item_id] / (float)(framenumber);
 
 	/* update the output GLTexture */
-	write_imagef(output_tex, i_coord, (float4)(tempcolor, 1.0f));
+	write_imagef(output_tex, i_coord, accumbuffer[work_item_id] / (float)(framenumber));
 }

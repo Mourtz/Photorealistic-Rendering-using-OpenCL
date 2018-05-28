@@ -147,11 +147,14 @@ bool initGL(){
 }
 
 void saveImage() {
-	unsigned int tex_size = 4 * window_width * window_height;
+	double tStart = glfwGetTime();
 
-	GLubyte* pixels = new GLubyte[tex_size];
+	GLubyte* pixels = new GLubyte[4 * window_width * window_height];
 	glReadPixels(0, 0, window_width, window_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-	stbi_write_png("render.png", window_width, window_height, 4, pixels, window_width * 4);
+	stbi_write_png("render.png", window_width, window_height, 4, pixels, 0);
+	delete pixels;
+
+	cout << std::endl << "succesfully saved in ( " << glfwGetTime() - tStart << "s )" << std::endl;
 }
 
 void createVBO(GLuint* vbo){

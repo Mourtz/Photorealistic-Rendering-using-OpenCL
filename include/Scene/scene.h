@@ -14,6 +14,7 @@
 #include <Scene/geometry.h>
 
 string scene_filepath = "../scenes/cornell.json";
+bool ALPHA_TESTING(false);
 
 struct cl_medium {
 	cl_float density;

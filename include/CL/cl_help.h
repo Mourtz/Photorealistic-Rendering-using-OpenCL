@@ -295,6 +295,14 @@ namespace cl_help {
 				continue;
 			}
 
+			temp_name = "#ALPHA_TESTING#";
+			temp = line.find(temp_name);
+			if (temp != string::npos) {
+				line.replace(temp, temp_name.length(), (ALPHA_TESTING ? "#define ALPHA_TESTING" : ""));
+				source += line + "\n";
+				continue;
+			}
+
 //--------------------------------- GLOBAL MEDIUM ---------------------------------------------
 			if (scene->HAS_GLOBAL_MEDIUM) {
 				temp_name = "#GLOBAL_FOG_DENSITY#";

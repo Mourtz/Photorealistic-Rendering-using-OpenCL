@@ -229,8 +229,9 @@ float4 radiance(
 				const float nnt = ray->backside ? nt / nc : nc / nt;
 				const float3 tdir = refract(ray->dir, wh, nnt);
 
+				const float Re = fresnel(ray->dir, wh, nc, nt, tdir);
 				/* reflect */
-				if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < fresnel(ray->dir, wh, nc, nt, tdir)) {
+				if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < Re) {
 					float3 newDir = reflect(ray->dir, wh);
 					//if (dot(newDir, ray->normal) < 0.0f) continue;
 					ray->origin = ray->pos + wh * EPS;
@@ -248,6 +249,9 @@ float4 radiance(
 					if (!ABS1) mask *= ((ABS2) ? 1.0f - mat.color : mat.color);
 
 					++SCATTERING_EVENTS;
+#ifdef ALPHA_TESTING
+					if (!DIFF_BOUNCES) acc.w = 1.0f - Re;
+#endif
 				}
 
 				/* absorption */
@@ -456,14 +460,16 @@ float4 radiance(
 		if (!intersect_scene(meshes, ray, &mesh_id, mesh_count, scene)) {
 			if (!bounceIsSpecular)
 				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
-#ifdef ALPHA_TESTING
-			else if ((DIFF_BOUNCES | TRANS_BOUNCES) == 0) 
-				return (float4)(0.0f);
-#endif
+
 			acc.xyz += mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz;
 
 			break;
 		}
+
+#ifdef ALPHA_TESTING
+		acc.w = 1.0f;
+#endif
+
 	}
 
 	return acc;

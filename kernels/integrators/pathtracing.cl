@@ -145,7 +145,7 @@ float4 radiance(
 
 	if (!intersect_scene(meshes, ray, &mesh_id, mesh_count, scene)) {
 #ifdef ALPHA_TESTING
-		return (float4)(0.0f, 1.0f, 0.0f, 1.0f);
+		return (float4)(0.0f);
 #else
 		return (float4)(read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
 #endif

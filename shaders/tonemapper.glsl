@@ -17,7 +17,9 @@ vec3 filmicToneMapping(vec3 color){
 
 void main()
 {
-	vec4 tex = texture(u_tex, gl_FragCoord.xy / u_resolution);
+	vec2 uv = gl_FragCoord.xy / u_resolution;
+
+	vec4 tex = texture(u_tex, uv);
 
 #ifndef FILMIC
 

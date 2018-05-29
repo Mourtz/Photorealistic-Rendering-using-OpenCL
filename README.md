@@ -20,7 +20,7 @@ __Prtsc__ - Export to png format
 -height   "{integer}: window's height"
 -scene    "{string}: filepath of the scene you want to render"
 -hdr      "{string}: filepath of the hdr you want to use"
--alpha    "{void}: add this flag if you want to enable alpha testing"
+-alpha    "{void}: add this flag if you want to enable alpha blending"
 -encoder  "{integer}: { 0: ".png", 1: ".hdr" }"
 ```
 > [**hdrihaven**](https://hdrihaven.com/hdris/) is a great site for downloading free hi-res HDR images.
@@ -31,7 +31,7 @@ __Prtsc__ - Export to png format
 - SDF Raymarching
 - Thin lens camera
 - Image-based lighting
-- Alpha testing
+- Alpha blending
 - Media
   - Homogeneous
   - Exponential

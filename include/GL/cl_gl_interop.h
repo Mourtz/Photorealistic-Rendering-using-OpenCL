@@ -17,6 +17,8 @@ int window_width = 1280;
 int window_height = 720;
 // enviroment map filepath
 string env_map_filepath = "";
+// encoder
+unsigned char encoder(0);
 
 // quad vertices
 const GLfloat quad_vertices[] = { -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0 };
@@ -107,6 +109,9 @@ bool initGL(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, tex0);
+
 	// Create and compile the vertex shader
 	string vertStr = readFile(vert_filepath);
 	const char* vertSrc = vertStr.c_str();
@@ -147,11 +152,18 @@ bool initGL(){
 
 void saveImage() {
 	double tStart = glfwGetTime();
-
-	GLubyte* pixels = new GLubyte[4 * window_width * window_height];
-	glReadPixels(0, 0, window_width, window_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-	stbi_write_png("render.png", window_width, window_height, 4, pixels, 0);
-	delete pixels;
+	
+	if (encoder == 0) {
+		GLubyte* pixels = new GLubyte[4 * window_width * window_height];
+		glReadPixels(0, 0, window_width, window_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		stbi_write_png("render.png", window_width, window_height, 4, pixels, 0);
+		delete pixels;
+	} else if (encoder == 1) {
+		float* pixels = new float[3 * window_width * window_height];
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, pixels);
+		stbi_write_hdr("render.hdr", window_width, window_height, 3, pixels);
+		delete pixels;
+	}
 
 	cout << std::endl << "succesfully saved in ( " << glfwGetTime() - tStart << "s )" << std::endl;
 }

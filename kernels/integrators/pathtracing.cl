@@ -233,8 +233,8 @@ float4 radiance(
 				/* reflect */
 				if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < Re) {
 					float3 newDir = reflect(ray->dir, wh);
-					//if (dot(newDir, ray->normal) < 0.0f) continue;
-					ray->origin = ray->pos + wh * EPS;
+					//if (dot(newDir, ray->normal) < 0.0f) break;
+					ray->origin = ray->pos + ray->normal * EPS;
 					ray->dir = newDir;
 
 					++SPEC_BOUNCES;
@@ -242,8 +242,8 @@ float4 radiance(
 				/* refract */
 				else {
 					float3 newDir = fast_normalize(tdir);
-					//if (dot(newDir, ray->normal) >= 0.0f) continue;
-					ray->origin = ray->pos - wh * EPS;
+					//if (dot(newDir, ray->normal) >= 0.0f) break;
+					ray->origin = ray->pos - ray->normal * EPS;
 					ray->dir = newDir;
 
 					if (!ABS1) mask *= ((ABS2) ? 1.0f - mat.color : mat.color);
@@ -255,7 +255,7 @@ float4 radiance(
 				}
 
 				/* absorption */
-				mask *= (ABS1 | ABS2) ? (ray->backside ? fmax(exp(-ray->t * ((ABS1) ? mat.color : 1.0f) * 10.0f), 0.01f) : 1.0f) : 1.0f;
+				mask *= (ABS1 | ABS2) ? (ray->backside ? exp(-ray->t * ((ABS1) ? mat.color : 1.0f) * 10.0f) : 1.0f) : 1.0f;
 
 				bounceIsSpecular = true;
 			}

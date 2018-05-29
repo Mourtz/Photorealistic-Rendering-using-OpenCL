@@ -16,11 +16,12 @@ __Y__ - Decrease Focal Distance\
 __Arrows__ - Yaw/Pitch\
 __Prtsc__ - Export to png format
 ```
--width  "window's width"
--height "window's height"
--scene  "filepath of the scene you want to render"
--hdr    "filepath of the hdr you want to use"
--alpha  "enable alpha channel"
+-width    "{integer}: window's width"
+-height   "{integer}: window's height"
+-scene    "{string}: filepath of the scene you want to render"
+-hdr      "{string}: filepath of the hdr you want to use"
+-alpha    "{void}: add this flag if you want to enable alpha testing"
+-encoder  "{integer}: { 0: ".png", 1: ".hdr" }"
 ```
 > [**hdrihaven**](https://hdrihaven.com/hdris/) is a great site for downloading free hi-res HDR images.
 

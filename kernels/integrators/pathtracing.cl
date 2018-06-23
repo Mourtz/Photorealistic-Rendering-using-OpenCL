@@ -73,7 +73,9 @@ float3 calcDirectLight(
 		const float3 randPointOnLight = light.pos + randomSphereDirection(seed0, seed1) * light.joker.x;
 
 		*wi = randPointOnLight - shadowRay.origin;
-		shadowRay.dir = fast_normalize(*wi);
+		float d2 = dot(*wi, *wi);
+		float len = native_sqrt(d2);
+		shadowRay.dir = native_divide(*wi, len);
 
 		if (ray->backside) {
 			float thickness;
@@ -81,11 +83,9 @@ float3 calcDirectLight(
 				shadowRay.origin += (thickness + EPS) * shadowRay.dir;
 		}
 
-		shadowRay.t = distance(randPointOnLight, shadowRay.origin);
+		shadowRay.t = len;
 		if (shadow(meshes, &shadowRay, mesh_count, scene)) {
 			float r2 = light.joker.x * light.joker.x;
-			float3 d = randPointOnLight - shadowRay.origin;
-			float d2 = dot(d, d);
 
 			float cos_a_max = sqrt(1.0f - clamp(r2 / d2, 0.0f, 1.0f));
 			float weight = 2.0f * (1.0f - cos_a_max);
@@ -111,7 +111,9 @@ float3 calcDirectLight(
 		);
 
 		*wi = randPointOnLight - shadowRay.origin;
-		shadowRay.dir = fast_normalize(*wi);
+		float d2 = dot(*wi, *wi);
+		float len = native_sqrt(d2);
+		shadowRay.dir = native_divide(*wi, len);
 
 		if (ray->backside) {
 			float thickness;
@@ -119,11 +121,9 @@ float3 calcDirectLight(
 				shadowRay.origin += (thickness + EPS) * shadowRay.dir;
 		}
 
-		shadowRay.t = distance(randPointOnLight, shadowRay.origin);
+		shadowRay.t = len;
 		if (shadow(meshes, &shadowRay, mesh_count, scene)) {
 			float r2 = fast_distance(light.joker.s012, light.joker.s345) * fast_distance(light.joker.s012, light.joker.s678);
-			float3 d = randPointOnLight - shadowRay.origin;
-			float d2 = dot(d, d);
 			float weight = r2 / d2;
 			return light.mat.color * clamp(weight, 0.0f, 1.0f) * 0.5f;
 		}

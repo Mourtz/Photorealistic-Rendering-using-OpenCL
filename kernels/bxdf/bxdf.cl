@@ -52,14 +52,19 @@ float3 randomSphereDirection(uint* seed0, uint* seed1){
 	return (float3)(native_sin(r.x) * (float2)(native_sin(r.y), native_cos(r.y)), native_cos(r.x));
 }
 
+float3 randomDirectionInHemisphere(const float3 n, uint* seed0, uint* seed1){
+	float3 dr = randomSphereDirection(seed0, seed1);
+	return dot(dr, n) * dr;
+}
+
 float3 uniformSphere(const float2 xi){
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*2.0f - 1.0f;
-	float r = sqrt(fmax(1.0f - z * z, 0.0f));
+	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
 
 	return (float3)(
-		cos(phi)*r,
-		sin(phi)*r,
+		native_cos(phi)*r,
+		native_sin(phi)*r,
 		z
 	);
 }
@@ -67,17 +72,12 @@ float3 uniformSphere(const float2 xi){
 float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*(1.0f - cosThetaMax) + cosThetaMax;
-	float r = sqrt(fmax(1.0f - z * z, 0.0f));
+	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
 	return (float3)(
-		cos(phi)*r,
-		sin(phi)*r,
+		native_cos(phi)*r,
+		native_sin(phi)*r,
 		z
 	);
-}
-
-float3 randomDirectionInHemisphere(const float3 n, uint* seed0, uint* seed1){
-	float3 dr = randomSphereDirection(seed0, seed1);
-	return dot(dr, n) * dr;
 }
 
 float f_schlick_f32(float v_dot_h, float f0) {

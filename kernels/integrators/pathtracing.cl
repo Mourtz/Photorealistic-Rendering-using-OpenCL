@@ -1,6 +1,8 @@
 #ifndef __INTEGRATOR__
 #define __INTEGRATOR__
 
+/*--------------------------- LIGHT ---------------------------*/
+
 #if defined(VOLUME_CAUSTICS)
 
 float3 caustics(
@@ -189,15 +191,16 @@ float4 radiance(
 #endif
 		{
 			if (mat.t & LIGHT) {
-				if (bounceIsSpecular) {
-					acc.xyz += mask * mat.color;
-				}
+				if (!bounceIsSpecular)
+					mask *= fmax(0.01f, dot(ray->dir, ray->normal));
 
+				acc.xyz += mask * mat.color;
 				break;
 			}
 			/*-------------------- DIFFUSE --------------------*/
 			else if (mat.t & DIFF) {
-				mask *= SampleDiffuse(ray, &mat, seed0, seed1);
+				if(!sampleLambert(ray, seed0, seed1))break;
+				mask *= mat.color;
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
 			}
@@ -220,7 +223,7 @@ float4 radiance(
 				float3 wh = ray->normal;
 
 				if (mat.roughness) {
-					wh = importance_sample_beckmann((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
+					wh = importance_sample_beckmann((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), &ray->tf, mat.roughness*mat.roughness);
 					//wh = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
 				}
 
@@ -271,7 +274,7 @@ float4 radiance(
 				}
 				/* diffuse */
 				else {
-					ray->dir = cosWeightedRandomHemisphereDirection(ray->normal, seed0, seed1);
+					if(!sampleLambert(ray, seed0, seed1)) break;
 					mask *= mat.color;
 
 					++DIFF_BOUNCES;

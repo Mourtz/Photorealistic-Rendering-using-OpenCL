@@ -42,11 +42,4 @@ float3 polar_to_cartesian(const float sinTheta, const float cosTheta,
 		cosTheta);
 }
 
-#define ortho(v) fabs(v.x) > fabs(v.y) ? F3_UP : F3_RIGHT
-
-void calc_binormals(const float3 normal, float3* tangent, float3* binormal) {
-	*binormal = fast_normalize(cross(normal, ortho(normal)));
-	*tangent = cross(normal, *binormal);
-}
-
 #endif

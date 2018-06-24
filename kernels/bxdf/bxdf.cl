@@ -101,31 +101,27 @@ float D_Beckmann(float3 normal, float3 wh, float alpha2) {
 	return exp(-(1.0f / cosTheta2 - 1.0f) / alpha2) * INV_PI / (alpha2 * cosTheta2 * cosTheta2);
 }
 
-float3 importance_sample_beckmann(float2 random, float3 normal, float alpha2) {
+float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float alpha2) {
 	float phi = TWO_PI * random.x;
 	float cos_theta = native_sqrt(1.0f / (1.0f - alpha2 * log(random.y)));
 	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
 
 	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
 
-	float3 tangent, binormal;
-	calc_binormals(normal, &tangent, &binormal);
-	return tangent * h.x + binormal * h.y + normal * h.z;
+	return toGlobal(tf, h);
 }
 
 
 /*---------------------------------- GGX ----------------------------------*/
 
-float3 importance_sample_ggx(float2 random, float3 normal, float alpha2) {
+float3 importance_sample_ggx(float2 random, const TangentFrame* tf, float alpha2) {
 	float phi = TWO_PI * random.x;
 	float cos_theta = native_sqrt((1.0f - random.y) / (1.0f + (alpha2 - 1.0f) * random.y));
 	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
 
 	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
 
-	float3 tangent, binormal;
-	calc_binormals(normal, &tangent, &binormal);
-	return tangent * h.x + binormal * h.y + normal * h.z;
+	return toGlobal(tf, h);
 }
 
 float g_smith_joint_lambda(float x_dot_n, float alpha2){
@@ -139,12 +135,12 @@ float g_smith_joint(float l_dot_n, float v_dot_n, float alpha2) {
 	return native_recip(1.0f + lambda_l + lambda_v);
 }
 
-bool sampleGGX(Ray * ray, float3* res, const Material* mat, const uint* seed0, const uint* seed1) {
+bool sampleGGX(Ray* ray, float3* res, const Material* mat, const uint* seed0, const uint* seed1) {
 
 	float roughness = fmax(mat->roughness, 1e-3f);
 
 	float alpha2 = roughness * roughness;
-	float3 hlf = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, alpha2);
+	float3 hlf = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), &ray->tf, alpha2);
 	float3 new_dir = reflect(ray->dir, hlf);
 
 	if (dot(ray->normal, new_dir) < EPS) {
@@ -172,31 +168,40 @@ bool sampleGGX(Ray * ray, float3* res, const Material* mat, const uint* seed0, c
 	return true;
 }
 
-/*------------------------------------------------------------------------------*/
-
-/* active materials */
-#FILE:bxdf/diffuse.cl
-
 /*---------------------------------- DIFFUSE ----------------------------------*/
 
-#ifdef __DIFFUSE__
-	float3 SampleDiffuse(Ray* ray, const Material* mat, uint* seed0, uint* seed1) {
-		ray->origin = ray->pos + ray->normal * EPS;
-		ray->dir = cosWeightedRandomHemisphereDirection(ray->normal, seed0, seed1);
+float3 cosineHemisphere(const float2* xi){ 
+    float phi = xi->x*TWO_PI;
+    float r = native_sqrt(xi->y);
 
+    return (float3)(
+            native_cos(phi)*r,
+            native_sin(phi)*r,
+            native_sqrt(fmax(1.0f - xi->y, 0.0f))
+    );
+}
+
+bool sampleLambert(Ray* ray, uint* seed0, uint* seed1){ 
+	float3 wi = toLocal(&ray->tf, -ray->dir);
+	if(wi.z <= 0) 
+		return false;
+
+	float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+	ray->origin = ray->pos + ray->normal * EPS;
+	ray->dir = toGlobal(&ray->tf, cosineHemisphere(&xi));
+
+	return true;
+}
+
+/*
 #ifdef __BURLEY_DIFF__
-		float3 H = fast_normalize(ray->incomingRayDir + ray->dir);
-		float NoV = clamp(dot(ray->normal, ray->incomingRayDir), EPS, 1.0f);
-		float NoL = clamp(dot(ray->normal, ray->dir), EPS, 1.0f);
-		float VoH = clamp(dot(ray->incomingRayDir, H), EPS, 1.0f);
+	float3 H = fast_normalize(ray->incomingRayDir + ray->dir);
+	float NoV = clamp(dot(ray->normal, ray->incomingRayDir), EPS, 1.0f);
+	float NoL = clamp(dot(ray->normal, ray->dir), EPS, 1.0f);
+	float VoH = clamp(dot(ray->incomingRayDir, H), EPS, 1.0f);
 
-		return DiffuseBurley(mat->color, fmax(mat->roughness, EPS2), NoV, NoL, VoH);
+	return DiffuseBurley(mat->color, fmax(mat->roughness, EPS2), NoV, NoL, VoH);
 #else
-		return mat->color;
-#endif
-	}
-#else
-#define SampleDiffuse(ray, mat, seed0, seed1) { printf("%s\n", "you haven't imported the diffuse module in the kernel!\n"); break; }
-#endif
+*/
 
 #endif

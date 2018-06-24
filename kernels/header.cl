@@ -99,6 +99,38 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 #define ABS_REFR	#ABS_REFR#
 #define ABS_REFR2	#ABS_REFR2#
 
+typedef struct { 
+	float3 normal, tangent, bitangent;
+} TangentFrame;
+
+// [Duff et al. 17] Building An Orthonormal Basis, Revisited. JCGT. 2017.
+TangentFrame createTangentFrame(const float3* normal){ 
+	TangentFrame res;
+
+	float sn = copysign(1.0f, normal->z);
+	float a = -1.0f/(sn + normal->z);
+    float b = normal->x*normal->y*a;
+
+	res.normal = *normal;
+	res.tangent = (float3)(1.0f + sn*normal->x*normal->x*a, sn*b, -sn*normal->x);
+	res.bitangent = (float3)(b, sn + normal->y*normal->y*a, -normal->y);
+	return res;
+}
+
+float3 toLocal(const TangentFrame* tf, const float3 p){ 
+	return (float3)(
+		dot(tf->tangent, p),
+		dot(tf->bitangent, p),
+		dot(tf->normal, p)
+	);
+}
+
+float3 toGlobal(const TangentFrame* tf, const float3 p){ 
+	return tf->tangent * p.x + 
+		 tf->bitangent * p.y + 
+		    tf->normal * p.z;
+}
+
 typedef struct {
 	float3 origin;			// origin
 	float3 dir;				// direction
@@ -109,6 +141,7 @@ typedef struct {
 	float t;				// dist from origin
 	bool backside;			// inside?
 	int hitFace;			// hitface id
+	TangentFrame tf;		// tangent frame
 } Ray;
 
 //------------- MATERIAL -------------

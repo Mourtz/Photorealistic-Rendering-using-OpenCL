@@ -349,6 +349,7 @@ bool intersect_scene(
 			ray->backside = dot(ray->normal, ray->dir) >= 0.0f;
 			ray->normal = ray->backside ? -ray->normal : ray->normal;
 		}
+		ray->tf = createTangentFrame(&ray->normal);
 		return true;
 	}
 

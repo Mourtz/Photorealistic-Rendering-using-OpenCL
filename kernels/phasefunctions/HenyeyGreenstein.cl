@@ -1,6 +1,17 @@
 #ifndef __HG__
 #define __HG__
 
+#ifndef ortho
+
+#define ortho(v) fabs(v.x) > fabs(v.y) ? F3_UP : F3_RIGHT
+
+void calc_binormals(const float3 normal, float3* tangent, float3* binormal) {
+	*binormal = fast_normalize(cross(normal, ortho(normal)));
+	*tangent = cross(normal, *binormal);
+}
+
+#endif
+
 //--------------------- HenyeyGreensteinPhaseFunction -----------------------
 
 float hg(const float cosTheta, const float _g) {

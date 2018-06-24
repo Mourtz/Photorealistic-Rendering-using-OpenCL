@@ -89,6 +89,12 @@ inline vec4 operator/(const float& f, const vec4& v) { return vec4(f) / v; }
 inline vec4 min4(const vec4& v1, const vec4& v2){ return vec4(fmin(v1.x, v2.x), fmin(v1.y, v2.y), fmin(v1.z, v2.z), fmin(v1.w, v2.w)); }
 inline vec4 max4(const vec4& v1, const vec4& v2){ return vec4(fmax(v1.x, v2.x), fmax(v1.y, v2.y), fmax(v1.z, v2.z), fmax(v1.w, v2.w)); }
 
+inline float v_min4(const float& v1, const float& v2, const float& v3, const float& v4) { return fmin(fmin(fmin(v1, v2), v3), v4); }
+inline float v_min4(const vec4& v) { return fmin(fmin(fmin(v.x, v.y), v.z), v.w); }
+
+inline float v_max4(const float& v1, const float& v2, const float& v3, const float& v4) { return fmax(fmax(fmax(v1, v2), v3), v4); }
+inline float v_max4(const vec4& v) { return fmax(fmax(fmax(v.x, v.y), v.z), v.w); }
+
 //-------------------------------------------------------------------------------------------------
 
 // OpenCL handles vec3 exactly the same as vec4
@@ -102,6 +108,12 @@ inline vec3 normalize(const vec3& v) { float norm = sqrtf(v.x * v.x + v.y * v.y 
 
 inline vec3 min3(const vec3& v1, const vec3& v2) { return vec3(fmin(v1.x, v2.x), fmin(v1.y, v2.y), fmin(v1.z, v2.z)); }
 inline vec3 max3(const vec3& v1, const vec3& v2) { return vec3(fmax(v1.x, v2.x), fmax(v1.y, v2.y), fmax(v1.z, v2.z)); }
+
+inline float v_min3(const float& v1, const float& v2, const float& v3) { return fmin(fmin(v1, v2), v3); }
+inline float v_min3(const vec3& v) { return fmin(fmin(v.x, v.z), v.w); }
+
+inline float v_max3(const float& v1, const float& v2, const float& v3) { return fmax(fmax(v1, v2), v3); }
+inline float v_max3(const vec3& v) { return fmax(fmax(v.x, v.y), v.w); }
 
 //-------------------------------------------------------------------------------------------------
 

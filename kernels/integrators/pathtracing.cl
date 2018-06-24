@@ -70,9 +70,12 @@ float3 calcDirectLight(
 	Ray shadowRay;
 	shadowRay.origin = ray->origin;
 
+	const float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+
 #ifdef __SPHERE__
 	if (light.t & SPHERE) {
-		const float3 randPointOnLight = light.pos + randomSphereDirection(seed0, seed1) * light.joker.x;
+		
+		const float3 randPointOnLight = light.pos + uniformSphere(xi) * light.joker.x;
 
 		*wi = randPointOnLight - shadowRay.origin;
 		float d2 = dot(*wi, *wi);
@@ -107,9 +110,9 @@ float3 calcDirectLight(
 		const float* verts = &light.joker;
 
 		const float3 randPointOnLight = (float3)(
-			mix(verts[0], verts[6], get_random(seed0, seed1)),
+			mix(verts[0], verts[6], xi.x),
 			verts[1],
-			mix(verts[2], verts[5], get_random(seed0, seed1))
+			mix(verts[2], verts[5], xi.y)
 		);
 
 		*wi = randPointOnLight - shadowRay.origin;
@@ -199,7 +202,7 @@ float4 radiance(
 			}
 			/*-------------------- DIFFUSE --------------------*/
 			else if (mat.t & DIFF) {
-				if(!sampleLambert(ray, seed0, seed1))break;
+				LambertBSDF(ray, seed0, seed1);
 				mask *= mat.color;
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
@@ -274,7 +277,7 @@ float4 radiance(
 				}
 				/* diffuse */
 				else {
-					if(!sampleLambert(ray, seed0, seed1)) break;
+					LambertBSDF(ray, seed0, seed1);
 					mask *= mat.color;
 
 					++DIFF_BOUNCES;
@@ -312,15 +315,16 @@ float4 radiance(
 						break;
 					}
 
+					float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
 					ray->origin = m_sample.p;
-					ray->dir = randomSphereDirection(seed0, seed1);
+					ray->dir = uniformSphere(xi);
 
 					if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;
 
 					//russian roulette
 					float roulettePdf = fmax3(mask);
 					if (roulettePdf < 0.1f) {
-						if (get_random(seed0, seed1) < roulettePdf)
+						if (xi.x < roulettePdf)
 							mask = native_divide(mask, roulettePdf);
 						else
 							break;
@@ -383,7 +387,7 @@ float4 radiance(
 #if 0
 						hg_sample_fast(&ray->dir, 0.8f, seed0, seed1);
 #else
-						ray->dir = randomSphereDirection(seed0, seed1);
+						ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
 #endif
 
 						if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;

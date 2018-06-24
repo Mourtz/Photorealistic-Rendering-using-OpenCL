@@ -47,39 +47,6 @@ float conductorReflectance(float eta, float k, float cosThetaI){
 	return 0.5f*(Rs + Rs * Rp);
 }
 
-float3 randomSphereDirection(uint* seed0, uint* seed1){
-	float2 r = (float2)(get_random(seed0, seed1), get_random(seed0, seed1)) * TWO_PI;
-	return (float3)(native_sin(r.x) * (float2)(native_sin(r.y), native_cos(r.y)), native_cos(r.x));
-}
-
-float3 randomDirectionInHemisphere(const float3 n, uint* seed0, uint* seed1){
-	float3 dr = randomSphereDirection(seed0, seed1);
-	return dot(dr, n) * dr;
-}
-
-float3 uniformSphere(const float2 xi){
-	float phi = xi.x*TWO_PI;
-	float z = xi.y*2.0f - 1.0f;
-	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
-
-	return (float3)(
-		native_cos(phi)*r,
-		native_sin(phi)*r,
-		z
-	);
-}
-
-float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
-	float phi = xi.x*TWO_PI;
-	float z = xi.y*(1.0f - cosThetaMax) + cosThetaMax;
-	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
-	return (float3)(
-		native_cos(phi)*r,
-		native_sin(phi)*r,
-		z
-	);
-}
-
 float f_schlick_f32(float v_dot_h, float f0) {
 	return f0 + (1.0f - f0) * pown(1.0f - v_dot_h, 5);
 }
@@ -170,27 +137,11 @@ bool sampleGGX(Ray* ray, float3* res, const Material* mat, const uint* seed0, co
 
 /*---------------------------------- DIFFUSE ----------------------------------*/
 
-float3 cosineHemisphere(const float2* xi){ 
-    float phi = xi->x*TWO_PI;
-    float r = native_sqrt(xi->y);
-
-    return (float3)(
-            native_cos(phi)*r,
-            native_sin(phi)*r,
-            native_sqrt(fmax(1.0f - xi->y, 0.0f))
-    );
-}
-
-bool sampleLambert(Ray* ray, uint* seed0, uint* seed1){ 
-	float3 wi = toLocal(&ray->tf, -ray->dir);
-	if(wi.z <= 0) 
-		return false;
-
+void LambertBSDF(Ray* ray, uint* seed0, uint* seed1){ 
 	float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
 	ray->origin = ray->pos + ray->normal * EPS;
 	ray->dir = toGlobal(&ray->tf, cosineHemisphere(&xi));
-
-	return true;
+	//*pdf = cosineHemispherePdf(ray->dir);
 }
 
 /*

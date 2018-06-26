@@ -3,6 +3,74 @@
 
 union prng_r { float f; uint ui; };
 
+float get_random(uint *seed0, uint *seed1) {
+
+	/* hash the seeds */
+	*seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);
+	*seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
+
+	uint ires = ((*seed0) << 16) + (*seed1);
+
+	union prng_r res;
+
+	res.ui = (ires & 0x007fffff) | 0x40000000;
+	return (res.f - 2.0f) * 0.5f;
+}
+
+// 2ui -> 2f32
+#define hash_2ui_2f32(seed0, seed1) (float2)(get_random(seed0, seed1), get_random(seed0, seed1))
+
+//---------------------------------- SIN HASH ----------------------------------
+
+// 1f32 -> 1f32
+float hash_1f32_1f32(float seed) {
+	float fl;
+#if 1
+	return fract(sin(seed)*43758.5453123f, &fl);
+#else
+	float res = fract(seed*43758.5453123f, &fl);
+	return fract(dot(res, res*(fl*213.321f)), &fl);
+#endif
+}
+// 1f32 -> 2f32
+float2 hash_1f32_2f32(float seed) {
+#if 1
+	float2 fl;
+	return fract(sin(seed)*(float2)(43758.5453123f,22578.1459123f), &fl);
+#else
+	float n = hash_1f32_1f32(seed);
+	return (float2)(n, hash_1f32_1f32(n+seed));
+#endif
+}
+// 1f32 -> 3f32
+float3 hash_1f32_3f32(float seed){
+#if 1
+	float3 fl;
+	return fract(sin(seed)*(float3)(43758.5453123f,22578.1459123f,19642.3490423f), &fl);
+#else
+	float n0 = hash_1f32_1f32(seed);
+	float n1 = hash_1f32_1f32(seed+n0);
+	return (float3)(n0, n1, hash_1f32_1f32(seed+n0+n1));
+#endif
+}
+
+//---------------------------- HAMMERSLEY ----------------------------
+
+/* https://learnopengl.com/PBR/IBL/Specular-IBL */
+float RadicalInverse_VdC(uint bits){
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	return (float)(bits) * 2.3283064365386963e-10f; // / 0x100000000
+}
+float2 Hammersley(uint i, uint N){
+	return (float2)((float)(i) / (float)(N), RadicalInverse_VdC(i));
+}
+
+//--------------------------------------------------------------------
+
 uint BJXorShift(uint x){
 	x += x << 10u;
 	x ^= x >> 6u;
@@ -30,38 +98,5 @@ uint WangHash(uint x){
 
 	return x;
 }
-
-float get_random(uint *seed0, uint *seed1) {
-
-	/* hash the seeds */
-	*seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);
-	*seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
-
-	uint ires = ((*seed0) << 16) + (*seed1);
-
-	union prng_r res;
-
-	res.ui = (ires & 0x007fffff) | 0x40000000;
-	return (res.f - 2.0f) * 0.5f;
-}
-
-/* https://learnopengl.com/PBR/IBL/Specular-IBL */
-float RadicalInverse_VdC(uint bits){
-	bits = (bits << 16u) | (bits >> 16u);
-	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-	return (float)(bits) * 2.3283064365386963e-10f; // / 0x100000000
-}
-float2 Hammersley(uint i, uint N){
-	return (float2)((float)(i) / (float)(N), RadicalInverse_VdC(i));
-}
-
-#ifdef SIN_HASH
-#define hash(seed)	fract(sin(seed)*43758.5453123f)
-#define hash2(seed) fract(sin(seed)*(float2)(43758.5453123f,22578.1459123f))
-#define hash3(seed)	fract(sin(seed)*(float3)(43758.5453123f,22578.1459123f,19642.3490423f))
-#endif
 
 #endif

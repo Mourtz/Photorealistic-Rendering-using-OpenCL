@@ -38,14 +38,14 @@ const int TEX_4		= 1 << 3;
 
 struct Material
 {
-	ALIGN(16)vec3 color;
+	ALIGN(16)vec4 color;
 	float roughness;
 	int t;
 	int tex;
 	bool b;
 
-	Material() : color(vec3(1.0f)), roughness(0.0f), t(DIFF), tex(TEX_NULL), b(true) {}
-	Material(vec3 _color, vec3 _emission, float _roughness, int _t, int _tex, bool _b) : color(_color), roughness(_roughness), t(_t), tex(_tex), b(_b) {}
+	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)), roughness(0.0f), t(DIFF), tex(TEX_NULL), b(true) {}
+	Material(vec4 _color, float _roughness, int _t, int _tex, bool _b) : color(_color), roughness(_roughness), t(_t), tex(_tex), b(_b) {}
 };
 
 const Material glass = Material();

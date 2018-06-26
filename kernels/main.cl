@@ -32,9 +32,6 @@ __kernel void render_kernel(
 
 	/* accumulation buffer */
 	__global float4* accumbuffer,
-
-	/* Wang Hashed framenumber */
-	const uint hashedframenumber,
 	
 	/* new frame */
 	__write_only image2d_t output_tex,
@@ -48,7 +45,11 @@ __kernel void render_kernel(
 	__global const float4* normals,
 	__constant Material* mat,
 
-	__read_only image2d_t env_map
+	/* enviroment map */
+	__read_only image2d_t env_map,
+
+	/* noise texture */
+	__read_only image2d_t noise_tex
 ) {
 	int work_item_id = get_global_id(0);			/* the unique global id of the work item for the current pixel */
 	/* xy-coordinate of the pixel */

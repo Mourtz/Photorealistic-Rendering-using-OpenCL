@@ -3,8 +3,6 @@
 
 #FILE:prng/prng.cl
 
-/* fractional part */
-#define fract(x) x-floor(x)
 /* max component */
 #define fmax2(v) fmax(v.x, v.y)
 #define fmax3(v) fmax(fmax(v.x, v.y), v.z)

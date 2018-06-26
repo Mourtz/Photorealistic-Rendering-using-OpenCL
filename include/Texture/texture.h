@@ -11,17 +11,27 @@
 #include <map>
 #include <Math/linear_algebra.h>
 
+template <typename T>
 struct Texture
 {
 	int width, height, nrComponents;
-	float* data;
+	T* data;
 };
 
-Texture* loadHDR(const char* filepath) {
-	Texture* res = new Texture();
+Texture<unsigned char>* loadPNG(const char* filepath) {
+	Texture<unsigned char>* res = new Texture<unsigned char>();
 
 	//stbi_set_flip_vertically_on_load(true);
+	res->data = stbi_load(filepath, &res->width, &res->height, &res->nrComponents, 0);
+	cout << "Successfully loaded the given PNG image(" << res->width << "x" << res->height << "x" << res->nrComponents << ")" << std::endl;
 
+	return res;
+}
+
+Texture<float>* loadHDR(const char* filepath) {
+	Texture<float>* res = new Texture<float>();
+
+	//stbi_set_flip_vertically_on_load(true);
 	res->data = stbi_loadf(filepath, &res->width, &res->height, &res->nrComponents, 0);
 	cout << "Successfully loaded the given HDR image(" << res->width << "x" << res->height << "x" << res->nrComponents << ")" << std::endl;
 

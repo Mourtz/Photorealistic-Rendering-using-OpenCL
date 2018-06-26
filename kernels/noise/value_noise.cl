@@ -1,13 +1,13 @@
 #ifndef __VALUE_NOISE__
 #define __VALUE_NOISE__
 
-#define value_hash(n) fract(sin(n) * 1e4f)
+#define value_hash hash_1f32_1f32
 
 float value_noise(const float3 x){ 
 	const float3 step = (float3)(110.0f, 241.0f, 171.0f);
 
-	float3 i = floor(x);
-	float3 f = fract(x);
+	float3 i;
+	float3 f = fract(x,&i);
 
 	// For performance, compute the base input to a 1D value_hash from the integer part of the argument and the 
 	// incremental change to the 1D based on the 3D -> 1D wrapping
@@ -38,5 +38,7 @@ float value_fbm(
 	}
 	return v;
 }
+
+#undef value_hash
 
 #endif

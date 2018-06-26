@@ -24,8 +24,7 @@ unsigned char encoder(0);
 const GLfloat quad_vertices[] = { -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0 };
 
 // display texture
-GLuint tex0;
-GLuint tex1;
+GLuint tex0, tex1, tex2;
 
 // OpenGL vertex buffer object
 GLuint vbo;
@@ -82,7 +81,7 @@ bool initGL(){
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
 
-	// generate tex0
+	// radiance
 	glGenTextures(1, &tex0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex0);
@@ -92,18 +91,33 @@ bool initGL(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+	// enviroment map
 	glGenTextures(1, &tex1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, tex1);
 	if (!env_map_filepath.empty()) {
-		Texture* cubemap = loadHDR(env_map_filepath.c_str());
+		Texture<float>* cubemap = loadHDR(env_map_filepath.c_str());
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, cubemap->width, cubemap->height, 0, GL_RGB, GL_FLOAT, &cubemap->data[0]);
 		stbi_image_free(cubemap->data);
 		delete cubemap;
-
 	} else {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 1, 1, 0, GL_RGB, GL_FLOAT, NULL);
 	}
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	// noise texture
+	glGenTextures(1, &tex2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, tex2);
+
+	Texture<unsigned char>* noise_tex = loadPNG("../resources/textures/rgb_noise1024.png");
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, noise_tex->width, noise_tex->height, 0, GL_RGB, GL_UNSIGNED_BYTE, &noise_tex->data[0]);
+	stbi_image_free(noise_tex->data);
+	delete noise_tex;
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

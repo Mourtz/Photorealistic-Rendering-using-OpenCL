@@ -60,6 +60,7 @@ clw::Buffer cl_camera;
 clw::Buffer cl_accumbuffer;
 clw::ImageGL cl_screen;
 clw::ImageGL cl_env_map;
+clw::ImageGL cl_noise_tex;
 vector<clw::Memory> cl_screens;
 
 cl_uint BVH_NUM_NODES(0);
@@ -341,18 +342,18 @@ void initCLKernel(){
 	kernel.setArg(6, rand());
 	kernel.setArg(7, rand());
 	kernel.setArg(8, cl_accumbuffer);
-	kernel.setArg(9, WangHash(framenumber));
-	kernel.setArg(10, cl_screen);
+	kernel.setArg(9, cl_screen);
 
-	kernel.setArg(11, BVH_NUM_NODES);
-	kernel.setArg(12, mBufBVH);
-	kernel.setArg(13, mBufFacesV);
-	kernel.setArg(14, mBufFacesN);
-	kernel.setArg(15, mBufVertices);
-	kernel.setArg(16, mBufNormals);
-	kernel.setArg(17, mBufMaterial);
+	kernel.setArg(10, BVH_NUM_NODES);
+	kernel.setArg(11, mBufBVH);
+	kernel.setArg(12, mBufFacesV);
+	kernel.setArg(13, mBufFacesN);
+	kernel.setArg(14, mBufVertices);
+	kernel.setArg(15, mBufNormals);
+	kernel.setArg(16, mBufMaterial);
 
-	kernel.setArg(18, cl_env_map);
+	kernel.setArg(17, cl_env_map);
+	kernel.setArg(18, cl_noise_tex);
 }
 
 //---------------------------------------------------------------------------------------
@@ -419,7 +420,6 @@ void render(){
 	kernel.setArg(5, cl_camera);
 	kernel.setArg(6, rand());
 	kernel.setArg(7, rand());
-	kernel.setArg(9, WangHash(framenumber));
 
 	runKernel();
 
@@ -542,6 +542,12 @@ int main(int argc, char** argv){
 #endif
 	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
 
+	// noise texture
+	cl_noise_tex = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex2, &err);
+	cl_screens.push_back(cl_noise_tex);
+	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
+
+	// radiance
 	cl_screen = clw::ImageGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex0, &err);
 	cl_screens.push_back(cl_screen);
 	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;

@@ -77,7 +77,8 @@ struct host_scene {
 { \
 	/* color */	\
 	if (_doc.HasMember("color") && _doc["color"].IsArray()) { \
-		for (int p = 0; p < 3; p++) { \
+		for (int p = 0; p < _doc["color"].GetArray().Size(); p++) { \
+			if(p == 4) break; \
 			_mat.color[p] = _doc["color"][p].GetFloat(); \
 		} \
 	} \

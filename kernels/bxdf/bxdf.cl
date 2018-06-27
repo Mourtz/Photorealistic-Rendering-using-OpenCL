@@ -1,6 +1,8 @@
 #ifndef __BXDF__
 #define __BXDF__
 
+#FILE:bxdf/microfacet/ggx.cl
+
 #define reflect(dir, n) (dir - 2.0f * dot(n, dir) * n)
 
 /* Schlick's approximation of Fresnel equation */
@@ -81,56 +83,34 @@ float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float a
 
 /*---------------------------------- GGX ----------------------------------*/
 
-float3 importance_sample_ggx(float2 random, const TangentFrame* tf, float alpha2) {
-	float phi = TWO_PI * random.x;
-	float cos_theta = native_sqrt((1.0f - random.y) / (1.0f + (alpha2 - 1.0f) * random.y));
-	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
+bool RoughConductor(
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){ 
+	float3 wi = toLocal(&ray->tf, -ray->dir);
 
-	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
+	float alpha = fmin(mat->roughness, 1e-3f);
 
-	return toGlobal(tf, h);
-}
+	float2 xi = hash_2ui_2f32(seed0, seed1);
+	float3 m  = GGX_sample(alpha, xi);
 
-float g_smith_joint_lambda(float x_dot_n, float alpha2){
-	float a = native_recip(x_dot_n * x_dot_n) - 1.0f;
-	return (0.5f * native_sqrt(1.0f + alpha2 * a) - 0.5f);
-}
-
-float g_smith_joint(float l_dot_n, float v_dot_n, float alpha2) {
-	float lambda_l = g_smith_joint_lambda(l_dot_n, alpha2);
-	float lambda_v = g_smith_joint_lambda(v_dot_n, alpha2);
-	return native_recip(1.0f + lambda_l + lambda_v);
-}
-
-bool sampleGGX(Ray* ray, float3* res, const Material* mat, const uint* seed0, const uint* seed1) {
-
-	float roughness = fmax(mat->roughness, 1e-3f);
-
-	float alpha2 = roughness * roughness;
-	float3 hlf = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), &ray->tf, alpha2);
-	float3 new_dir = reflect(ray->dir, hlf);
-
-	if (dot(ray->normal, new_dir) < EPS) {
+	float wiDotM = dot(wi, m);
+	float3 wo = 2.0f*wiDotM*m - wi;
+	if (wiDotM <= 0.0f || wo.z <= 0.0f)
 		return false;
-	}
-	else {
-		float3 view = -ray->dir;
-		float v_dot_n = clamp(dot(view, ray->normal), 0.0f, 1.0f);
-		float l_dot_n = clamp(dot(new_dir, ray->normal), 0.0f, 1.0f);
-		float v_dot_h = clamp(dot(view, hlf), 0.0f, 1.0f);
-		float h_dot_n = clamp(dot(hlf, ray->normal), 0.0f, 1.0f);
+	float G = GGX_G(alpha, wi, wo, m);
+	float D = GGX_D(alpha, m);
+	float mPdf = GGX_pdf(alpha, m);
+	float pdf = mPdf*0.25f/wiDotM;
+	float weight = wiDotM*G*D/(wi.z*mPdf);
+	// Aluminium 
+	float F = conductorReflectance(1.0972f, 6.7942f, wiDotM);
 
-		// Masking-shadowing
-		float g = g_smith_joint(l_dot_n, v_dot_n, alpha2);
-
-		float3 f = f_schlick(v_dot_h, mat->color);
-
-		float3 weight = f * clamp(g * v_dot_h / (h_dot_n * v_dot_n), 0.0f, 1.0f);
-		*res = mat->color*weight;
-
-		ray->origin = ray->pos + ray->normal * EPS;
-		ray->dir = new_dir;
-	}
+	res->pdf = pdf;
+	res->weight = F*weight;
+	ray->origin = ray->pos + ray->normal * EPS;
+	ray->dir = toGlobal(&ray->tf, wo);
 
 	return true;
 }

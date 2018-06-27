@@ -56,6 +56,22 @@ float3 hash_1f32_3f32(float seed){
 
 //---------------------------- HAMMERSLEY ----------------------------
 
+float VanDerCorpus(uint n, uint base){
+    float invBase = 1.0f / (float)(base);
+    float denom   = 1.0f;
+    float result  = 0.0f;
+
+    for(uint i = 0; i < 32; ++i){
+        if(n > 0){
+            denom   = fmod((float)(n), 2.0f);
+            result += denom * invBase;
+            invBase = invBase * 0.5f;
+            n       = (uint)((float)(n) * 0.5f);
+        }
+    }
+
+    return result;
+}
 /* https://learnopengl.com/PBR/IBL/Specular-IBL */
 float RadicalInverse_VdC(uint bits){
 	bits = (bits << 16u) | (bits >> 16u);

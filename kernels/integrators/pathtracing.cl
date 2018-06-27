@@ -3,57 +3,6 @@
 
 /*--------------------------- LIGHT ---------------------------*/
 
-#if defined(VOLUME_CAUSTICS)
-
-float3 caustics(
-	__constant Mesh* meshes,
-	const Ray* ray,
-	const float3* pos,
-	const Scene* scene,
-	const uint* light_index,
-	const uint* mesh_count,
-	float3* wi,
-	uint* seed0, uint* seed1,
-	const int c_mesh_id
-
-) {
-	const Mesh light = meshes[*light_index];
-
-	Ray shadowRay;
-	shadowRay.origin = *pos;
-
-	if (light.t & SPHERE) {
-
-	}
-	//------------------------------
-	else if (light.t & QUAD) {
-
-		const float* verts = &light.joker;
-
-		const float3 randPointOnLight = (float3)(
-			mix(verts[0], verts[6], get_random(seed0, seed1)),
-			verts[1],
-			mix(verts[2], verts[5], get_random(seed0, seed1))
-		);
-
-		*wi = randPointOnLight - *pos;
-		shadowRay.dir = fast_normalize(*wi);
-		shadowRay.t = distance(randPointOnLight, shadowRay.origin);
-		if (shadow_with_caustics(meshes, &shadowRay, mesh_count, scene, seed0, seed1)) {
-			float r2 = fast_distance(light.joker.s012, light.joker.s345) * fast_distance(light.joker.s012, light.joker.s678);
-			float3 d = randPointOnLight - shadowRay.origin;
-			float d2 = dot(d, d);
-			float weight = r2 / d2;
-			return light.mat.color * clamp(weight, 0.0f, 1.0f) * 0.5f;
-		}
-	}
-
-	return F3_ZERO;
-}
-#else
-#define caustics calcDirectLight
-#endif
-
 float3 calcDirectLight(
 	__constant Mesh* meshes,
 	const Ray* ray,
@@ -92,7 +41,7 @@ float3 calcDirectLight(
 		if (shadow(meshes, &shadowRay, mesh_count, scene)) {
 			float r2 = light.joker.x * light.joker.x;
 
-			float cos_a_max = sqrt(1.0f - clamp(r2 / d2, 0.0f, 1.0f));
+			float cos_a_max = native_sqrt(1.0f - clamp(r2 / d2, 0.0f, 1.0f));
 			float weight = 2.0f * (1.0f - cos_a_max);
 			return light.mat.color * weight;
 		}
@@ -160,6 +109,9 @@ float4 radiance(
 
 	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
 	float3 mask = (float3)(1.0f);
+	float brdfPdf = 1.0f;
+
+	SurfaceScatterEvent surfaceEvent;
 
 	bool bounceIsSpecular = true;
 
@@ -209,11 +161,10 @@ float4 radiance(
 			}
 			/*-------------------- GLOSSY/SPECULAR --------------------*/
 			else if (mat.t & GLOSSY) {
-				float3 res;
-				if (!sampleGGX(ray, &res, &mat, seed0, seed1))
+				if (!RoughConductor(ray, &surfaceEvent, &mat, seed0, seed1))
 					break;
 
-				mask *= res;
+				mask *= mat.color*surfaceEvent.weight;
 
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;
@@ -434,7 +385,7 @@ float4 radiance(
 
 				if (fast_distance(ray->origin, meshes[index].pos) >= INF) continue;
 
-				float3 dLight = caustics(meshes, ray, scene, &index, mesh_count, &vwi, seed0, seed1, mesh_id);
+				float3 dLight = calcDirectLight(meshes, ray, scene, &index, mesh_count, &vwi, seed0, seed1, mesh_id);
 				// @ToFix - im 100% sure this is wrong
 				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			}

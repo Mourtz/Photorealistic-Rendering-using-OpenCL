@@ -1,7 +1,7 @@
 #ifndef __BXDF__
 #define __BXDF__
 
-#FILE:bxdf/microfacet/ggx.cl
+#FILE:bxdf/microfacet.cl
 
 #define reflect(dir, n) (dir - 2.0f * dot(n, dir) * n)
 
@@ -49,6 +49,16 @@ float conductorReflectance(float eta, float k, float cosThetaI){
 	return 0.5f*(Rs + Rs * Rp);
 }
 
+float conductorReflectanceApprox(float eta, float k, float cosThetaI){
+    float cosThetaISq = cosThetaI*cosThetaI;
+    float ekSq = eta*eta* + k*k;
+    float cosThetaEta2 = cosThetaI*2.0f*eta;
+
+    float Rp = (ekSq*cosThetaISq - cosThetaEta2 + 1.0f)/(ekSq*cosThetaISq + cosThetaEta2 + 1.0f);
+    float Rs = (ekSq - cosThetaEta2 + cosThetaISq)/(ekSq + cosThetaEta2 + cosThetaISq);
+    return (Rs + Rp)*0.5f;
+}
+
 float f_schlick_f32(float v_dot_h, float f0) {
 	return f0 + (1.0f - f0) * pown(1.0f - v_dot_h, 5);
 }
@@ -84,24 +94,25 @@ float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float a
 /*---------------------------------- GGX ----------------------------------*/
 
 bool RoughConductor(
+	const int dist,
 	Ray* ray, SurfaceScatterEvent* res,
 	const Material* mat, 
 	uint* seed0, uint* seed1
 ){ 
 	float3 wi = toLocal(&ray->tf, -ray->dir);
 
-	float alpha = fmin(mat->roughness, 1e-3f);
+	float alpha = roughnessToAlpha(dist, mat->roughness);
 
 	float2 xi = hash_2ui_2f32(seed0, seed1);
-	float3 m  = GGX_sample(alpha, xi);
+	float3 m  = Microfacet_sample(dist, alpha, xi);
 
 	float wiDotM = dot(wi, m);
 	float3 wo = 2.0f*wiDotM*m - wi;
 	if (wiDotM <= 0.0f || wo.z <= 0.0f)
 		return false;
-	float G = GGX_G(alpha, wi, wo, m);
-	float D = GGX_D(alpha, m);
-	float mPdf = GGX_pdf(alpha, m);
+	float G = Microfacet_G(dist, alpha, wi, wo, m);
+	float D = Microfacet_D(dist, alpha, m);
+	float mPdf = Microfacet_pdf(dist, alpha, m);
 	float pdf = mPdf*0.25f/wiDotM;
 	float weight = wiDotM*G*D/(wi.z*mPdf);
 	// Aluminium 

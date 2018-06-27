@@ -159,9 +159,9 @@ float4 radiance(
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
 			}
-			/*-------------------- GLOSSY/SPECULAR --------------------*/
+			/*-------------------- GLOSSY/SPECULAR (GGX|BECKMANN|PHONG) --------------------*/
 			else if (mat.t & GLOSSY) {
-				if (!RoughConductor(ray, &surfaceEvent, &mat, seed0, seed1))
+				if (!RoughConductor(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
 					break;
 
 				mask *= mat.color*surfaceEvent.weight;

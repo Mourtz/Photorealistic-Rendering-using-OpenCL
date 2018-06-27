@@ -100,7 +100,6 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 #define ABS_REFR2	#ABS_REFR2#
 
 typedef struct { 
-	float3 wi, wo;
 	float pdf;
 	float weight;
 } SurfaceScatterEvent;

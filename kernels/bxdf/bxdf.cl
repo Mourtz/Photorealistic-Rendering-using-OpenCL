@@ -118,6 +118,99 @@ void LambertianFiberBCSDF(Ray* ray, uint* seed0, uint* seed1){
 	ray->dir = toGlobal(&ray->tf, (float3)(d.z*nx + d.x*nz, d.y, d.z*nz - d.x*nx));
 }
 
+/*---------------------------------- DIELECTRIC ----------------------------------*/
+
+bool DielectricBSDF(
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){
+	float3 wi = toLocal(&ray->tf, -ray->dir);
+	float3 wo;
+
+	const float ior = 1.5f;
+	const float eta = wi.z < 0.0f ? ior : 1.0f/ior;
+
+	float cosThetaT = 0.0f;
+    float F = dielectricReflectance(eta, fabs(wi.z), &cosThetaT);
+
+	if(get_random(seed0, seed1) < F){ 
+		wo = (float3)(-wi.x, -wi.y, wi.z);
+		res->pdf = F;
+	} else { 
+		if(F == 1.0f)
+			return false;
+
+		wo = (float3)(-wi.x*eta, -wi.y*eta, -copysign(cosThetaT, wi.z));
+		res->pdf = 1.0f - F;
+	}
+	res->weight = 1.0f;
+
+	ray->dir = toGlobal(&ray->tf, wo);
+	ray->origin = ray->pos + ray->dir * EPS;
+
+	return true;
+}
+
+bool RoughDielectricBSDF(
+	const int dist,
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){
+	const float3 wi = toLocal(&ray->tf, -ray->dir);
+	const float wiDotN = wi.z;
+
+	float3 wo;
+
+	const float ior = 1.5f;
+	const float eta = wiDotN < 0.0f ? ior : 1.0f/ior;
+
+	float sampleRoughness = (1.2f - 0.2f*native_sqrt(fabs(wiDotN)))*mat->roughness;
+    float alpha = roughnessToAlpha(dist, mat->roughness);
+    float sampleAlpha = roughnessToAlpha(dist, sampleRoughness);
+
+	float3 m = Microfacet_sample(dist, sampleAlpha, hash_2ui_2f32(seed0, seed1));
+	float pm = Microfacet_pdf(dist, sampleAlpha, m);
+
+	if (pm < 1e-10f)
+		return false;
+
+	float wiDotM = dot(wi, m);
+    float cosThetaT = 0.0f;
+	float F = dielectricReflectance(1.0f/ior, wiDotM, &cosThetaT);
+	float etaM = wiDotM < 0.0f ? ior : 1.0f/ior;
+
+	bool reflect = get_random(seed0, seed1) < F;
+
+	if (reflect)
+		wo = 2.0f*wiDotM*m - wi;
+	else
+		wo = (etaM*wiDotM - sgnE(wiDotM)*cosThetaT)*m - etaM*wi;
+
+	float woDotN = wo.z;
+
+	bool reflected = wiDotN*woDotN > 0.0f;
+	if (reflected != reflect)
+		return false;
+
+	float woDotM = dot(wo, m);
+	float G = Microfacet_G(dist, alpha, wi, wo, m);
+	float D = Microfacet_D(dist, alpha, m);
+	
+	res->weight = fabs(wiDotM)*G*D/(fabs(wiDotN)*pm);
+	
+	if (reflect)
+        res->pdf = (F)*pm*0.25f/fabs(wiDotM);
+    else
+        res->pdf = (1.0f - F)*pm*fabs(woDotM)/pow(eta*wiDotM + woDotM, 2.0f);
+	
+	ray->dir = toGlobal(&ray->tf, wo);
+	ray->origin = ray->pos + ray->dir * EPS;
+
+	return true;
+}
+
 /*---------------------------------- SPECULAR ----------------------------------*/
 
 bool RoughConductor(

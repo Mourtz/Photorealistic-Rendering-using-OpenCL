@@ -169,50 +169,13 @@ float4 radiance(
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;
 			}
-			/*-------------------- REFRACTIVE --------------------*/
+			/*-------------------- REFRACTIVE (GGX|BECKMANN|PHONG) --------------------*/
 			else if (mat.t & REFR) {
-				const float nc = 1.0f;
-				const float nt = 1.5f;
+				if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
+					break;
 
-				float3 wh = ray->normal;
+				mask *= mat.color*surfaceEvent.weight;
 
-				if (mat.roughness) {
-					wh = importance_sample_beckmann((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), &ray->tf, mat.roughness*mat.roughness);
-					//wh = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
-				}
-
-				const bool ABS1 = mat.t & ABS_REFR, ABS2 = mat.t & ABS_REFR2;
-
-				const float nnt = ray->backside ? nt / nc : nc / nt;
-				const float3 tdir = refract(ray->dir, wh, nnt);
-
-				const float Re = fresnel(ray->dir, wh, nc, nt, tdir);
-				/* reflect */
-				if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < Re) {
-					float3 newDir = reflect(ray->dir, wh);
-					//if (dot(newDir, ray->normal) < 0.0f) break;
-					ray->origin = ray->pos + ray->normal * EPS;
-					ray->dir = newDir;
-
-					++SPEC_BOUNCES;
-				}
-				/* refract */
-				else {
-					float3 newDir = fast_normalize(tdir);
-					//if (dot(newDir, ray->normal) >= 0.0f) break;
-					ray->origin = ray->pos - ray->normal * EPS;
-					ray->dir = newDir;
-
-					if (!ABS1) mask *= ((ABS2) ? 1.0f - mat.color : mat.color);
-
-					++SCATTERING_EVENTS;
-#ifdef ALPHA_TESTING
-					if (!DIFF_BOUNCES) acc.w = 1.0f - Re;
-#endif
-				}
-
-				/* absorption */
-				mask *= (ABS1 | ABS2) ? (ray->backside ? exp(-ray->t * ((ABS1) ? mat.color : 1.0f) * 10.0f) : 1.0f) : 1.0f;
 
 				bounceIsSpecular = true;
 			}

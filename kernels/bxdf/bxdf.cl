@@ -59,25 +59,32 @@ float conductorReflectanceApprox(float eta, float k, float cosThetaI){
     return (Rs + Rp)*0.5f;
 }
 
-float f_schlick_f32(float v_dot_h, float f0) {
-	return f0 + (1.0f - f0) * pown(1.0f - v_dot_h, 5);
+float dielectricReflectance(float eta, float cosThetaI, float *cosThetaT){
+    if (cosThetaI < 0.0f) {
+        eta = 1.0f/eta;
+        cosThetaI = -cosThetaI;
+    }
+    float sinThetaTSq = eta*eta*(1.0f - cosThetaI*cosThetaI);
+    if (sinThetaTSq > 1.0f) {
+        *cosThetaT = 0.0f;
+        return 1.0f;
+    }
+    *cosThetaT = native_sqrt(fmax(1.0f - sinThetaTSq, 0.0f));
+
+    float Rs = (eta*cosThetaI - *cosThetaT)/(eta*cosThetaI + *cosThetaT);
+    float Rp = (eta*(*cosThetaT) - cosThetaI)/(eta*(*cosThetaT) + cosThetaI);
+
+    return (Rs*Rs + Rp*Rp)*0.5f;
 }
 
-float3 f_schlick(float v_dot_h, float3 f0) {
-	return (float3)(
-		f_schlick_f32(v_dot_h, f0.x),
-		f_schlick_f32(v_dot_h, f0.y),
-		f_schlick_f32(v_dot_h, f0.z)
-	);
-}
+float3 importance_sample_ggx(float2 random, const TangentFrame* tf, float alpha2) {
+	float phi = TWO_PI * random.x;
+	float cos_theta = native_sqrt((1.0f - random.y) / (1.0f + (alpha2 - 1.0f) * random.y));
+	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
 
-/*---------------------------------- BECKMANN ----------------------------------*/
+	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
 
-float D_Beckmann(float3 normal, float3 wh, float alpha2) {
-	float cosTheta2 = dot(normal, wh);
-	cosTheta2 *= cosTheta2;
-
-	return exp(-(1.0f / cosTheta2 - 1.0f) / alpha2) * INV_PI / (alpha2 * cosTheta2 * cosTheta2);
+	return toGlobal(tf, h);
 }
 
 float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float alpha2) {
@@ -90,8 +97,28 @@ float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float a
 	return toGlobal(tf, h);
 }
 
+/*---------------------------------- DIFFUSE ----------------------------------*/
 
-/*---------------------------------- GGX ----------------------------------*/
+void LambertBSDF(Ray* ray, uint* seed0, uint* seed1){ 
+	float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+	ray->origin = ray->pos + ray->normal * EPS;
+	ray->dir = toGlobal(&ray->tf, cosineHemisphere(&xi));
+	//*pdf = cosineHemispherePdf(ray->dir);
+}
+
+void LambertianFiberBCSDF(Ray* ray, uint* seed0, uint* seed1){
+	float h = get_random(seed0, seed1)*2.0f - 1.0f;
+	float nx = h;
+    float nz = trigInverse(nx);
+
+	float2 xi = hash_2ui_2f32(seed0, seed1);
+	float3 d = cosineHemisphere(&xi);
+
+	ray->origin = ray->pos + ray->normal * EPS;
+	ray->dir = toGlobal(&ray->tf, (float3)(d.z*nx + d.x*nz, d.y, d.z*nz - d.x*nx));
+}
+
+/*---------------------------------- SPECULAR ----------------------------------*/
 
 bool RoughConductor(
 	const int dist,
@@ -100,12 +127,13 @@ bool RoughConductor(
 	uint* seed0, uint* seed1
 ){ 
 	float3 wi = toLocal(&ray->tf, -ray->dir);
+	
+	if(wi.z <= 0.0f)
+		return false;
 
 	float alpha = roughnessToAlpha(dist, mat->roughness);
 
-	float2 xi = hash_2ui_2f32(seed0, seed1);
-	float3 m  = Microfacet_sample(dist, alpha, xi);
-
+	float3 m = Microfacet_sample(dist, alpha, hash_2ui_2f32(seed0, seed1));
 	float wiDotM = dot(wi, m);
 	float3 wo = 2.0f*wiDotM*m - wi;
 	if (wiDotM <= 0.0f || wo.z <= 0.0f)
@@ -120,19 +148,11 @@ bool RoughConductor(
 
 	res->pdf = pdf;
 	res->weight = F*weight;
+
 	ray->origin = ray->pos + ray->normal * EPS;
 	ray->dir = toGlobal(&ray->tf, wo);
 
 	return true;
-}
-
-/*---------------------------------- DIFFUSE ----------------------------------*/
-
-void LambertBSDF(Ray* ray, uint* seed0, uint* seed1){ 
-	float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
-	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&ray->tf, cosineHemisphere(&xi));
-	//*pdf = cosineHemispherePdf(ray->dir);
 }
 
 /*

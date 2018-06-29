@@ -345,10 +345,11 @@ bool intersect_scene(
 #endif
 
 	if(ray->t < INF){ 
-		if (checkSide) {
-			ray->backside = dot(ray->normal, ray->dir) >= 0.0f;
-			ray->normal = ray->backside ? -ray->normal : ray->normal;
-		}
+		bool nTrans = meshes[*mesh_id].mat.t & ~REFR;
+
+		ray->backside = dot(ray->normal, ray->dir) >= 0.0f;
+		ray->normal = ray->backside && nTrans ? -ray->normal : ray->normal;
+
 		ray->tf = createTangentFrame(&ray->normal);
 		return true;
 	}

@@ -101,7 +101,7 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 
 typedef struct { 
 	float pdf;
-	float weight;
+	float3 weight;
 } SurfaceScatterEvent;
 
 typedef struct { 

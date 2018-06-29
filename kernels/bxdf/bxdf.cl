@@ -198,8 +198,14 @@ bool RoughDielectricBSDF(
 	float G = Microfacet_G(dist, alpha, wi, wo, m);
 	float D = Microfacet_D(dist, alpha, m);
 	
+	const bool ABS1 = mat->t & ABS_REFR, ABS2 = mat->t & ABS_REFR2;
+
 	res->weight = fabs(wiDotM)*G*D/(fabs(wiDotN)*pm);
-	
+	if(ABS1 | ABS2){
+		res->weight *= ABS2 ? mat->color : 1.0f; 
+		res->weight *= ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
+	}
+
 	if (reflect)
         res->pdf = (F)*pm*0.25f/fabs(wiDotM);
     else

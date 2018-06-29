@@ -174,9 +174,9 @@ float4 radiance(
 				if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
 					break;
 
-				mask *= mat.color*surfaceEvent.weight;
+				mask *= surfaceEvent.weight;
 
-
+				//++SPEC_BOUNCES;
 				bounceIsSpecular = true;
 			}
 			/*-------------------- COAT --------------------*/

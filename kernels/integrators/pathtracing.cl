@@ -129,7 +129,7 @@ float4 radiance(
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
 #endif
 
-	while (++bounce < MAX_BOUNCES) {
+	do {
 
 /*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
@@ -391,7 +391,7 @@ float4 radiance(
 		acc.w = 1.0f;
 #endif
 
-	}
+	} while(++bounce < MAX_BOUNCES);
 
 	return acc;
 }

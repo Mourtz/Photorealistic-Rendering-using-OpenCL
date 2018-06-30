@@ -64,7 +64,7 @@ struct host_scene {
 		for(cl_uint i = 0; i < object_count.s[7]; ++i){
 			if(cpu_meshes[i].mat.t & LIGHT){
 				cout << "-> Light Source (" << LIGHT_COUNT << ", " << i << ")" << std::endl;
-				LIGHT_COUNT++;
+				++LIGHT_COUNT;
 				LIGHT_INDICES.push_back(i);
 			}
 		}

@@ -3,6 +3,8 @@
 
 /*--------------------------- LIGHT ---------------------------*/
 
+#ifdef HAS_LIGHTS
+
 float3 calcDirectLight(
 	__constant Mesh* meshes,
 	const Ray* ray,
@@ -86,6 +88,8 @@ float3 calcDirectLight(
 
 	return F3_ZERO;
 }
+
+#endif
 
 float4 radiance(
 	__constant Mesh* meshes,
@@ -326,6 +330,7 @@ float4 radiance(
 				}
 			}
 
+#ifdef HAS_LIGHTS
 			if (!bounceIsSpecular) {
 				float3 wi;
 				for (uint i = 0; i < LIGHT_COUNT; ++i) {
@@ -337,11 +342,14 @@ float4 radiance(
 					acc.xyz += dLight * mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 				}
 			}
+#endif
+
 		}
 #ifdef GLOBAL_MEDIUM
 		else {
 			ray->origin = gm_sample.p;
 
+#ifdef HAS_LIGHTS
 			float3 vwi;
 			for (uint i = 0; i < LIGHT_COUNT; ++i) {
 				uint index = LIGHT_INDICES[i];
@@ -352,6 +360,7 @@ float4 radiance(
 				// @ToFix - im 100% sure this is wrong
 				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			}
+#endif
 
 			/* Henyey-Greenstein phase function */
 			PhaseSample p_sample;

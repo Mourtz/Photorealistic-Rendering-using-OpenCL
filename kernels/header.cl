@@ -56,6 +56,10 @@
 #define GLOBAL_FOG_ABS_ONLY		#GLOBAL_FOG_ABS_ONLY#
 #endif
 
+/* Light Sources */
+#HAS_LIGHTS#
+#ifdef HAS_LIGHTS
+
 /* total light sources */
 #define LIGHT_COUNT				#LIGHT_COUNT#
 #define INV_LIGHT_COUNT			#INV_LIGHT_COUNT#
@@ -63,6 +67,7 @@
 __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 /* max light bounces */
 #define LIGHT_BOUNCES			2
+#endif
 
 /* Seperate bounce controls for eye tracing */
 #define MAX_BOUNCES				#MAX_BOUNCES#

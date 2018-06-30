@@ -42,13 +42,12 @@ __Prtsc__ - Export
 - Materials
   - Lambertian BRDF
   - Burley BRDF
-  - Specular BRDF
-  - Specular BSDF
+  - Rough Conductor
   - Rough Dielectric + Absorption
   - Microfacet
     - GGX
     - Beckmann
-    - Blinn
+    - Phong
   - Specular Subsurface Scattering
 
 ## Possible Future work
@@ -61,7 +60,8 @@ __Prtsc__ - Export
 - Bi-Directional PT
 - MLT
 - Sheen BRDF
-- Blinn Microfacet BRDF
+- Blinn Phong Microfacet BRDF
+- Oren-Nayar BRDF
 - LBVH using spatial Morton codes
 
 ## How To Build

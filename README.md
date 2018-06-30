@@ -14,7 +14,7 @@ __H__ - Decrease Aperture Diameter\
 __T__ - Increase Focal Distance\
 __Y__ - Decrease Focal Distance\
 __Arrows__ - Yaw/Pitch\
-__Prtsc__ - Export to png format
+__Prtsc__ - Export
 ```
 -width    "{integer}: window's width"
 -height   "{integer}: window's height"
@@ -44,9 +44,11 @@ __Prtsc__ - Export to png format
   - Burley BRDF
   - Specular BRDF
   - Specular BSDF
-  - Rough Dielectric (Beckmann) + Absorption
-  - GGX Microfacet BRDF
-  - Beckmann Microfacet BRDF
+  - Rough Dielectric + Absorption
+  - Microfacet
+    - GGX
+    - Beckmann
+    - Blinn
   - Specular Subsurface Scattering
 
 ## Possible Future work

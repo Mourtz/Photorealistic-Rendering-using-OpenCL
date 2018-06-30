@@ -16,7 +16,7 @@ int window_width = 1280;
 // window height
 int window_height = 720;
 // enviroment map filepath
-string env_map_filepath = "";
+string env_map_filepath = "../resources/pillars_8k.hdr";
 // encoder
 unsigned char encoder(0);
 

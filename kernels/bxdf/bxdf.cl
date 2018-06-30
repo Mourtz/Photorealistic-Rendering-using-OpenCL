@@ -204,6 +204,8 @@ bool RoughDielectricBSDF(
 	if(ABS1 | ABS2){
 		res->weight *= ABS2 ? mat->color : 1.0f; 
 		res->weight *= ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
+	} else { 
+		res->weight *= mat->color;
 	}
 
 	if (reflect)

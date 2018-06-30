@@ -285,7 +285,6 @@ bool shadow(
 
 /* find the closest intersection in the scene */
 bool intersect_scene(
-	__constant Mesh* meshes, 
 	Ray* ray, 
 	int* mesh_id, 
 	const uint* mesh_count, 
@@ -309,10 +308,10 @@ bool intersect_scene(
 	for (uint i = 0; i < mesh_count[0]; ++i) {
 		float hit_dist = 0.0f;
 
-		if (intersect_sphere(ray, &hit_dist, &meshes[i])) {
+		if (intersect_sphere(ray, &hit_dist, &scene->meshes[i])) {
 			ray->t = hit_dist;
 			ray->pos = ray->origin + ray->dir * ray->t;
-			ray->normal = fast_normalize(ray->pos - meshes[i].pos);
+			ray->normal = fast_normalize(ray->pos - scene->meshes[i].pos);
 			*mesh_id = i;
 		}
 	}
@@ -321,9 +320,9 @@ bool intersect_scene(
 #ifdef __SDF__
 	/* if there are any sdfs in the scene raymarch them */
 	if (mesh_count[1]) {
-		if (intesect_sdf(meshes, ray, mesh_id, mesh_count)) {
+		if (intesect_sdf(scene->meshes, ray, mesh_id, mesh_count)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
-			ray->normal = calcNormal(&meshes[*mesh_id], ray->pos);
+			ray->normal = calcNormal(&scene->meshes[*mesh_id], ray->pos);
 		}
 	}
 #endif
@@ -331,7 +330,7 @@ bool intersect_scene(
 	uint fl = mesh_count[0] + mesh_count[1];
 #ifdef __BOX__
 	for (uint i = 0; i < mesh_count[2]; ++i) {
-		if (intersect_box(&meshes[fl], ray)) {
+		if (intersect_box(&scene->meshes[fl], ray)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			*mesh_id = fl;
 			checkSide = false;
@@ -342,7 +341,7 @@ bool intersect_scene(
 
 #ifdef __QUAD__
 	for (uint i = 0; i < mesh_count[3]; ++i) {
-		if(intersect_quad(&meshes[fl], ray)){
+		if(intersect_quad(&scene->meshes[fl], ray)){
 			*mesh_id = fl;
 			checkSide = false;
 		}
@@ -351,7 +350,7 @@ bool intersect_scene(
 #endif
 
 	if(ray->t < INF){ 
-		bool nTrans = meshes[*mesh_id].mat.t & ~REFR;
+		bool nTrans = scene->meshes[*mesh_id].mat.t & ~REFR;
 
 		ray->backside = dot(ray->normal, ray->dir) >= 0.0f;
 		ray->normal = ray->backside && nTrans ? -ray->normal : ray->normal;

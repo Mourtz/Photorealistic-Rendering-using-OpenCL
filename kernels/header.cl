@@ -164,6 +164,15 @@ typedef struct {
 	bool b;				// backface culling
 } Material;
 
+//------------- MESH -------------
+
+typedef struct {
+	Material mat;	// assigned material
+	float3 pos;		// position
+	float16 joker;	// generic data
+	int t;			// type
+} Mesh;
+
 //------------- BVH -------------
 
 typedef struct {
@@ -178,22 +187,15 @@ typedef struct {
 } light_t;
 
 typedef struct {
-	uint NUM_NODES;
-	__global const bvhNode* bvh;
-	__global const uint4* facesV;
-	__global const uint4* facesN;
-	__global const float4* vertices;
-	__global const float4* normals;
+	__constant Mesh* meshes;
+	const uint* mesh_count;
+	const uint NUM_NODES;
+	__constant bvhNode* bvh;
+	__constant uint4* facesV;
+	__constant uint4* facesN;
+	__constant float4* vertices;
+	__constant float4* normals;
 	__constant Material* mat;
 } Scene;
-
-//------------- MESH -------------
-
-typedef struct {
-	Material mat;	// assigned material
-	float3 pos;		// position
-	float16 joker;	// generic data
-	int t;			// type
-} Mesh;
 
 #endif

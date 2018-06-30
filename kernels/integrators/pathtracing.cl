@@ -9,7 +9,6 @@ float3 calcDirectLight(
 	const Ray* ray,
 	const Scene* scene,
 	const uint* light_index,
-	const uint* mesh_count,
 	float3* wi,
 	uint* seed0, uint* seed1,
 	const int c_mesh_id
@@ -39,7 +38,7 @@ float3 calcDirectLight(
 		}
 
 		shadowRay.t = len;
-		if (shadow(scene->meshes, &shadowRay, mesh_count, scene)) {
+		if (shadow(&shadowRay, scene)) {
 			float r2 = light.joker.x * light.joker.x;
 
 			float cos_a_max = native_sqrt(1.0f - clamp(r2 / d2, 0.0f, 1.0f));
@@ -77,7 +76,7 @@ float3 calcDirectLight(
 		}
 
 		shadowRay.t = len;
-		if (shadow(scene->meshes, &shadowRay, mesh_count, scene)) {
+		if (shadow(&shadowRay, scene)) {
 			float r2 = fast_distance(light.joker.s012, light.joker.s345) * fast_distance(light.joker.s012, light.joker.s678);
 			float weight = r2 / d2;
 			return light.mat.color * clamp(weight, 0.0f, 1.0f) * 0.5f;
@@ -98,7 +97,7 @@ float4 radiance(
 ){
 	int mesh_id;
 
-	if (!intersect_scene(ray, &mesh_id, scene->mesh_count, scene)) {
+	if (!intersect_scene(ray, &mesh_id, scene)) {
 #ifdef ALPHA_TESTING
 		return (float4)(0.0f);
 #else
@@ -336,7 +335,7 @@ float4 radiance(
 
 					if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
-					float3 dLight = calcDirectLight(ray, scene, &index, scene->mesh_count, &wi, seed0, seed1, mesh_id);
+					float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, mesh_id);
 					acc.xyz += dLight * mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 				}
 			}
@@ -354,7 +353,7 @@ float4 radiance(
 
 				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
-				float3 dLight = calcDirectLight(ray, scene, &index, scene->mesh_count, &vwi, seed0, seed1, mesh_id);
+				float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
 				// @ToFix - im 100% sure this is wrong
 				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			}
@@ -385,7 +384,7 @@ float4 radiance(
 				break;
 		}
 
-		if (!intersect_scene(ray, &mesh_id, scene->mesh_count, scene)) {
+		if (!intersect_scene(ray, &mesh_id, scene)) {
 			if (!bounceIsSpecular)
 				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
 

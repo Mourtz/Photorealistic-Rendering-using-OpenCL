@@ -227,9 +227,7 @@ bool shadow_with_caustics(
 
 /* shadow casting */
 bool shadow(
-	__constant Mesh* meshes,
 	const Ray* ray,
-	const uint* mesh_count,
 	const Scene* scene
 ){ 
 	const float maxDist = ray->t;
@@ -243,9 +241,9 @@ bool shadow(
 
 
 #ifdef __SPHERE__
-	for (uint i = 0; i < mesh_count[0]; ++i) {
+	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
 		float hit_dist = 0.0f;
-		if (intersect_sphere(ray, &hit_dist, &meshes[i])) {
+		if (intersect_sphere(ray, &hit_dist, &scene->meshes[i])) {
 			if (hit_dist < maxDist) return false;
 		}
 	}
@@ -253,25 +251,25 @@ bool shadow(
 
 #ifdef __SDF__
 	/* if there are any sdfs in the scene raymarch them */
-	if (mesh_count[1]) {
-		if (shadow_sdf(meshes, ray, mesh_count)) {
+	if (scene->mesh_count[1]) {
+		if (shadow_sdf(scene->meshes, ray, scene->mesh_count)) {
 			return false;
 		}
 	}
 #endif
 
-	uint fl = mesh_count[0] + mesh_count[1];
+	uint fl = scene->mesh_count[0] + scene->mesh_count[1];
 #ifdef __BOX__
-	for (uint i = 0; i < mesh_count[2]; ++i) {
-		if (intersect_box(&meshes[fl++], ray)) {
+	for (uint i = 0; i < scene->mesh_count[2]; ++i) {
+		if (intersect_box(&scene->meshes[fl++], ray)) {
 			if (ray->t < maxDist) return false;
 		}
 	}
 #endif
 
 #ifdef __QUAD__
-	for (uint i = 0; i < mesh_count[3]; ++i) {
-		if (intersect_quad(&meshes[fl++], ray)) {
+	for (uint i = 0; i < scene->mesh_count[3]; ++i) {
+		if (intersect_quad(&scene->meshes[fl++], ray)) {
 			if (ray->t < maxDist) return false;
 		}
 	}
@@ -287,7 +285,6 @@ bool shadow(
 bool intersect_scene(
 	Ray* ray, 
 	int* mesh_id, 
-	const uint* mesh_count, 
 	const Scene* scene
 ) {
 	ray->t = INF;
@@ -305,7 +302,7 @@ bool intersect_scene(
 #endif
 
 #ifdef __SPHERE__
-	for (uint i = 0; i < mesh_count[0]; ++i) {
+	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
 		float hit_dist = 0.0f;
 
 		if (intersect_sphere(ray, &hit_dist, &scene->meshes[i])) {
@@ -319,17 +316,17 @@ bool intersect_scene(
 
 #ifdef __SDF__
 	/* if there are any sdfs in the scene raymarch them */
-	if (mesh_count[1]) {
-		if (intesect_sdf(scene->meshes, ray, mesh_id, mesh_count)) {
+	if (scene->mesh_count[1]) {
+		if (intesect_sdf(scene->meshes, ray, mesh_id, scene->mesh_count)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			ray->normal = calcNormal(&scene->meshes[*mesh_id], ray->pos);
 		}
 	}
 #endif
 
-	uint fl = mesh_count[0] + mesh_count[1];
+	uint fl = scene->mesh_count[0] + scene->mesh_count[1];
 #ifdef __BOX__
-	for (uint i = 0; i < mesh_count[2]; ++i) {
+	for (uint i = 0; i < scene->mesh_count[2]; ++i) {
 		if (intersect_box(&scene->meshes[fl], ray)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			*mesh_id = fl;
@@ -340,7 +337,7 @@ bool intersect_scene(
 #endif
 
 #ifdef __QUAD__
-	for (uint i = 0; i < mesh_count[3]; ++i) {
+	for (uint i = 0; i < scene->mesh_count[3]; ++i) {
 		if(intersect_quad(&scene->meshes[fl], ray)){
 			*mesh_id = fl;
 			checkSide = false;

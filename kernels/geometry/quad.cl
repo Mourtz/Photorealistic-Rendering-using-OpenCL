@@ -2,7 +2,7 @@
 #define __QUAD__
 
 /* Quad intesection */
-bool intersect_quad(__constant Mesh* plane, Ray* ray) {
+bool intersect_quad(const Mesh* plane, Ray* ray) {
 
 	union
 	{

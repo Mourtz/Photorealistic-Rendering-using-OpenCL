@@ -10,7 +10,7 @@
 #FILE:geometry/bvh.cl
 
 /* Find the closest distance to a specific object */
-bool get_dist(float* dist, const Ray* sray, __constant Mesh* mesh, const Scene* scene, const bool isOBJ){
+bool get_dist(float* dist, const Ray* sray, const Mesh* mesh, const Scene* scene, const bool isOBJ){
 	Ray temp_ray = *sray;
 	temp_ray.t = INF;
 
@@ -49,7 +49,7 @@ bool get_dist(float* dist, const Ray* sray, __constant Mesh* mesh, const Scene* 
 #ifdef HAS_LIGHTS
 
 /* Hit a specific object and pass the intesection info to the ray */
-bool intersect_mesh(Ray* sray, __constant Mesh* mesh, const Scene* scene, const bool isOBJ) {
+bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool isOBJ) {
 	const Ray temp_ray = *sray;
 
 	sray->t = INF;
@@ -103,11 +103,11 @@ bool intersect_mesh(Ray* sray, __constant Mesh* mesh, const Scene* scene, const 
 	return true;
 }
 
-#if defined(VOLUME_CAUSTICS)
+#ifdef VOLUME_CAUSTICS
 
 /* sample caustics for light tracing */
 bool sampleCaustics(Ray* ray, 
-	__constant Mesh* mesh, const Scene* scene, 
+	const Mesh* mesh, const Scene* scene, 
 	const bool isOBJ, uint* seed0, uint* seed1
 ) {
 	const float nc = 1.0f;
@@ -141,88 +141,6 @@ bool sampleCaustics(Ray* ray,
 	}
 }
 
-/* shadow raycasting through refractive surfaces */
-bool shadow_with_caustics(
-	__constant Mesh* meshes,
-	const Ray* ray,
-	const uint* mesh_count,
-	const Scene* scene,
-	uint* seed0, uint* seed1
-) { 
-	Ray sRay = *ray;
-	const float maxDist = ray->t;
-
-#ifdef __BVH__
-	if (scene->NUM_NODES) {
-		if (scene->mat->t & REFR) {
-			traverse(scene, &sRay);
-			if (sRay.t < maxDist) {
-				sRay.pos = sRay.dir * sRay.t + sRay.origin;
-
-				sRay.backside = dot(sRay.normal, sRay.dir) >= 0.0f;
-				sRay.normal = sRay.backside ? -sRay.normal : sRay.normal;
-				if (!sampleCaustics(&sRay, NULL, scene, true, seed0, seed1)) return false;
-			}
-		}
-		else {
-			traverseShadows(scene, &sRay);
-			if (sRay.t < maxDist) return false;
-		}
-	}
-#endif
-
-
-#ifdef __SPHERE__
-	for (uint i = 0; i < mesh_count[0]; ++i) {
-		float hit_dist = 0.0f;
-		if (intersect_sphere(&sRay, &hit_dist, &meshes[i])) {
-			if (hit_dist < maxDist){
-				if (meshes[i].mat.t & REFR) {
-					sRay.t = hit_dist;
-					sRay.pos = sRay.origin + sRay.dir * sRay.t;
-					sRay.normal = fast_normalize(sRay.pos - meshes[i].pos);
-
-					sRay.backside = dot(sRay.normal, sRay.dir) >= 0.0f;
-					sRay.normal = sRay.backside ? -sRay.normal : sRay.normal;
-					if (!sampleCaustics(&sRay, &meshes[i], scene, false, seed0, seed1)) return false;
-				}
-				else {
-					return false;
-				}
-			}
-		}
-	}
-#endif
-
-	uint fl = mesh_count[0] + mesh_count[1];
-#ifdef __SDF__
-	for (uint i = mesh_count[0]; i < fl; ++i) {
-		if (s_map(&meshes[i], sRay.origin) < maxDist) return false;
-	}
-#endif
-
-#ifdef __BOX__
-	for (uint i = 0; i < mesh_count[2]; ++i) {
-
-		if (intersect_box(&meshes[fl], &sRay)) {
-			if (sRay.t < maxDist) return false;
-		}
-		fl++;
-	}
-#endif
-
-#ifdef __QUAD__
-	for (uint i = 0; i < mesh_count[3]; ++i) {
-		if (intersect_quad(&meshes[fl], &sRay)) {
-			if (sRay.t < maxDist) return false;
-		}
-		fl++;
-	}
-#endif
-
-	return true;
-}
-
 #endif
 
 /* shadow casting */
@@ -243,7 +161,10 @@ bool shadow(
 #ifdef __SPHERE__
 	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
 		float hit_dist = 0.0f;
-		if (intersect_sphere(ray, &hit_dist, &scene->meshes[i])) {
+
+		Mesh sphere = scene->meshes[i]; /* local copy */
+
+		if (intersect_sphere(ray, &hit_dist, &sphere)) {
 			if (hit_dist < maxDist) return false;
 		}
 	}
@@ -261,7 +182,10 @@ bool shadow(
 	uint fl = scene->mesh_count[0] + scene->mesh_count[1];
 #ifdef __BOX__
 	for (uint i = 0; i < scene->mesh_count[2]; ++i) {
-		if (intersect_box(&scene->meshes[fl++], ray)) {
+		
+		Mesh box = scene->meshes[fl++]; /* local copy */
+
+		if (intersect_box(&box, ray)) {
 			if (ray->t < maxDist) return false;
 		}
 	}
@@ -269,7 +193,10 @@ bool shadow(
 
 #ifdef __QUAD__
 	for (uint i = 0; i < scene->mesh_count[3]; ++i) {
-		if (intersect_quad(&scene->meshes[fl++], ray)) {
+	
+		Mesh tquad = scene->meshes[fl++]; /* local copy */
+
+		if (intersect_quad(&tquad, ray)) {
 			if (ray->t < maxDist) return false;
 		}
 	}
@@ -305,10 +232,12 @@ bool intersect_scene(
 	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
 		float hit_dist = 0.0f;
 
-		if (intersect_sphere(ray, &hit_dist, &scene->meshes[i])) {
+		Mesh sphere = scene->meshes[i]; /* local copy */
+
+		if (intersect_sphere(ray, &hit_dist, &sphere)) {
 			ray->t = hit_dist;
 			ray->pos = ray->origin + ray->dir * ray->t;
-			ray->normal = fast_normalize(ray->pos - scene->meshes[i].pos);
+			ray->normal = fast_normalize(ray->pos - sphere.pos);
 			*mesh_id = i;
 		}
 	}
@@ -319,7 +248,8 @@ bool intersect_scene(
 	if (scene->mesh_count[1]) {
 		if (intesect_sdf(scene->meshes, ray, mesh_id, scene->mesh_count)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
-			ray->normal = calcNormal(&scene->meshes[*mesh_id], ray->pos);
+			Mesh sdf = scene->meshes[*mesh_id]; /* local copy */
+			ray->normal = calcNormal(&sdf, ray->pos);
 		}
 	}
 #endif
@@ -327,7 +257,10 @@ bool intersect_scene(
 	uint fl = scene->mesh_count[0] + scene->mesh_count[1];
 #ifdef __BOX__
 	for (uint i = 0; i < scene->mesh_count[2]; ++i) {
-		if (intersect_box(&scene->meshes[fl], ray)) {
+		
+		Mesh box = scene->meshes[fl]; /* local copy */
+
+		if (intersect_box(&box, ray)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			*mesh_id = fl;
 			checkSide = false;
@@ -338,7 +271,10 @@ bool intersect_scene(
 
 #ifdef __QUAD__
 	for (uint i = 0; i < scene->mesh_count[3]; ++i) {
-		if(intersect_quad(&scene->meshes[fl], ray)){
+		
+		Mesh tquad = scene->meshes[fl]; /* local copy */
+
+		if(intersect_quad(&tquad, ray)){
 			*mesh_id = fl;
 			checkSide = false;
 		}

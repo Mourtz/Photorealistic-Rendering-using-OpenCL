@@ -15,6 +15,7 @@ float3 calcDirectLight(
 
 ){ 
 	const Mesh light = scene->meshes[*light_index];
+	const Mesh c_mesh = scene->meshes[c_mesh_id];
 
 	Ray shadowRay;
 	shadowRay.origin = ray->origin;
@@ -33,7 +34,7 @@ float3 calcDirectLight(
 
 		if (ray->backside) {
 			float thickness;
-			if (get_dist(&thickness, &shadowRay, &scene->meshes[c_mesh_id], scene, c_mesh_id == -1))
+			if (get_dist(&thickness, &shadowRay, &c_mesh, scene, c_mesh_id == -1))
 				shadowRay.origin += (thickness + EPS) * shadowRay.dir;
 		}
 
@@ -71,7 +72,7 @@ float3 calcDirectLight(
 
 		if (ray->backside) {
 			float thickness;
-			if (get_dist(&thickness, &shadowRay, &scene->meshes[c_mesh_id], scene, c_mesh_id == -1))
+			if (get_dist(&thickness, &shadowRay, &c_mesh, scene, c_mesh_id == -1))
 				shadowRay.origin += (thickness + EPS) * shadowRay.dir;
 		}
 
@@ -139,13 +140,15 @@ float4 radiance(
 #endif
 
 		/*------------------------------------------------------*/
-		const Mesh mesh = scene->meshes[mesh_id];
-		const Material mat = (mesh_id + 1) ? scene->meshes[mesh_id].mat : *scene->mat;
+
 
 #ifdef GLOBAL_MEDIUM
 		if (hitSurface) 
 #endif
 		{
+			const Mesh mesh = scene->meshes[mesh_id];
+			const Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
+
 			if (mat.t & LIGHT) {
 				if (!bounceIsSpecular)
 					mask *= fmax(0.01f, dot(ray->dir, ray->normal));
@@ -203,7 +206,7 @@ float4 radiance(
 			else if (mat.t & VOL) {
 				if (!ray->backside) {
 					ray->origin = ray->pos - ray->normal * EPS;
-					if (!get_dist(&ray->t, ray, &scene->meshes[mesh_id], scene, mesh_id == -1)) return acc;
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 					ray->backside = true;
 				}
 
@@ -234,7 +237,7 @@ float4 radiance(
 					ray->origin = m_sample.p;
 					ray->dir = uniformSphere(xi);
 
-					if (!get_dist(&ray->t, ray, &scene->meshes[mesh_id], scene, mesh_id == -1)) return acc;
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
 					//russian roulette
 					float roulettePdf = fmax3(mask);
@@ -271,7 +274,7 @@ float4 radiance(
 				else {
 					if (!ray->backside) {
 						ray->origin = ray->pos - ray->normal * EPS;
-						if (!get_dist(&ray->t, ray, &scene->meshes[mesh_id], scene, mesh_id == -1)) return acc;
+						if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 						ray->backside = true;
 					}
 
@@ -305,7 +308,7 @@ float4 radiance(
 						ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
 #endif
 
-						if (!get_dist(&ray->t, ray, &scene->meshes[mesh_id], scene, mesh_id == -1)) return acc;
+						if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
 						//russian roulette
 						float roulettePdf = fmax3(mask);

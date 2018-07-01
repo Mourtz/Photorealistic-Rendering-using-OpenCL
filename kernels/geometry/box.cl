@@ -2,7 +2,7 @@
 #define __BOX__
 
 /* box intesection */
-bool intersect_box(__constant Mesh* box, Ray* ray) {
+bool intersect_box(const Mesh* box, Ray* ray) {
 	const float3 invDir = native_recip(ray->dir);
 
 	const float3 tmin = (box->pos + box->joker.s012 - ray->origin) * invDir;

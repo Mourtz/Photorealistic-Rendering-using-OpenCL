@@ -11,11 +11,12 @@
   },
   "scene": {
     "obj": {
-      "path": "dragon.obj",
+      "path": "suzanne.obj",
       "material": {
-        "color": [ 1.0, 1.0, 1.0 ],
-        "type": 2,
-        "roughness": 0.1
+        "color": [ 0.6, 0.7, 0.2 ],
+        "type": 3,
+        "roughness": 0.5,
+        "absorptive": 1
       }
     },
     "quads": [

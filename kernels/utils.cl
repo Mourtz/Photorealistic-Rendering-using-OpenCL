@@ -18,6 +18,9 @@
 /* linear interpolation */
 #define lerp(a, b, w) (a + w * (b - a))
 
+/* Signum that exludes 0 */
+#define sgnE(T) (T < 0.0f ? -1.0f : 1.0f)
+
 /* equirectangular mapping */
 #define envMapEquirect(dir) (float2)((atan2(dir.z, dir.x) * INV_TWO_PI) + 0.5f, acos(dir.y) * INV_PI)
 
@@ -40,6 +43,9 @@ float3 polar_to_cartesian(const float sinTheta, const float cosTheta,
 		cosTheta);
 }
 
+float trigInverse(float x){
+    return fmin(native_sqrt(fmax(1.0f - x*x, 0.0f)), 1.0f);
+}
 
 //--------------------------------------------------------------------
 

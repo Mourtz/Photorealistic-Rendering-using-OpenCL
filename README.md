@@ -14,7 +14,7 @@ __H__ - Decrease Aperture Diameter\
 __T__ - Increase Focal Distance\
 __Y__ - Decrease Focal Distance\
 __Arrows__ - Yaw/Pitch\
-__Prtsc__ - Export to png format
+__Prtsc__ - Export
 ```
 -width    "{integer}: window's width"
 -height   "{integer}: window's height"
@@ -42,11 +42,12 @@ __Prtsc__ - Export to png format
 - Materials
   - Lambertian BRDF
   - Burley BRDF
-  - Specular BRDF
-  - Specular BSDF
-  - Rough Dielectric (Beckmann) + Absorption
-  - GGX Microfacet BRDF
-  - Beckmann Microfacet BRDF
+  - Rough Conductor
+  - Rough Dielectric + Absorption
+  - Microfacet
+    - GGX
+    - Beckmann
+    - Phong
   - Specular Subsurface Scattering
 
 ## Possible Future work
@@ -59,7 +60,8 @@ __Prtsc__ - Export to png format
 - Bi-Directional PT
 - MLT
 - Sheen BRDF
-- Blinn Microfacet BRDF
+- Blinn Phong Microfacet BRDF
+- Oren-Nayar BRDF
 - LBVH using spatial Morton codes
 
 ## How To Build

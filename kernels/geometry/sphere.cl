@@ -2,7 +2,7 @@
 #define __SPHERE__
 
 /* sphere intesection */
-bool intersect_sphere(const Ray* ray, float* dist, __constant Mesh* sphere) {
+bool intersect_sphere(const Ray* ray, float* dist, const Mesh* sphere) {
 
 	float3 rayToCenter = sphere->pos - ray->origin;
 	float b = dot(rayToCenter, ray->dir);
@@ -19,7 +19,7 @@ bool intersect_sphere(const Ray* ray, float* dist, __constant Mesh* sphere) {
 	return false;
 }
 
-float sphere_area(__constant Mesh* sphere){
+float sphere_area(const Mesh* sphere){
 	return FOUR_PI * sphere->joker.x * sphere->joker.x;
 }
 

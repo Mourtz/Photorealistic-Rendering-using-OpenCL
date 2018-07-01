@@ -56,6 +56,10 @@
 #define GLOBAL_FOG_ABS_ONLY		#GLOBAL_FOG_ABS_ONLY#
 #endif
 
+/* Light Sources */
+#HAS_LIGHTS#
+#ifdef HAS_LIGHTS
+
 /* total light sources */
 #define LIGHT_COUNT				#LIGHT_COUNT#
 #define INV_LIGHT_COUNT			#INV_LIGHT_COUNT#
@@ -63,6 +67,7 @@
 __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 /* max light bounces */
 #define LIGHT_BOUNCES			2
+#endif
 
 /* Seperate bounce controls for eye tracing */
 #define MAX_BOUNCES				#MAX_BOUNCES#
@@ -98,6 +103,11 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 #define SPECSUB		#SPECSUB#
 #define ABS_REFR	#ABS_REFR#
 #define ABS_REFR2	#ABS_REFR2#
+
+typedef struct { 
+	float pdf;
+	float3 weight;
+} SurfaceScatterEvent;
 
 typedef struct { 
 	float3 normal, tangent, bitangent;
@@ -154,6 +164,15 @@ typedef struct {
 	bool b;				// backface culling
 } Material;
 
+//------------- MESH -------------
+
+typedef struct {
+	Material mat;	// assigned material
+	float3 pos;		// position
+	float16 joker;	// generic data
+	int t;			// type
+} Mesh;
+
 //------------- BVH -------------
 
 typedef struct {
@@ -168,22 +187,15 @@ typedef struct {
 } light_t;
 
 typedef struct {
-	uint NUM_NODES;
-	__global const bvhNode* bvh;
-	__global const uint4* facesV;
-	__global const uint4* facesN;
-	__global const float4* vertices;
-	__global const float4* normals;
+	__constant Mesh* meshes;
+	const uint* mesh_count;
+	const uint NUM_NODES;
+	__constant bvhNode* bvh;
+	__constant uint4* facesV;
+	__constant uint4* facesN;
+	__constant float4* vertices;
+	__constant float4* normals;
 	__constant Material* mat;
 } Scene;
-
-//------------- MESH -------------
-
-typedef struct {
-	Material mat;	// assigned material
-	float3 pos;		// position
-	float16 joker;	// generic data
-	int t;			// type
-} Mesh;
 
 #endif

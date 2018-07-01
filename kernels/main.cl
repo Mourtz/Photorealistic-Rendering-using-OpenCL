@@ -38,11 +38,11 @@ __kernel void render_kernel(
 	
 	/* BVH */
 	const uint BVH_NUM_NODES,
-	__global const bvhNode* bvh,
-	__global const uint4* facesV,
-	__global const uint4* facesN,
-	__global const float4* vertices,
-	__global const float4* normals,
+	__constant bvhNode* bvh,
+	__constant uint4* facesV,
+	__constant uint4* facesN,
+	__constant float4* vertices,
+	__constant float4* normals,
 	__constant Material* mat,
 
 	/* enviroment map */
@@ -60,11 +60,11 @@ __kernel void render_kernel(
 	uint seed0 = i_coord.x * framenumber % 1000 + (random0 * 100);
 	uint seed1 = i_coord.y * framenumber % 1000 + (random1 * 100);
 
-	const Scene scene = { BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
+	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
 
 	Ray ray = createCamRay(i_coord, width, height, cam, &seed0, &seed1);
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
-	accumbuffer[work_item_id] += radiance(meshes, &mesh_count, &scene, env_map, &ray, &seed0, &seed1);
+	accumbuffer[work_item_id] += radiance(&scene, env_map, &ray, &seed0, &seed1);
 
 	/* update the output GLTexture */
 	write_imagef(output_tex, i_coord, accumbuffer[work_item_id] / (float)(framenumber));

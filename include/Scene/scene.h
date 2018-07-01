@@ -13,7 +13,7 @@
 
 #include <Scene/geometry.h>
 
-string scene_filepath = "../scenes/cornell.json";
+string scene_filepath = "../scenes/test.json";
 bool ALPHA_TESTING(false);
 
 struct cl_medium {
@@ -64,7 +64,7 @@ struct host_scene {
 		for(cl_uint i = 0; i < object_count.s[7]; ++i){
 			if(cpu_meshes[i].mat.t & LIGHT){
 				cout << "-> Light Source (" << LIGHT_COUNT << ", " << i << ")" << std::endl;
-				LIGHT_COUNT++;
+				++LIGHT_COUNT;
 				LIGHT_INDICES.push_back(i);
 			}
 		}
@@ -89,10 +89,10 @@ struct host_scene {
 	/* type */ \
 	if (_doc.HasMember("type") && _doc["type"].IsInt()) { \
 		_mat.t = 1 << _doc["type"].GetInt(); \
-		if (_mat.t == REFR) { \
+		if (_mat.t & REFR) { \
 			/* abosrptive? */ \
 			if (_doc.HasMember("absorptive") && _doc["absorptive"].IsNumber()) { \
-				const int cc = document["scene"]["obj"]["material"]["absorptive"].GetInt(); \
+				const int cc = _doc["absorptive"].GetInt(); \
 				if (cc) _mat.t |= (cc == 1) ? ABS_REFR : ABS_REFR2;	\
 			} \
 		} \

@@ -1,6 +1,8 @@
 #ifndef __BXDF__
 #define __BXDF__
 
+#FILE:bxdf/microfacet.cl
+
 #define reflect(dir, n) (dir - 2.0f * dot(n, dir) * n)
 
 /* Schlick's approximation of Fresnel equation */
@@ -47,25 +49,42 @@ float conductorReflectance(float eta, float k, float cosThetaI){
 	return 0.5f*(Rs + Rs * Rp);
 }
 
-float f_schlick_f32(float v_dot_h, float f0) {
-	return f0 + (1.0f - f0) * pown(1.0f - v_dot_h, 5);
+float conductorReflectanceApprox(float eta, float k, float cosThetaI){
+    float cosThetaISq = cosThetaI*cosThetaI;
+    float ekSq = eta*eta* + k*k;
+    float cosThetaEta2 = cosThetaI*2.0f*eta;
+
+    float Rp = (ekSq*cosThetaISq - cosThetaEta2 + 1.0f)/(ekSq*cosThetaISq + cosThetaEta2 + 1.0f);
+    float Rs = (ekSq - cosThetaEta2 + cosThetaISq)/(ekSq + cosThetaEta2 + cosThetaISq);
+    return (Rs + Rp)*0.5f;
 }
 
-float3 f_schlick(float v_dot_h, float3 f0) {
-	return (float3)(
-		f_schlick_f32(v_dot_h, f0.x),
-		f_schlick_f32(v_dot_h, f0.y),
-		f_schlick_f32(v_dot_h, f0.z)
-	);
+float dielectricReflectance(float eta, float cosThetaI, float *cosThetaT){
+    if (cosThetaI < 0.0f) {
+        eta = 1.0f/eta;
+        cosThetaI = -cosThetaI;
+    }
+    float sinThetaTSq = eta*eta*(1.0f - cosThetaI*cosThetaI);
+    if (sinThetaTSq > 1.0f) {
+        *cosThetaT = 0.0f;
+        return 1.0f;
+    }
+    *cosThetaT = native_sqrt(fmax(1.0f - sinThetaTSq, 0.0f));
+
+    float Rs = (eta*cosThetaI - *cosThetaT)/(eta*cosThetaI + *cosThetaT);
+    float Rp = (eta*(*cosThetaT) - cosThetaI)/(eta*(*cosThetaT) + cosThetaI);
+
+    return (Rs*Rs + Rp*Rp)*0.5f;
 }
 
-/*---------------------------------- BECKMANN ----------------------------------*/
+float3 importance_sample_ggx(float2 random, const TangentFrame* tf, float alpha2) {
+	float phi = TWO_PI * random.x;
+	float cos_theta = native_sqrt((1.0f - random.y) / (1.0f + (alpha2 - 1.0f) * random.y));
+	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
 
-float D_Beckmann(float3 normal, float3 wh, float alpha2) {
-	float cosTheta2 = dot(normal, wh);
-	cosTheta2 *= cosTheta2;
+	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
 
-	return exp(-(1.0f / cosTheta2 - 1.0f) / alpha2) * INV_PI / (alpha2 * cosTheta2 * cosTheta2);
+	return toGlobal(tf, h);
 }
 
 float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float alpha2) {
@@ -78,63 +97,6 @@ float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float a
 	return toGlobal(tf, h);
 }
 
-
-/*---------------------------------- GGX ----------------------------------*/
-
-float3 importance_sample_ggx(float2 random, const TangentFrame* tf, float alpha2) {
-	float phi = TWO_PI * random.x;
-	float cos_theta = native_sqrt((1.0f - random.y) / (1.0f + (alpha2 - 1.0f) * random.y));
-	float sin_theta = native_sqrt(1.0f - cos_theta * cos_theta);
-
-	float3 h = (float3)(sin_theta * native_cos(phi), sin_theta * native_sin(phi), cos_theta);
-
-	return toGlobal(tf, h);
-}
-
-float g_smith_joint_lambda(float x_dot_n, float alpha2){
-	float a = native_recip(x_dot_n * x_dot_n) - 1.0f;
-	return (0.5f * native_sqrt(1.0f + alpha2 * a) - 0.5f);
-}
-
-float g_smith_joint(float l_dot_n, float v_dot_n, float alpha2) {
-	float lambda_l = g_smith_joint_lambda(l_dot_n, alpha2);
-	float lambda_v = g_smith_joint_lambda(v_dot_n, alpha2);
-	return native_recip(1.0f + lambda_l + lambda_v);
-}
-
-bool sampleGGX(Ray* ray, float3* res, const Material* mat, const uint* seed0, const uint* seed1) {
-
-	float roughness = fmax(mat->roughness, 1e-3f);
-
-	float alpha2 = roughness * roughness;
-	float3 hlf = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), &ray->tf, alpha2);
-	float3 new_dir = reflect(ray->dir, hlf);
-
-	if (dot(ray->normal, new_dir) < EPS) {
-		return false;
-	}
-	else {
-		float3 view = -ray->dir;
-		float v_dot_n = clamp(dot(view, ray->normal), 0.0f, 1.0f);
-		float l_dot_n = clamp(dot(new_dir, ray->normal), 0.0f, 1.0f);
-		float v_dot_h = clamp(dot(view, hlf), 0.0f, 1.0f);
-		float h_dot_n = clamp(dot(hlf, ray->normal), 0.0f, 1.0f);
-
-		// Masking-shadowing
-		float g = g_smith_joint(l_dot_n, v_dot_n, alpha2);
-
-		float3 f = f_schlick(v_dot_h, mat->color);
-
-		float3 weight = f * clamp(g * v_dot_h / (h_dot_n * v_dot_n), 0.0f, 1.0f);
-		*res = mat->color*weight;
-
-		ray->origin = ray->pos + ray->normal * EPS;
-		ray->dir = new_dir;
-	}
-
-	return true;
-}
-
 /*---------------------------------- DIFFUSE ----------------------------------*/
 
 void LambertBSDF(Ray* ray, uint* seed0, uint* seed1){ 
@@ -142,6 +104,156 @@ void LambertBSDF(Ray* ray, uint* seed0, uint* seed1){
 	ray->origin = ray->pos + ray->normal * EPS;
 	ray->dir = toGlobal(&ray->tf, cosineHemisphere(&xi));
 	//*pdf = cosineHemispherePdf(ray->dir);
+}
+
+void LambertianFiberBCSDF(Ray* ray, uint* seed0, uint* seed1){
+	float h = get_random(seed0, seed1)*2.0f - 1.0f;
+	float nx = h;
+    float nz = trigInverse(nx);
+
+	float2 xi = hash_2ui_2f32(seed0, seed1);
+	float3 d = cosineHemisphere(&xi);
+
+	ray->origin = ray->pos + ray->normal * EPS;
+	ray->dir = toGlobal(&ray->tf, (float3)(d.z*nx + d.x*nz, d.y, d.z*nz - d.x*nx));
+}
+
+/*---------------------------------- DIELECTRIC ----------------------------------*/
+
+bool DielectricBSDF(
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){
+	float3 wi = toLocal(&ray->tf, -ray->dir);
+	float3 wo;
+
+	const float ior = 1.5f;
+	const float eta = wi.z < 0.0f ? ior : 1.0f/ior;
+
+	float cosThetaT = 0.0f;
+    float F = dielectricReflectance(eta, fabs(wi.z), &cosThetaT);
+
+	if(get_random(seed0, seed1) < F){ 
+		wo = (float3)(-wi.x, -wi.y, wi.z);
+		res->pdf = F;
+	} else { 
+		if(F == 1.0f)
+			return false;
+
+		wo = (float3)(-wi.x*eta, -wi.y*eta, -copysign(cosThetaT, wi.z));
+		res->pdf = 1.0f - F;
+	}
+	res->weight = 1.0f;
+
+	ray->dir = toGlobal(&ray->tf, wo);
+	ray->origin = ray->pos + ray->dir * EPS;
+
+	return true;
+}
+
+bool RoughDielectricBSDF(
+	const int dist,
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){
+	const float3 wi = toLocal(&ray->tf, -ray->dir);
+	const float wiDotN = wi.z;
+
+	float3 wo;
+
+	const float ior = 1.5f;
+	const float eta = wiDotN < 0.0f ? ior : 1.0f/ior;
+
+	float sampleRoughness = (1.2f - 0.2f*native_sqrt(fabs(wiDotN)))*mat->roughness;
+    float alpha = roughnessToAlpha(dist, mat->roughness);
+    float sampleAlpha = roughnessToAlpha(dist, sampleRoughness);
+
+	float3 m = Microfacet_sample(dist, sampleAlpha, hash_2ui_2f32(seed0, seed1));
+	float pm = Microfacet_pdf(dist, sampleAlpha, m);
+
+	if (pm < 1e-10f)
+		return false;
+
+	float wiDotM = dot(wi, m);
+    float cosThetaT = 0.0f;
+	float F = dielectricReflectance(1.0f/ior, wiDotM, &cosThetaT);
+	float etaM = wiDotM < 0.0f ? ior : 1.0f/ior;
+
+	bool reflect = get_random(seed0, seed1) < F;
+
+	if (reflect)
+		wo = 2.0f*wiDotM*m - wi;
+	else
+		wo = (etaM*wiDotM - sgnE(wiDotM)*cosThetaT)*m - etaM*wi;
+
+	float woDotN = wo.z;
+
+	bool reflected = wiDotN*woDotN > 0.0f;
+	if (reflected != reflect)
+		return false;
+
+	float woDotM = dot(wo, m);
+	float G = Microfacet_G(dist, alpha, wi, wo, m);
+	float D = Microfacet_D(dist, alpha, m);
+	
+	const bool ABS1 = mat->t & ABS_REFR, ABS2 = mat->t & ABS_REFR2;
+
+	res->weight = fabs(wiDotM)*G*D/(fabs(wiDotN)*pm);
+	if(ABS1 | ABS2){
+		res->weight *= ABS2 ? mat->color : 1.0f; 
+		res->weight *= ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
+	} else { 
+		res->weight *= mat->color;
+	}
+
+	if (reflect)
+        res->pdf = (F)*pm*0.25f/fabs(wiDotM);
+    else
+        res->pdf = (1.0f - F)*pm*fabs(woDotM)/pow(eta*wiDotM + woDotM, 2.0f);
+	
+	ray->dir = toGlobal(&ray->tf, wo);
+	ray->origin = ray->pos + ray->dir * EPS;
+
+	return true;
+}
+
+/*---------------------------------- SPECULAR ----------------------------------*/
+
+bool RoughConductor(
+	const int dist,
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){ 
+	float3 wi = toLocal(&ray->tf, -ray->dir);
+	
+	if(wi.z <= 0.0f)
+		return false;
+
+	float alpha = roughnessToAlpha(dist, mat->roughness);
+
+	float3 m = Microfacet_sample(dist, alpha, hash_2ui_2f32(seed0, seed1));
+	float wiDotM = dot(wi, m);
+	float3 wo = 2.0f*wiDotM*m - wi;
+	if (wiDotM <= 0.0f || wo.z <= 0.0f)
+		return false;
+	float G = Microfacet_G(dist, alpha, wi, wo, m);
+	float D = Microfacet_D(dist, alpha, m);
+	float mPdf = Microfacet_pdf(dist, alpha, m);
+	float pdf = mPdf*0.25f/wiDotM;
+	float weight = wiDotM*G*D/(wi.z*mPdf);
+	// Aluminium 
+	float F = conductorReflectance(1.0972f, 6.7942f, wiDotM);
+
+	res->pdf = pdf;
+	res->weight = F*weight;
+
+	ray->origin = ray->pos + ray->normal * EPS;
+	ray->dir = toGlobal(&ray->tf, wo);
+
+	return true;
 }
 
 /*

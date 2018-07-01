@@ -33,7 +33,7 @@ float udRoundBox(const float3 p, const float3 b, const float r){
 	return length(fmax(fabs(p) - b, 0.0f)) - r;
 }
 
-float s_map(__constant Mesh* sdf, const float3 pos) {
+float s_map(const Mesh* sdf, const float3 pos) {
 	float temp_dist = INF;
 
 	const float3 sdf_center = pos - sdf->pos;
@@ -61,7 +61,8 @@ float map(__constant Mesh* meshes, const float tmin, const float3 pos, int* mesh
 	const uint fl = mesh_count[0] + mesh_count[1];
 
 	for (uint i = mesh_count[0]; i < fl; ++i) {
-		float temp_dist = s_map(&meshes[i], pos);
+		Mesh sdf = meshes[i]; /* local copy */
+		float temp_dist = s_map(&sdf, pos);
 
 		if (temp_dist < dist) {
 			dist = temp_dist;
@@ -72,13 +73,13 @@ float map(__constant Mesh* meshes, const float tmin, const float3 pos, int* mesh
 	return dist;
 }
 
-float3 calcNormal(__constant Mesh* meshes, const float3 pos) {
-	float3 eps = (float3)(EPS*2.0f, 0.0f, 0.0f);
+float3 calcNormal(const Mesh* mesh, const float3 pos) {
+	const float3 eps = (float3)(EPS*2.0f, 0.0f, 0.0f);
 
-	return normalize((float3)(
-		s_map(meshes, pos + eps.xyy) - s_map(meshes, pos - eps.xyy),
-		s_map(meshes, pos + eps.yxy) - s_map(meshes, pos - eps.yxy),
-		s_map(meshes, pos + eps.yyx) - s_map(meshes, pos - eps.yyx))
+	return fast_normalize((float3)(
+		s_map(mesh, pos + eps.xyy) - s_map(mesh, pos - eps.xyy),
+		s_map(mesh, pos + eps.yxy) - s_map(mesh, pos - eps.yxy),
+		s_map(mesh, pos + eps.yyx) - s_map(mesh, pos - eps.yyx))
 	);
 }
 

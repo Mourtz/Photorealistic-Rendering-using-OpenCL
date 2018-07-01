@@ -557,32 +557,43 @@ namespace cl_help {
 
 //--------------------------------- LIGHT ---------------------------------
 
-			temp_name = "#LIGHT_COUNT#";
+			temp_name = "#HAS_LIGHTS#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(scene->LIGHT_COUNT));
+				line.replace(temp, temp_name.length(), (scene->LIGHT_COUNT > 0 ? "#define HAS_LIGHTS" : ""));
 				source += line + "\n";
 				continue;
 			}
 
-			temp_name = "#INV_LIGHT_COUNT#";
-			temp = line.find(temp_name);
-			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(1.0f / scene->LIGHT_COUNT) + "f");
-				source += line + "\n";
-				continue;
-			}
+			if (scene->LIGHT_COUNT) {
 
-			temp_name = "#LIGHT_INDICES#";
-			temp = line.find(temp_name);
-			if (temp != string::npos) {
-				string res = "";
-				for(cl_uint i = 0; i < scene->LIGHT_COUNT; ++i)
-					res += std::to_string(scene->LIGHT_INDICES[i]) + ((i != (scene->LIGHT_COUNT - 1)) ? "," : "");
-				
-				line.replace(temp, temp_name.length(), res);
-				source += line + "\n";
-				continue;
+				temp_name = "#LIGHT_COUNT#";
+				temp = line.find(temp_name);
+				if (temp != string::npos) {
+					line.replace(temp, temp_name.length(), std::to_string(scene->LIGHT_COUNT));
+					source += line + "\n";
+					continue;
+				}
+
+				temp_name = "#INV_LIGHT_COUNT#";
+				temp = line.find(temp_name);
+				if (temp != string::npos) {
+					line.replace(temp, temp_name.length(), std::to_string(1.0f / scene->LIGHT_COUNT) + "f");
+					source += line + "\n";
+					continue;
+				}
+
+				temp_name = "#LIGHT_INDICES#";
+				temp = line.find(temp_name);
+				if (temp != string::npos) {
+					string res = "";
+					for (cl_uint i = 0; i < scene->LIGHT_COUNT; ++i)
+						res += std::to_string(scene->LIGHT_INDICES[i]) + ((i != (scene->LIGHT_COUNT - 1)) ? "," : "");
+
+					line.replace(temp, temp_name.length(), res);
+					source += line + "\n";
+					continue;
+				}
 			}
 
 //--------------------------------- SDF TYPES ---------------------------------

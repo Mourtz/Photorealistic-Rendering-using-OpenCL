@@ -396,9 +396,6 @@ void runKernel(){
 
 void render(){
 
-	//cpu_meshes[1].position.y += 0.01f;
-	//queue.enqueueWriteBuffer(cl_meshes, CL_TRUE, 0, object_count.w * sizeof(Mesh), cpu_meshes.data());
-
 	if (buffer_reset){
 #ifdef __DEBUG__
 		acc_time = 0;

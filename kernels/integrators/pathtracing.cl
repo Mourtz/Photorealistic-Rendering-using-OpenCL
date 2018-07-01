@@ -3,69 +3,19 @@
 
 /*--------------------------- LIGHT ---------------------------*/
 
-#if defined(VOLUME_CAUSTICS)
-
-float3 caustics(
-	__constant Mesh* meshes,
-	const Ray* ray,
-	const float3* pos,
-	const Scene* scene,
-	const uint* light_index,
-	const uint* mesh_count,
-	float3* wi,
-	uint* seed0, uint* seed1,
-	const int c_mesh_id
-
-) {
-	const Mesh light = meshes[*light_index];
-
-	Ray shadowRay;
-	shadowRay.origin = *pos;
-
-	if (light.t & SPHERE) {
-
-	}
-	//------------------------------
-	else if (light.t & QUAD) {
-
-		const float* verts = &light.joker;
-
-		const float3 randPointOnLight = (float3)(
-			mix(verts[0], verts[6], get_random(seed0, seed1)),
-			verts[1],
-			mix(verts[2], verts[5], get_random(seed0, seed1))
-		);
-
-		*wi = randPointOnLight - *pos;
-		shadowRay.dir = fast_normalize(*wi);
-		shadowRay.t = distance(randPointOnLight, shadowRay.origin);
-		if (shadow_with_caustics(meshes, &shadowRay, mesh_count, scene, seed0, seed1)) {
-			float r2 = fast_distance(light.joker.s012, light.joker.s345) * fast_distance(light.joker.s012, light.joker.s678);
-			float3 d = randPointOnLight - shadowRay.origin;
-			float d2 = dot(d, d);
-			float weight = r2 / d2;
-			return light.mat.color * clamp(weight, 0.0f, 1.0f) * 0.5f;
-		}
-	}
-
-	return F3_ZERO;
-}
-#else
-#define caustics calcDirectLight
-#endif
+#ifdef HAS_LIGHTS
 
 float3 calcDirectLight(
-	__constant Mesh* meshes,
 	const Ray* ray,
 	const Scene* scene,
 	const uint* light_index,
-	const uint* mesh_count,
 	float3* wi,
 	uint* seed0, uint* seed1,
 	const int c_mesh_id
 
 ){ 
-	const Mesh light = meshes[*light_index];
+	const Mesh light = scene->meshes[*light_index];
+	const Mesh c_mesh = scene->meshes[c_mesh_id];
 
 	Ray shadowRay;
 	shadowRay.origin = ray->origin;
@@ -84,15 +34,15 @@ float3 calcDirectLight(
 
 		if (ray->backside) {
 			float thickness;
-			if (get_dist(&thickness, &shadowRay, &meshes[c_mesh_id], scene, c_mesh_id == -1))
+			if (get_dist(&thickness, &shadowRay, &c_mesh, scene, c_mesh_id == -1))
 				shadowRay.origin += (thickness + EPS) * shadowRay.dir;
 		}
 
 		shadowRay.t = len;
-		if (shadow(meshes, &shadowRay, mesh_count, scene)) {
+		if (shadow(&shadowRay, scene)) {
 			float r2 = light.joker.x * light.joker.x;
 
-			float cos_a_max = sqrt(1.0f - clamp(r2 / d2, 0.0f, 1.0f));
+			float cos_a_max = native_sqrt(1.0f - clamp(r2 / d2, 0.0f, 1.0f));
 			float weight = 2.0f * (1.0f - cos_a_max);
 			return light.mat.color * weight;
 		}
@@ -122,12 +72,12 @@ float3 calcDirectLight(
 
 		if (ray->backside) {
 			float thickness;
-			if (get_dist(&thickness, &shadowRay, &meshes[c_mesh_id], scene, c_mesh_id == -1))
+			if (get_dist(&thickness, &shadowRay, &c_mesh, scene, c_mesh_id == -1))
 				shadowRay.origin += (thickness + EPS) * shadowRay.dir;
 		}
 
 		shadowRay.t = len;
-		if (shadow(meshes, &shadowRay, mesh_count, scene)) {
+		if (shadow(&shadowRay, scene)) {
 			float r2 = fast_distance(light.joker.s012, light.joker.s345) * fast_distance(light.joker.s012, light.joker.s678);
 			float weight = r2 / d2;
 			return light.mat.color * clamp(weight, 0.0f, 1.0f) * 0.5f;
@@ -138,9 +88,9 @@ float3 calcDirectLight(
 	return F3_ZERO;
 }
 
+#endif
+
 float4 radiance(
-	__constant Mesh* meshes,
-	const uint* mesh_count,
 	const Scene* scene,
 	__read_only image2d_t env_map,
 	Ray* ray,
@@ -148,7 +98,7 @@ float4 radiance(
 ){
 	int mesh_id;
 
-	if (!intersect_scene(meshes, ray, &mesh_id, mesh_count, scene)) {
+	if (!intersect_scene(ray, &mesh_id, scene)) {
 #ifdef ALPHA_TESTING
 		return (float4)(0.0f);
 #else
@@ -160,6 +110,9 @@ float4 radiance(
 
 	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
 	float3 mask = (float3)(1.0f);
+	float brdfPdf = 1.0f;
+
+	SurfaceScatterEvent surfaceEvent;
 
 	bool bounceIsSpecular = true;
 
@@ -177,7 +130,7 @@ float4 radiance(
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
 #endif
 
-	while (++bounce < MAX_BOUNCES) {
+	do {
 
 /*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
@@ -187,12 +140,15 @@ float4 radiance(
 #endif
 
 		/*------------------------------------------------------*/
-		const Material mat = (mesh_id + 1) ? meshes[mesh_id].mat : *scene->mat;
+
 
 #ifdef GLOBAL_MEDIUM
 		if (hitSurface) 
 #endif
 		{
+			const Mesh mesh = scene->meshes[mesh_id];
+			const Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
+
 			if (mat.t & LIGHT) {
 				if (!bounceIsSpecular)
 					mask *= fmax(0.01f, dot(ray->dir, ray->normal));
@@ -207,62 +163,24 @@ float4 radiance(
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
 			}
-			/*-------------------- GLOSSY/SPECULAR --------------------*/
+			/*-------------------- GLOSSY/SPECULAR (GGX|BECKMANN|PHONG) --------------------*/
 			else if (mat.t & GLOSSY) {
-				float3 res;
-				if (!sampleGGX(ray, &res, &mat, seed0, seed1))
+				if (!RoughConductor(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
 					break;
 
-				mask *= res;
+				mask *= mat.color*surfaceEvent.weight;
 
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;
 			}
-			/*-------------------- REFRACTIVE --------------------*/
+			/*-------------------- REFRACTIVE (GGX|BECKMANN|PHONG) --------------------*/
 			else if (mat.t & REFR) {
-				const float nc = 1.0f;
-				const float nt = 1.5f;
+				if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
+					break;
 
-				float3 wh = ray->normal;
+				mask *= surfaceEvent.weight;
 
-				if (mat.roughness) {
-					wh = importance_sample_beckmann((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), &ray->tf, mat.roughness*mat.roughness);
-					//wh = importance_sample_ggx((float2)(get_random(seed0, seed1), get_random(seed0, seed1)), ray->normal, mat.roughness*mat.roughness);
-				}
-
-				const bool ABS1 = mat.t & ABS_REFR, ABS2 = mat.t & ABS_REFR2;
-
-				const float nnt = ray->backside ? nt / nc : nc / nt;
-				const float3 tdir = refract(ray->dir, wh, nnt);
-
-				const float Re = fresnel(ray->dir, wh, nc, nt, tdir);
-				/* reflect */
-				if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < Re) {
-					float3 newDir = reflect(ray->dir, wh);
-					//if (dot(newDir, ray->normal) < 0.0f) break;
-					ray->origin = ray->pos + ray->normal * EPS;
-					ray->dir = newDir;
-
-					++SPEC_BOUNCES;
-				}
-				/* refract */
-				else {
-					float3 newDir = fast_normalize(tdir);
-					//if (dot(newDir, ray->normal) >= 0.0f) break;
-					ray->origin = ray->pos - ray->normal * EPS;
-					ray->dir = newDir;
-
-					if (!ABS1) mask *= ((ABS2) ? 1.0f - mat.color : mat.color);
-
-					++SCATTERING_EVENTS;
-#ifdef ALPHA_TESTING
-					if (!DIFF_BOUNCES) acc.w = 1.0f - Re;
-#endif
-				}
-
-				/* absorption */
-				mask *= (ABS1 | ABS2) ? (ray->backside ? exp(-ray->t * ((ABS1) ? mat.color : 1.0f) * 10.0f) : 1.0f) : 1.0f;
-
+				//++SPEC_BOUNCES;
 				bounceIsSpecular = true;
 			}
 			/*-------------------- COAT --------------------*/
@@ -288,7 +206,7 @@ float4 radiance(
 			else if (mat.t & VOL) {
 				if (!ray->backside) {
 					ray->origin = ray->pos - ray->normal * EPS;
-					if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 					ray->backside = true;
 				}
 
@@ -319,7 +237,7 @@ float4 radiance(
 					ray->origin = m_sample.p;
 					ray->dir = uniformSphere(xi);
 
-					if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
 					//russian roulette
 					float roulettePdf = fmax3(mask);
@@ -356,7 +274,7 @@ float4 radiance(
 				else {
 					if (!ray->backside) {
 						ray->origin = ray->pos - ray->normal * EPS;
-						if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;
+						if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 						ray->backside = true;
 					}
 
@@ -390,7 +308,7 @@ float4 radiance(
 						ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
 #endif
 
-						if (!get_dist(&ray->t, ray, &meshes[mesh_id], scene, mesh_id == -1)) return acc;
+						if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
 						//russian roulette
 						float roulettePdf = fmax3(mask);
@@ -412,32 +330,37 @@ float4 radiance(
 				}
 			}
 
+#ifdef HAS_LIGHTS
 			if (!bounceIsSpecular) {
 				float3 wi;
 				for (uint i = 0; i < LIGHT_COUNT; ++i) {
 					uint index = LIGHT_INDICES[i];
 
-					if (fast_distance(ray->origin, meshes[index].pos) >= INF) continue;
+					if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
-					float3 dLight = calcDirectLight(meshes, ray, scene, &index, mesh_count, &wi, seed0, seed1, mesh_id);
+					float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, mesh_id);
 					acc.xyz += dLight * mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 				}
 			}
+#endif
+
 		}
 #ifdef GLOBAL_MEDIUM
 		else {
 			ray->origin = gm_sample.p;
 
+#ifdef HAS_LIGHTS
 			float3 vwi;
 			for (uint i = 0; i < LIGHT_COUNT; ++i) {
 				uint index = LIGHT_INDICES[i];
 
-				if (fast_distance(ray->origin, meshes[index].pos) >= INF) continue;
+				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
-				float3 dLight = caustics(meshes, ray, scene, &index, mesh_count, &vwi, seed0, seed1, mesh_id);
+				float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
 				// @ToFix - im 100% sure this is wrong
 				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			}
+#endif
 
 			/* Henyey-Greenstein phase function */
 			PhaseSample p_sample;
@@ -464,7 +387,7 @@ float4 radiance(
 				break;
 		}
 
-		if (!intersect_scene(meshes, ray, &mesh_id, mesh_count, scene)) {
+		if (!intersect_scene(ray, &mesh_id, scene)) {
 			if (!bounceIsSpecular)
 				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
 
@@ -477,7 +400,7 @@ float4 radiance(
 		acc.w = 1.0f;
 #endif
 
-	}
+	} while(++bounce < MAX_BOUNCES);
 
 	return acc;
 }

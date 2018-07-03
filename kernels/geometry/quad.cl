@@ -4,21 +4,14 @@
 /* Quad intesection */
 bool intersect_quad(const Mesh* plane, Ray* ray) {
 
-	union
-	{
-		float s[16];
-		float16 v;
-	} vert;
-	vert.v = plane->joker;
-
-	const float3 v0 = (float3)(vert.s[0], vert.s[1], vert.s[2]);
-	const float3 v1 = (float3)(vert.s[3], vert.s[4], vert.s[5]);
-	const float3 v2 = (float3)(vert.s[6], vert.s[7], vert.s[8]);
-	const float3 v3 = (float3)(vert.s[9], vert.s[10], vert.s[11]);
+	const float3 v0 = plane->joker.s012;
+	const float3 v1 = plane->joker.s345;
+	const float3 v2 = plane->joker.s678;
+	const float3 v3 = plane->joker.s9ab;
 
 	float3 v = v2 - v0;
 	float3 u = v1 - v0;
-	const float3 n = fast_normalize(cross(v, u)) * vert.s[12];
+	const float3 n = fast_normalize(cross(v, u)) * plane->joker.sC;
 
 	float3 w0 = ray->origin - v0;
 	float a = -dot(n, w0);

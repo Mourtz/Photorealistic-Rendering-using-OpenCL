@@ -4,11 +4,11 @@ __constant sampler_t samplerA = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
 
 #FILE:header.cl
 #FILE:utils.cl
+#FILE:noise/value_noise.cl
 #FILE:camera.cl
 #FILE:bxdf/bxdf.cl
 #FILE:intersect.cl
 #FILE:media.cl
-#FILE:noise/value_noise.cl
 #FILE:integrators/pathtracing.cl
 
 __kernel void render_kernel(
@@ -64,7 +64,7 @@ __kernel void render_kernel(
 
 	Ray ray = createCamRay(i_coord, width, height, cam, &seed0, &seed1);
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
-	accumbuffer[work_item_id] += radiance(&scene, env_map, &ray, &seed0, &seed1);
+	accumbuffer[work_item_id] += radiance(&scene, env_map, noise_tex, &ray, &seed0, &seed1);
 
 	/* update the output GLTexture */
 	write_imagef(output_tex, i_coord, accumbuffer[work_item_id] / (float)(framenumber));

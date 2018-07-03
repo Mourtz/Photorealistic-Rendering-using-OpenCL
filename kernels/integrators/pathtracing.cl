@@ -93,6 +93,7 @@ float3 calcDirectLight(
 float4 radiance(
 	const Scene* scene,
 	__read_only image2d_t env_map,
+	__read_only image2d_t noise_tex,
 	Ray* ray,
 	uint* seed0, uint* seed1
 ){
@@ -149,6 +150,7 @@ float4 radiance(
 			const Mesh mesh = scene->meshes[mesh_id];
 			const Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
 
+#ifdef HAS_LIGHTS
 			if (mat.t & LIGHT) {
 				if (!bounceIsSpecular)
 					mask *= fmax(0.01f, dot(ray->dir, ray->normal));
@@ -156,8 +158,9 @@ float4 radiance(
 				acc.xyz += mask * mat.color;
 				break;
 			}
+#endif
 			/*-------------------- DIFFUSE --------------------*/
-			else if (mat.t & DIFF) {
+			if (mat.t & DIFF) {
 				LambertBSDF(ray, seed0, seed1);
 				mask *= mat.color;
 				++DIFF_BOUNCES;
@@ -388,8 +391,9 @@ float4 radiance(
 		}
 
 		if (!intersect_scene(ray, &mesh_id, scene)) {
+			/* cosine weighted importance sampling */
 			if (!bounceIsSpecular)
-				mask *= fmax(0.01f, dot(fast_normalize(ray->dir), ray->normal));
+				mask *= fmax(0.01f, dot(ray->dir, ray->normal));
 
 			acc.xyz += mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz;
 

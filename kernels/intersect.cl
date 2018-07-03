@@ -19,10 +19,7 @@ bool get_dist(float* dist, const Ray* sray, const Mesh* mesh, const Scene* scene
 	} 
 #ifdef __SPHERE__
 	else if(mesh->t & SPHERE){ 
-		float hit_dist = 0.0f;
-		if (intersect_sphere(&temp_ray, &hit_dist, mesh)) {
-			temp_ray.t = hit_dist;
-		}
+		intersect_sphere(&temp_ray, mesh);
 	} 
 #endif
 #ifdef __SDF__
@@ -63,13 +60,11 @@ bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool 
 	}
 #ifdef __SPHERE__
 	else if (mesh->t & SPHERE) {
-		float hit_dist = 0.0f;
-		if (intersect_sphere(sray, &hit_dist, mesh)) {
-			sray->t = hit_dist;
+		if (intersect_sphere(sray, mesh)) {
 			sray->pos = sray->origin + sray->dir * sray->t;
 			sray->normal = fast_normalize(sray->pos - mesh->pos);
 
-			sray->backside = dot(sray->normal, sray->dir) >= 0.0f;
+			//sray->backside = dot(sray->normal, sray->dir) >= 0.0f;
 			sray->normal = sray->backside ? -sray->normal : sray->normal;
 		}
 	}
@@ -160,12 +155,11 @@ bool shadow(
 
 #ifdef __SPHERE__
 	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
-		float hit_dist = 0.0f;
 
 		Mesh sphere = scene->meshes[i]; /* local copy */
 
-		if (intersect_sphere(ray, &hit_dist, &sphere)) {
-			if (hit_dist < maxDist) return false;
+		if (intersect_sphere(ray, &sphere)) {
+			if (ray->t < maxDist) return false;
 		}
 	}
 #endif
@@ -218,7 +212,6 @@ bool intersect_scene(
 	ray->incomingRayDir = -ray->dir;
 
 	*mesh_id = -1;
-	bool checkSide = true;
 
 #ifdef __BVH__
 	if (scene->NUM_NODES) {
@@ -230,12 +223,10 @@ bool intersect_scene(
 
 #ifdef __SPHERE__
 	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
-		float hit_dist = 0.0f;
 
 		Mesh sphere = scene->meshes[i]; /* local copy */
 
-		if (intersect_sphere(ray, &hit_dist, &sphere)) {
-			ray->t = hit_dist;
+		if (intersect_sphere(ray, &sphere)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			ray->normal = fast_normalize(ray->pos - sphere.pos);
 			*mesh_id = i;
@@ -263,7 +254,6 @@ bool intersect_scene(
 		if (intersect_box(&box, ray)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			*mesh_id = fl;
-			checkSide = false;
 		}
 		++fl;
 	}
@@ -276,7 +266,6 @@ bool intersect_scene(
 
 		if(intersect_quad(&tquad, ray)){
 			*mesh_id = fl;
-			checkSide = false;
 		}
 		++fl;
 	}

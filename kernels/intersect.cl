@@ -279,7 +279,7 @@ bool intersect_scene(
 	#elif defined ROUGH_DIEL
 		const bool nTrans = scene->meshes[*mesh_id].mat.t & ~ROUGH_DIEL;
 	#else
-		const bool nTrans = false;
+		const bool nTrans = true;
 	#endif
 
 		ray->backside = dot(ray->normal, ray->dir) >= 0.0f;

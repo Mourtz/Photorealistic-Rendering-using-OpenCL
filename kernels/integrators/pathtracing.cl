@@ -172,9 +172,24 @@ float4 radiance(
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
 			}
-			/*-------------------- GLOSSY/SPECULAR (GGX|BECKMANN|PHONG) --------------------*/
-#ifdef GLOSSY
-			else if (mat.t & GLOSSY)
+			/*-------------------- CONDUCTOR --------------------*/
+#ifdef COND
+			else if (mat.t & COND)
+#else
+			else if (false)
+#endif
+			{
+				if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1))
+					break;
+
+				mask *= surfaceEvent.weight;
+
+				++SPEC_BOUNCES;
+				bounceIsSpecular = true;
+			}
+			/*-------------------- ROUGH CONDUCTOR (GGX|BECKMANN|PHONG) --------------------*/
+#ifdef ROUGH_COND
+			else if (mat.t & ROUGH_COND)
 #else
 			else if (false)
 #endif
@@ -182,14 +197,31 @@ float4 radiance(
 				if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1))
 					break;
 
-				mask *= mat.color*surfaceEvent.weight;
+				mask *= surfaceEvent.weight;
 
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;
 			}
-			/*-------------------- REFRACTIVE (GGX|BECKMANN|PHONG) --------------------*/
-#ifdef REFR
-			else if (mat.t & REFR) 
+
+			/*-------------------- DIELECTRIC --------------------*/
+#ifdef DIEL
+			else if (mat.t & DIEL) 
+#else
+			else if (false) 
+#endif
+			
+			{
+				if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1))
+					break;
+
+				mask *= surfaceEvent.weight;
+
+				//++SPEC_BOUNCES;
+				bounceIsSpecular = true;
+			}
+			/*---------------- ROUGH DIELECTRIC (GGX|BECKMANN|PHONG) ----------------*/
+#ifdef ROUGH_DIEL
+			else if (mat.t & ROUGH_DIEL) 
 #else
 			else if (false) 
 #endif
@@ -203,6 +235,7 @@ float4 radiance(
 				//++SPEC_BOUNCES;
 				bounceIsSpecular = true;
 			}
+
 			/*-------------------- COAT --------------------*/
 #ifdef COAT
 			else if (mat.t & COAT)

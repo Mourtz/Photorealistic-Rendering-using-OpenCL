@@ -494,21 +494,41 @@ namespace cl_help {
 				continue;
 			}
 
-			temp_name = "#SPEC#";
+			temp_name = "#COND#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				if (scene->ACTIVE_MATS & SPEC) {
-					line.replace(temp, temp_name.length(), std::to_string(SPEC));
+				if (scene->ACTIVE_MATS & COND) {
+					line.replace(temp, temp_name.length(), std::to_string(COND));
 					source += line + "\n";
 				}
 				continue;
 			}
 
-			temp_name = "#REFR#";
+			temp_name = "#ROUGH_COND#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				if (scene->ACTIVE_MATS & REFR) {
-					line.replace(temp, temp_name.length(), std::to_string(REFR));
+				if (scene->ACTIVE_MATS & ROUGH_COND) {
+					line.replace(temp, temp_name.length(), std::to_string(ROUGH_COND));
+					source += line + "\n";
+				}
+				continue;
+			}
+
+			temp_name = "#DIEL#";
+			temp = line.find(temp_name);
+			if (temp != string::npos) {
+				if (scene->ACTIVE_MATS & DIEL) {
+					line.replace(temp, temp_name.length(), std::to_string(DIEL));
+					source += line + "\n";
+				}
+				continue;
+			}
+
+			temp_name = "#ROUGH_DIEL#";
+			temp = line.find(temp_name);
+			if (temp != string::npos) {
+				if (scene->ACTIVE_MATS & ROUGH_DIEL) {
+					line.replace(temp, temp_name.length(), std::to_string(ROUGH_DIEL));
 					source += line + "\n";
 				}
 				continue;

@@ -7,25 +7,29 @@
 const int TOTAL_MAT_TYPES = 9;
 
 // Light
-const int LIGHT		= 1 << 0;
+const int LIGHT			= 1 << 0;
 // Diffuse
-const int DIFF		= 1 << 1;
-// Specular/Glossy
-const int SPEC		= 1 << 2;
-// Refractive
-const int REFR		= 1 << 3;
+const int DIFF			= 1 << 1;
+// Conductor
+const int COND			= 1 << 2;
+// Rough Conductor
+const int ROUGH_COND	= 1 << 10;
+// Dielectric
+const int DIEL			= 1 << 3;
+// Rough Dielectric
+const int ROUGH_DIEL	= 1 << 11;
 // Coat
-const int COAT		= 1 << 4;
+const int COAT			= 1 << 4;
 // Bounded Homogeneous Medium
-const int VOL		= 1 << 5;
+const int VOL			= 1 << 5;
 // Translucent Subsurface Scattering
-const int TRANS		= 1 << 6;
+const int TRANS			= 1 << 6;
 // Specular Subsurface Scattering
-const int SPECSUB	= 1 << 7;
+const int SPECSUB		= 1 << 7;
 // Absorptive 1
-const int ABS_REFR	= 1 << 8;
+const int ABS_REFR		= 1 << 8;
 // Absorptive 2
-const int ABS_REFR2 = 1 << 9;
+const int ABS_REFR2		= 1 << 9;
 
 // total texture types
 const int TOTAL_TEX_TYPES = 4;

@@ -95,8 +95,10 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 /* Material Types */
 #define LIGHT		#LIGHT#
 #define DIFF		#DIFF#
-#define GLOSSY		#SPEC#
-#define REFR		#REFR#
+#define COND		#COND#
+#define ROUGH_COND	#ROUGH_COND#
+#define DIEL		#DIEL#
+#define ROUGH_DIEL	#ROUGH_DIEL#
 #define COAT		#COAT#
 #define VOL			#VOL#
 #define TRANS		#TRANS#

@@ -92,7 +92,7 @@ struct host_scene {
 	if (_doc.HasMember("type") && _doc["type"].IsInt()) { \
 		_mat.t = 1 << _doc["type"].GetInt(); \
 		ACTIVE_MATS |= _mat.t; \
-		if (_mat.t & REFR) { \
+		if (_mat.t & (DIEL|ROUGH_DIEL)) { \
 			/* abosrptive? */ \
 			if (_doc.HasMember("absorptive") && _doc["absorptive"].IsNumber()) { \
 				const int cc = _doc["absorptive"].GetInt(); \
@@ -174,7 +174,7 @@ struct host_scene {
 
 						obj_mat->t = 1 << document["scene"]["obj"]["material"]["type"].GetInt();
 						ACTIVE_MATS |= obj_mat->t;
-						if (obj_mat->t == REFR) {
+						if (obj_mat->t & (DIEL | ROUGH_DIEL)) {
 							if (document["scene"]["obj"]["material"].HasMember("absorptive") &&
 								document["scene"]["obj"]["material"]["absorptive"].IsNumber()){ 
 							

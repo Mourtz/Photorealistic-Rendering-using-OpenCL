@@ -144,7 +144,14 @@ bool DielectricBSDF(
 		wo = (float3)(-wi.x*eta, -wi.y*eta, -copysign(cosThetaT, wi.z));
 		res->pdf = 1.0f - F;
 	}
-	res->weight = 1.0f;
+
+	const bool ABS1 = mat->t & ABS_REFR, ABS2 = mat->t & ABS_REFR2;
+	if(ABS1 | ABS2){
+		res->weight = ABS2 ? mat->color : 1.0f; 
+		res->weight = ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
+	} else { 
+		res->weight = mat->color;
+	}
 
 	ray->dir = toGlobal(&ray->tf, wo);
 	ray->origin = ray->pos + ray->dir * EPS;
@@ -221,6 +228,25 @@ bool RoughDielectricBSDF(
 
 /*---------------------------------- SPECULAR ----------------------------------*/
 
+bool Conductor(
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){ 
+	float3 wi = toLocal(&ray->tf, -ray->dir);
+	
+	// Silver (Ag) 
+	float F = conductorReflectance(0.051585f, 3.9046f, wi.z);
+
+	res->pdf = 1.0f;
+	res->weight = F*mat->color;
+
+	ray->origin = ray->pos + ray->normal * EPS;
+	ray->dir = toGlobal(&ray->tf, (float3)(-wi.x, -wi.y, wi.z));
+
+	return true;
+}
+
 bool RoughConductor(
 	const int dist,
 	Ray* ray, SurfaceScatterEvent* res,
@@ -248,7 +274,7 @@ bool RoughConductor(
 	float F = conductorReflectance(0.051585f, 3.9046f, wiDotM);
 
 	res->pdf = pdf;
-	res->weight = F*weight;
+	res->weight = mat->color*F*weight;
 
 	ray->origin = ray->pos + ray->normal * EPS;
 	ray->dir = toGlobal(&ray->tf, wo);

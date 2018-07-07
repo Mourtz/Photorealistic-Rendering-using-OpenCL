@@ -486,56 +486,71 @@ namespace cl_help {
 			temp_name = "#DIFF#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(DIFF));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & DIFF) {
+					line.replace(temp, temp_name.length(), std::to_string(DIFF));
+					source += line + "\n";
+				}
+
 				continue;
 			}
 
 			temp_name = "#SPEC#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(SPEC));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & SPEC) {
+					line.replace(temp, temp_name.length(), std::to_string(SPEC));
+					source += line + "\n";
+				}
 				continue;
 			}
 
 			temp_name = "#REFR#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(REFR));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & REFR) {
+					line.replace(temp, temp_name.length(), std::to_string(REFR));
+					source += line + "\n";
+				}
 				continue;
 			}
 
 			temp_name = "#COAT#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(COAT));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & COAT) {
+					line.replace(temp, temp_name.length(), std::to_string(COAT));
+					source += line + "\n";
+				}
 				continue;
 			}
 
 			temp_name = "#VOL#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(VOL));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & VOL) {
+					line.replace(temp, temp_name.length(), std::to_string(VOL));
+					source += line + "\n";
+				}
 				continue;
 			}
 
 			temp_name = "#TRANS#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(TRANS));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & TRANS) {
+					line.replace(temp, temp_name.length(), std::to_string(TRANS));
+					source += line + "\n";
+				}
 				continue;
 			}
 
 			temp_name = "#SPECSUB#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(SPECSUB));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & SPECSUB) {
+					line.replace(temp, temp_name.length(), std::to_string(SPECSUB));
+					source += line + "\n";
+				}
 				continue;
 			}
 

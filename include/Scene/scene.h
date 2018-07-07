@@ -43,6 +43,8 @@ struct host_scene {
 	bool H_BOX = false;
 	bool H_QUAD = false;
 
+	int ACTIVE_MATS = 0;
+
 	// lights
 	cl_uint LIGHT_COUNT = 0;
 	vector<cl_uint> LIGHT_INDICES;
@@ -89,6 +91,7 @@ struct host_scene {
 	/* type */ \
 	if (_doc.HasMember("type") && _doc["type"].IsInt()) { \
 		_mat.t = 1 << _doc["type"].GetInt(); \
+		ACTIVE_MATS |= _mat.t; \
 		if (_mat.t & REFR) { \
 			/* abosrptive? */ \
 			if (_doc.HasMember("absorptive") && _doc["absorptive"].IsNumber()) { \
@@ -170,6 +173,7 @@ struct host_scene {
 						document["scene"]["obj"]["material"]["type"].IsInt()) {
 
 						obj_mat->t = 1 << document["scene"]["obj"]["material"]["type"].GetInt();
+						ACTIVE_MATS |= obj_mat->t;
 						if (obj_mat->t == REFR) {
 							if (document["scene"]["obj"]["material"].HasMember("absorptive") &&
 								document["scene"]["obj"]["material"]["absorptive"].IsNumber()){ 

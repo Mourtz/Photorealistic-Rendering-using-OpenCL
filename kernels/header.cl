@@ -101,6 +101,7 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 #define VOL			#VOL#
 #define TRANS		#TRANS#
 #define SPECSUB		#SPECSUB#
+
 #define ABS_REFR	#ABS_REFR#
 #define ABS_REFR2	#ABS_REFR2#
 

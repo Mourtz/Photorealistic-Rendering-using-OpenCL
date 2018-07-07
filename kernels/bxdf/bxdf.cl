@@ -244,8 +244,8 @@ bool RoughConductor(
 	float mPdf = Microfacet_pdf(dist, alpha, m);
 	float pdf = mPdf*0.25f/wiDotM;
 	float weight = wiDotM*G*D/(wi.z*mPdf);
-	// Aluminium 
-	float F = conductorReflectance(1.0972f, 6.7942f, wiDotM);
+	// Silver (Ag) 
+	float F = conductorReflectance(0.051585f, 3.9046f, wiDotM);
 
 	res->pdf = pdf;
 	res->weight = F*weight;

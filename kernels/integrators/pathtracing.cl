@@ -159,16 +159,27 @@ float4 radiance(
 				break;
 			}
 #endif
+
 			/*-------------------- DIFFUSE --------------------*/
-			if (mat.t & DIFF) {
+#ifdef DIFF
+			if (mat.t & DIFF) 
+#else
+			if (false) 
+#endif
+			{
 				LambertBSDF(ray, seed0, seed1);
 				mask *= mat.color;
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
 			}
 			/*-------------------- GLOSSY/SPECULAR (GGX|BECKMANN|PHONG) --------------------*/
-			else if (mat.t & GLOSSY) {
-				if (!RoughConductor(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
+#ifdef GLOSSY
+			else if (mat.t & GLOSSY)
+#else
+			else if (false)
+#endif
+			{
+				if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1))
 					break;
 
 				mask *= mat.color*surfaceEvent.weight;
@@ -177,7 +188,13 @@ float4 radiance(
 				bounceIsSpecular = true;
 			}
 			/*-------------------- REFRACTIVE (GGX|BECKMANN|PHONG) --------------------*/
-			else if (mat.t & REFR) {
+#ifdef REFR
+			else if (mat.t & REFR) 
+#else
+			else if (false) 
+#endif
+			
+			{
 				if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
 					break;
 
@@ -187,7 +204,12 @@ float4 radiance(
 				bounceIsSpecular = true;
 			}
 			/*-------------------- COAT --------------------*/
-			else if (mat.t & COAT) {
+#ifdef COAT
+			else if (mat.t & COAT)
+#else
+			else if (false)
+#endif
+			{
 				ray->origin = ray->pos + ray->normal * EPS;
 				/* reflect */
 				if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
@@ -206,7 +228,12 @@ float4 radiance(
 				}
 			}
 			/*-------------------- VOL --------------------*/
-			else if (mat.t & VOL) {
+#ifdef VOL
+			else if (mat.t & VOL) 
+#else
+			else if (false)
+#endif
+			{
 				if (!ray->backside) {
 					ray->origin = ray->pos - ray->normal * EPS;
 					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
@@ -260,13 +287,17 @@ float4 radiance(
 				ray->normal = ray->dir;
 				ray->backside = bounceIsSpecular = false;
 			}
-			/*-------------------- TRANS --------------------*/
+			/*-------------------- TRANS --------------------
 			else if (mat.t & TRANS) {
 
 			}
 			/*-------------------- SPECSUB --------------------*/
-			else if (mat.t & SPECSUB) {
-
+#ifdef SPECSUB
+			else if (mat.t & SPECSUB)
+#else
+			else if (false)
+#endif
+			{
 				if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.3f)) {
 					ray->origin = ray->pos + ray->normal * EPS;
 					ray->dir = fast_normalize(reflect(ray->dir, ray->normal));

@@ -167,8 +167,10 @@ float4 radiance(
 			if (false) 
 #endif
 			{
-				LambertBSDF(ray, seed0, seed1);
-				mask *= mat.color;
+				LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
+		
+				mask *= surfaceEvent.weight;
+
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
 			}
@@ -243,9 +245,9 @@ float4 radiance(
 			else if (false)
 #endif
 			{
-				ray->origin = ray->pos + ray->normal * EPS;
 				/* reflect */
 				if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
+					ray->origin = ray->pos + ray->normal * EPS;
 					ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
 					++SPEC_BOUNCES;
@@ -253,8 +255,9 @@ float4 radiance(
 				}
 				/* diffuse */
 				else {
-					LambertBSDF(ray, seed0, seed1);
-					mask *= mat.color;
+					LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
+
+					mask *= surfaceEvent.weight;
 
 					++DIFF_BOUNCES;
 					bounceIsSpecular = false;
@@ -449,7 +452,7 @@ float4 radiance(
 		float roulettePdf = fmax3(mask);
 		if (roulettePdf < 0.1f && bounce > 2) {
 			if (get_random(seed0, seed1) < roulettePdf)
-				mask = native_divide(mask,roulettePdf);
+				mask /= roulettePdf;
 			else
 				break;
 		}

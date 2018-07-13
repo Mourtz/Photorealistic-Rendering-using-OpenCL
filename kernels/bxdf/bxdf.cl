@@ -49,6 +49,14 @@ float conductorReflectance(float eta, float k, float cosThetaI){
 	return 0.5f*(Rs + Rs * Rp);
 }
 
+float3 conductorReflectance3(float3 eta, float3 k, float cosThetaI){
+    return (float3)(
+        conductorReflectance(eta.x, k.x, cosThetaI),
+        conductorReflectance(eta.y, k.y, cosThetaI),
+        conductorReflectance(eta.z, k.z, cosThetaI)
+    );
+}
+
 float conductorReflectanceApprox(float eta, float k, float cosThetaI){
     float cosThetaISq = cosThetaI*cosThetaI;
     float ekSq = eta*eta* + k*k;
@@ -97,16 +105,39 @@ float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float a
 	return toGlobal(tf, h);
 }
 
-/*---------------------------------- DIFFUSE ----------------------------------*/
+/*---------------------------------- LAMBERTIAN ----------------------------------*/
 
-void LambertBSDF(Ray* ray, uint* seed0, uint* seed1){ 
+void LambertBSDF(
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){ 
 	float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+	ray->dir = cosineHemisphere(&xi);
+
+	res->pdf = cosineHemispherePdf(ray->dir);
+	res->weight = mat->color;
+
 	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&ray->tf, cosineHemisphere(&xi));
-	//*pdf = cosineHemispherePdf(ray->dir);
+	ray->dir = toGlobal(&ray->tf, ray->dir);
 }
 
-void LambertianFiberBCSDF(Ray* ray, uint* seed0, uint* seed1){
+/*----------------- FIBER -----------------*/
+
+float lambertianCylinder(const float3* wo){
+    float cosThetaO = trigInverse(wo->y);
+    float phi = atan2(wo->x, wo->z);
+    if (phi < 0.0f)
+        phi += TWO_PI;
+
+    return cosThetaO*fabs(((PI - phi)*native_cos(phi) + native_sin(phi))*INV_FOUR_PI);
+}
+
+void LambertianFiberBCSDF(
+	Ray* ray, SurfaceScatterEvent* res,
+	const Material* mat, 
+	uint* seed0, uint* seed1
+){
 	float h = get_random(seed0, seed1)*2.0f - 1.0f;
 	float nx = h;
     float nz = trigInverse(nx);
@@ -114,8 +145,13 @@ void LambertianFiberBCSDF(Ray* ray, uint* seed0, uint* seed1){
 	float2 xi = hash_2ui_2f32(seed0, seed1);
 	float3 d = cosineHemisphere(&xi);
 
+	ray->dir = (float3)(d.z*nx + d.x*nz, d.y, d.z*nz - d.x*nx);
+
+	res->pdf = lambertianCylinder(&ray->dir);
+    res->weight = mat->color;
+
 	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&ray->tf, (float3)(d.z*nx + d.x*nz, d.y, d.z*nz - d.x*nx));
+	ray->dir = toGlobal(&ray->tf, ray->dir);
 }
 
 /*---------------------------------- DIELECTRIC ----------------------------------*/
@@ -226,7 +262,7 @@ bool RoughDielectricBSDF(
 	return true;
 }
 
-/*---------------------------------- SPECULAR ----------------------------------*/
+/*---------------------------------- CONDUCTOR ----------------------------------*/
 
 bool Conductor(
 	Ray* ray, SurfaceScatterEvent* res,
@@ -270,8 +306,8 @@ bool RoughConductor(
 	float mPdf = Microfacet_pdf(dist, alpha, m);
 	float pdf = mPdf*0.25f/wiDotM;
 	float weight = wiDotM*G*D/(wi.z*mPdf);
-	// Silver (Ag) 
-	float F = conductorReflectance(0.051585f, 3.9046f, wiDotM);
+	// Copper (Cu) 
+	float3 F = conductorReflectance3((float3)(0.200438f, 0.924033f, 1.10221f), (float3)(3.91295f, 2.45285f, 2.14219f), wiDotM);
 
 	res->pdf = pdf;
 	res->weight = mat->color*F*weight;

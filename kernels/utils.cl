@@ -67,6 +67,16 @@ float uniformSpherePdf(){
 
 //--------------------------------------------------------------------
 
+float3 uniformHemisphere(const float2* xi){
+    float phi  = TWO_PI*xi->x;
+    float r = native_sqrt(fmax(1.0f - xi->y*xi->y, 0.0f));
+    return (float3)(native_cos(phi)*r, native_sin(phi)*r, xi->y);
+}
+
+#define uniformHemispherePdf() INV_TWO_PI
+
+//--------------------------------------------------------------------
+
 float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*(1.0f - cosThetaMax) + cosThetaMax;
@@ -94,9 +104,7 @@ float3 cosineHemisphere(const float2* xi){
     );
 }
 
-float cosineHemispherePdf(const float3 p){
-    return fabs(p.z)*INV_PI;
-}
+#define cosineHemispherePdf(p) fabs(p.z)*INV_PI
 
 //--------------------------------------------------------------------
 

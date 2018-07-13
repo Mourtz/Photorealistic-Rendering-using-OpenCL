@@ -22,6 +22,8 @@ float3 calcDirectLight(
 
 	const float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
 
+//------------------------------------ SPHERE LIGHT ------------------------------------//
+
 #ifdef __SPHERE__
 	if (light.t & SPHERE) {
 		
@@ -48,6 +50,8 @@ float3 calcDirectLight(
 		}
 	}
 #endif
+
+//------------------------------------ QUAD LIGHT ------------------------------------//
 
 #ifdef __QUAD__
 

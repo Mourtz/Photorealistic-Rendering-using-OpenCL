@@ -3,7 +3,7 @@
 
 /*--------------------------- LIGHT ---------------------------*/
 
-#ifdef HAS_LIGHTS
+#ifdef LIGHT
 
 float3 calcDirectLight(
 	const Ray* ray,
@@ -150,7 +150,7 @@ float4 radiance(
 			const Mesh mesh = scene->meshes[mesh_id];
 			const Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
 
-#ifdef HAS_LIGHTS
+#ifdef LIGHT
 			if (mat.t & LIGHT) {
 				if (!bounceIsSpecular)
 					mask *= fmax(0.01f, dot(ray->dir, ray->normal));
@@ -400,7 +400,7 @@ float4 radiance(
 				}
 			}
 
-#ifdef HAS_LIGHTS
+#ifdef LIGHT
 			if (!bounceIsSpecular) {
 				float3 wi;
 				for (uint i = 0; i < LIGHT_COUNT; ++i) {
@@ -419,7 +419,7 @@ float4 radiance(
 		else {
 			ray->origin = gm_sample.p;
 
-#ifdef HAS_LIGHTS
+#ifdef LIGHT
 			float3 vwi;
 			for (uint i = 0; i < LIGHT_COUNT; ++i) {
 				uint index = LIGHT_INDICES[i];

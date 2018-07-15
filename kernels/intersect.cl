@@ -42,8 +42,8 @@ bool get_dist(float* dist, const Ray* sray, const Mesh* mesh, const Scene* scene
 	return temp_ray.t < INF;
 }
 
-//-------------# HAS_LIGHTS
-#ifdef HAS_LIGHTS
+//-------------# LIGHTS
+#ifdef LIGHT
 
 /* Hit a specific object and pass the intesection info to the ray */
 bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool isOBJ) {
@@ -200,7 +200,7 @@ bool shadow(
 }
 
 #endif
-//-------------# HAS_LIGHTS
+//-------------# LIGHTS
 
 /* find the closest intersection in the scene */
 bool intersect_scene(

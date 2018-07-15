@@ -25,8 +25,10 @@
 #define envMapEquirect(dir) (float2)((atan2(dir.z, dir.x) * INV_TWO_PI) + 0.5f, acos(dir.y) * INV_PI)
 
 /// Translate cartesian coordinates to spherical system
-void CartesianToSpherical(float3 cart, float* r, float* phi, float* theta)
-{
+void CartesianToSpherical(
+	float3 cart, 
+	float* r, float* phi, float* theta
+){
 	float temp = atan2(cart.x, cart.z);
 	*r = sqrt(cart.x*cart.x + cart.y*cart.y + cart.z*cart.z);
 	/* Account for discontinuity */
@@ -35,9 +37,10 @@ void CartesianToSpherical(float3 cart, float* r, float* phi, float* theta)
 }
 
 /// Translate polar coordinates to cartesian
-float3 polar_to_cartesian(const float sinTheta, const float cosTheta,
-	const float sinPhi, const float cosPhi)
-{
+float3 polar_to_cartesian(
+	const float sinTheta, const float cosTheta,
+	const float sinPhi, const float cosPhi
+){
 	return (float3)(sinTheta * cosPhi,
 		sinTheta * sinPhi,
 		cosTheta);
@@ -84,9 +87,7 @@ float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
 	);
 }
 
-float uniformSphericalCapPdf(float cosThetaMax){
-    return INV_TWO_PI/(1.0f - cosThetaMax);
-}
+#define uniformSphericalCapPdf(cosThetaMax) INV_TWO_PI/(1.0f - cosThetaMax)
 
 //--------------------------------------------------------------------
 
@@ -111,9 +112,7 @@ float3 phongHemisphere(const float2* xi, float n){
     return (float3)(native_cos(phi)*r, native_sin(phi)*r, cosTheta);
 }
 
-float phongHemispherePdf(const float3* v, float n){
-    return INV_TWO_PI*(n + 1.0f)*pow(v->z, n);
-}
+#define phongHemispherePdf(v, n) INV_TWO_PI*(n + 1.0f)*pow(v->z, n)
 
 //--------------------------------------------------------------------
 

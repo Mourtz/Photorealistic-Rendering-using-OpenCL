@@ -368,6 +368,6 @@ struct host_scene {
 			}
 		}
 
-		this->getLights();
+		if(ACTIVE_MATS & LIGHT) this->getLights();
 	}
 };

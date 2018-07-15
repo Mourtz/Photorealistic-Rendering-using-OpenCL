@@ -478,8 +478,10 @@ namespace cl_help {
 			temp_name = "#LIGHT#";
 			temp = line.find(temp_name);
 			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), std::to_string(LIGHT));
-				source += line + "\n";
+				if (scene->ACTIVE_MATS & LIGHT) {
+					line.replace(temp, temp_name.length(), std::to_string(LIGHT));
+					source += line + "\n";
+				}
 				continue;
 			}
 
@@ -591,14 +593,6 @@ namespace cl_help {
 			}
 
 //--------------------------------- LIGHT ---------------------------------
-
-			temp_name = "#HAS_LIGHTS#";
-			temp = line.find(temp_name);
-			if (temp != string::npos) {
-				line.replace(temp, temp_name.length(), (scene->LIGHT_COUNT > 0 ? "#define HAS_LIGHTS" : ""));
-				source += line + "\n";
-				continue;
-			}
 
 			if (scene->LIGHT_COUNT) {
 

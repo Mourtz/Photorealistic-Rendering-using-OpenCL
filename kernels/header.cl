@@ -56,19 +56,6 @@
 #define GLOBAL_FOG_ABS_ONLY		#GLOBAL_FOG_ABS_ONLY#
 #endif
 
-/* Light Sources */
-#HAS_LIGHTS#
-#ifdef HAS_LIGHTS
-
-/* total light sources */
-#define LIGHT_COUNT				#LIGHT_COUNT#
-#define INV_LIGHT_COUNT			#INV_LIGHT_COUNT#
-/* light indices */
-__constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
-/* max light bounces */
-#define LIGHT_BOUNCES			2
-#endif
-
 /* Seperate bounce controls for eye tracing */
 #define MAX_BOUNCES				#MAX_BOUNCES#
 #define MAX_DIFF_BOUNCES		#MAX_DIFF_BOUNCES#
@@ -106,6 +93,19 @@ __constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
 
 #define ABS_REFR	#ABS_REFR#
 #define ABS_REFR2	#ABS_REFR2#
+
+/* Light Sources */
+#ifdef LIGHT
+
+/* total light sources */
+#define LIGHT_COUNT				#LIGHT_COUNT#
+#define INV_LIGHT_COUNT			#INV_LIGHT_COUNT#
+/* light indices */
+__constant uint LIGHT_INDICES[LIGHT_COUNT] = { #LIGHT_INDICES# };
+/* max light bounces */
+#define LIGHT_BOUNCES			2
+#endif
+
 
 typedef struct { 
 	float pdf;

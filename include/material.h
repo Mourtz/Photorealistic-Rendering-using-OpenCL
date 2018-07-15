@@ -3,9 +3,6 @@
 #include <align.h>
 #include <Texture/texture.h>
 
-// total material types
-const int TOTAL_MAT_TYPES = 9;
-
 // Light
 const int LIGHT			= 1 << 0;
 // Diffuse
@@ -51,5 +48,3 @@ struct Material
 	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)), roughness(0.0f), t(DIFF), tex(TEX_NULL), b(true) {}
 	Material(vec4 _color, float _roughness, int _t, int _tex, bool _b) : color(_color), roughness(_roughness), t(_t), tex(_tex), b(_b) {}
 };
-
-const Material glass = Material();

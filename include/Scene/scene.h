@@ -13,7 +13,7 @@
 
 #include <Scene/geometry.h>
 
-string scene_filepath = "../scenes/test.json";
+string scene_filepath = "../scenes/cornell.json";
 bool ALPHA_TESTING(false);
 
 struct cl_medium {
@@ -91,7 +91,6 @@ struct host_scene {
 	/* type */ \
 	if (_doc.HasMember("type") && _doc["type"].IsInt()) { \
 		_mat.t = 1 << _doc["type"].GetInt(); \
-		ACTIVE_MATS |= _mat.t; \
 		if (_mat.t & (DIEL|ROUGH_DIEL)) { \
 			/* abosrptive? */ \
 			if (_doc.HasMember("absorptive") && _doc["absorptive"].IsNumber()) { \
@@ -100,6 +99,7 @@ struct host_scene {
 			} \
 		} \
 	} \
+	ACTIVE_MATS |= _mat.t; \
 }
 
 	void load() {
@@ -173,7 +173,6 @@ struct host_scene {
 						document["scene"]["obj"]["material"]["type"].IsInt()) {
 
 						obj_mat->t = 1 << document["scene"]["obj"]["material"]["type"].GetInt();
-						ACTIVE_MATS |= obj_mat->t;
 						if (obj_mat->t & (DIEL | ROUGH_DIEL)) {
 							if (document["scene"]["obj"]["material"].HasMember("absorptive") &&
 								document["scene"]["obj"]["material"]["absorptive"].IsNumber()){ 
@@ -185,6 +184,7 @@ struct host_scene {
 							}
 						}
 					}
+					ACTIVE_MATS |= obj_mat->t;
 				}
 			}
 

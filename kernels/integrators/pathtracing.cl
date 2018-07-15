@@ -270,27 +270,27 @@ float4 radiance(
 			else if (false)
 #endif
 			{
+				// if ~backside get the ray inside the medium
 				if (!ray->backside) {
 					ray->origin = ray->pos - ray->normal * EPS;
 					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 					ray->backside = true;
 				}
 
-				// max scattering events
-				const int max_scatters = 1024;
-
 				MediumSample m_sample;
 
 				// medium's properties
 				Medium medium;
-				medium.density = mat.color * 40.0f;
+				medium.density = mat.color * 80.0f;
 				medium.sigmaA = 0.2f * medium.density;
 				medium.sigmaS = 1.0f * medium.density;
 				medium.sigmaT = (medium.sigmaA + medium.sigmaS);
 				medium.absorptionOnly = (dot(medium.sigmaS, 1.0f) == 0.0f);
 
+				// max scattering events
+				const int max_scatters = 1024;
 				int scatters = 0;
-				while (true) {
+				do {
 					sampleDistance(ray, &m_sample, &medium, seed0, seed1);
 
 					mask *= m_sample.weight;
@@ -301,7 +301,11 @@ float4 radiance(
 
 					float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
 					ray->origin = m_sample.p;
-					ray->dir = uniformSphere(xi);
+					#if 0
+						ray->dir = uniformSphere(xi);
+					#else
+						hg_sample_fast(&ray->dir, 0.4f, &xi);
+					#endif
 
 					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
@@ -313,11 +317,7 @@ float4 radiance(
 						else
 							break;
 					}
-
-					if (++scatters > max_scatters) {
-						break;
-					}
-				}
+				} while(++scatters < max_scatters);
 
 				ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 				ray->normal = ray->dir;

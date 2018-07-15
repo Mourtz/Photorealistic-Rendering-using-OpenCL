@@ -43,9 +43,7 @@ float3 polar_to_cartesian(const float sinTheta, const float cosTheta,
 		cosTheta);
 }
 
-float trigInverse(float x){
-    return fmin(native_sqrt(fmax(1.0f - x*x, 0.0f)), 1.0f);
-}
+#define trigInverse(x) fmin(native_sqrt(fmax(1.0f - x*x, 0.0f)), 1.0f)
 
 //--------------------------------------------------------------------
 
@@ -61,9 +59,7 @@ float3 uniformSphere(const float2 xi){
 	);
 }
 
-float uniformSpherePdf(){
-    return INV_FOUR_PI;
-}
+#define uniformSpherePdf() INV_FOUR_PI
 
 //--------------------------------------------------------------------
 

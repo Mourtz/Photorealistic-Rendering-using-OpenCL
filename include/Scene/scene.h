@@ -13,7 +13,7 @@
 
 #include <Scene/geometry.h>
 
-string scene_filepath = "../scenes/cornell.json";
+string scene_filepath = "../scenes/test.json";
 bool ALPHA_TESTING(false);
 
 struct cl_medium {

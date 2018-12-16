@@ -217,7 +217,7 @@ struct host_scene {
 					if (spheres[i].HasMember("radius") &&
 						spheres[i]["radius"].IsNumber()) {
 
-						cpu_meshes[i].joker.x = spheres[i]["radius"].GetFloat();
+						cpu_meshes[i].joker.s[0] = spheres[i]["radius"].GetFloat();
 					}
 
 					// sphere's material

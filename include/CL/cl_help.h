@@ -191,11 +191,12 @@ namespace cl_help {
 	//---------------------------------------------------------------------------------------
 	
 	template<typename T>
-	static Buffer createBuffer(vector<T> data, std::size_t size) {
-		cl_int err;
-		Buffer buffer = Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, size, &data[0], &err);
-
-		return buffer;
+	static inline Buffer createBuffer(
+		vector<T> data,
+		std::size_t size,
+		cl_mem_flags flags = (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR)
+	){
+		return Buffer(context, flags, size, &data[0]);
 	}
 
 	//---------------------------------------------------------------------------------------

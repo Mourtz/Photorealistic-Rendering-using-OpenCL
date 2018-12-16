@@ -153,9 +153,8 @@ float4 radiance(
 #ifdef LIGHT
 			if (mat.t & LIGHT) {
 				if (!bounceIsSpecular)
-					mask *= fmax(0.01f, dot(ray->dir, ray->normal));
-
-				acc.xyz += mask * mat.color;
+					acc.xyz += mask * mat.color;
+	
 				break;
 			}
 #endif

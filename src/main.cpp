@@ -110,8 +110,8 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 
 		vector<Tri> facesVec = node->faces;
 		cl_uint fvecLen = facesVec.size();
-		sn.bbMin.w = (fvecLen > 0) ? (cl_float)facesV.size() + 0 : -1.0f;
-		sn.bbMax.w = (fvecLen > 1) ? (cl_float)facesV.size() + 1 : -1.0f;
+		sn.bbMin.s[3] = (fvecLen > 0) ? (cl_float)facesV.size() + 0 : -1.0f;
+		sn.bbMax.s[3] = (fvecLen > 1) ? (cl_float)facesV.size() + 1 : -1.0f;
 
 		// Set the flag to skip the next left child node.
 		if (fvecLen == 0 && node->skipNextLeft) {
@@ -142,13 +142,13 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 
 					// Reached a parent with a true sibling.
 					if (dummy->parent->parent != NULL) {
-						sn.bbMax.w = dummy->parent->parent->rightChild->id - dummy->parent->parent->rightChild->numSkipsToHere;
+						sn.bbMax.s[3] = dummy->parent->parent->rightChild->id - dummy->parent->parent->rightChild->numSkipsToHere;
 					}
 				}
 			}
 			// Node on the left, go to the right sibling.
 			else {
-				sn.bbMax.w = node->parent->rightChild->id - node->parent->rightChild->numSkipsToHere;
+				sn.bbMax.s[3] = node->parent->rightChild->id - node->parent->rightChild->numSkipsToHere;
 			}
 		}
 
@@ -160,16 +160,16 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 			cl_uint4 fv;
 			cl_uint4 fn;
 
-			fv.x = faces[tri.face.w * 3];
-			fv.y = faces[tri.face.w * 3 + 1];
-			fv.z = faces[tri.face.w * 3 + 2];
+			fv.s[0] = faces[tri.face.s[3] * 3];
+			fv.s[1] = faces[tri.face.s[3] * 3 + 1];
+			fv.s[2] = faces[tri.face.s[3] * 3 + 2];
 			// Material of face @ToDo
 			//fv.w = facesMtl[tri.face.w];
 
-			fn.x = facesVN[tri.normals.w * 3];
-			fn.y = facesVN[tri.normals.w * 3 + 1];
-			fn.z = facesVN[tri.normals.w * 3 + 2];
-			fn.w = 0;
+			fn.s[0] = facesVN[tri.normals.s[3] * 3];
+			fn.s[1] = facesVN[tri.normals.s[3] * 3 + 1];
+			fn.s[2] = facesVN[tri.normals.s[3] * 3 + 2];
+			fn.s[3] = 0;
 
 			facesV.push_back(fv);
 			facesN.push_back(fn);
@@ -292,8 +292,9 @@ void initOpenCL()
 	cout << "\t\t\tMax compute units: " << device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << endl;
 	cout << "\t\t\tMax work group size: " << device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << endl;
 
+	std::vector<cl_context_properties> properties;
 #if defined OS_WIN
-	cl_context_properties properties[] =
+    properties =
 	{
 		CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetWGLContext(window),
 		CL_WGL_HDC_KHR, (cl_context_properties)GetDC(glfwGetWin32Window(window)),
@@ -301,17 +302,20 @@ void initOpenCL()
 		0
 	};
 #elif defined OS_LNX
-	cl_context_properties properties[] =
+    properties =
 	{
 		CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetGLXContext(window),
 		CL_GLX_DISPLAY_KHR, (cl_context_properties)glfwGetX11Display(),
 		CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 		0
 	};
+#else
+	std::cout << "there's only support for Windows and Linux at the moment" << std::endl; 
+	exit(1);
 #endif
 
 	// Create an OpenCL context
-	context = clw::Context(device, properties);
+	context = clw::Context(device, properties.data());
 
 	// Create a command queue
 	queue = clw::CommandQueue(context, device);
@@ -485,13 +489,16 @@ int main(int argc, char** argv){
 	initOpenCL();
 
 #ifdef __DEBUG__
+	std::cout << "device specifications:" << std::endl;
 	if (!device.getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err)) {
 		OPENCL_EXPECTED_ERROR("Images are not supported on this device!");
 	}
 
-	cout << "max image2D size (" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(&err) << "x" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>(&err) << ")" << std::endl;
+	cout << "> max image2D size (" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(&err) << "x" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>(&err) << ")" << std::endl;
 #endif
 
+	std::cout << "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" << std::endl;
+	
 	glfwShowWindow(window);
 
 	//make sure OpenGL is finished before we proceed

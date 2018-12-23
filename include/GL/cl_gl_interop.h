@@ -64,6 +64,7 @@ bool initGL(){
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetCursorPosCallback(window, cursor_pos_callback);
+	glfwSetScrollCallback(window, scroll_callback);
 	//glfwSetWindowSizeCallback(window, window_size_callback);
 
 	// initialise OpenGL extensions

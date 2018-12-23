@@ -45,8 +45,8 @@ namespace clw = cl_help;
 
 #define __DEBUG__
 
-const string models_directory = "../resources/models/";
-const string kernel_filepath = "../kernels/main.cl";
+constexpr char* models_directory = "../resources/models/";
+constexpr char* kernel_filepath = "../kernels/main.cl";
 
 // every pixel in the image has its own thread or "work item",
 // so the total amount of work items equals the number of pixels
@@ -60,8 +60,16 @@ clw::Buffer cl_camera;
 clw::Buffer cl_accumbuffer;
 clw::ImageGL cl_screen;
 clw::ImageGL cl_env_map;
-clw::ImageGL cl_noise_tex;
+// clw::ImageGL cl_noise_tex;
 vector<clw::Memory> cl_screens;
+
+// struct RayI {
+// 	cl_float3 origin, direction, mask;
+// 	cl_uint bounces;
+// };
+constexpr size_t RayI_size = 64;
+
+clw::Buffer cl_flattenI;
 
 cl_uint BVH_NUM_NODES(0);
 clw::Buffer mBufBVH;
@@ -357,7 +365,8 @@ void initCLKernel(){
 	kernel.setArg(16, mBufMaterial);
 
 	kernel.setArg(17, cl_env_map);
-	kernel.setArg(18, cl_noise_tex);
+	// kernel.setArg(18, cl_noise_tex);
+	kernel.setArg(18, cl_flattenI);
 }
 
 //---------------------------------------------------------------------------------------
@@ -404,12 +413,11 @@ void render(){
 #ifdef __DEBUG__
 		acc_time = 0;
 #endif
-		float arg = 0;
-		queue.enqueueFillBuffer(cl_accumbuffer, arg, 0, window_width * window_height * sizeof(cl_float4));
+		queue.enqueueFillBuffer(cl_accumbuffer, 0, 0, window_width * window_height * sizeof(cl_float4));
+		queue.enqueueFillBuffer(cl_flattenI, 0, 0, window_width * window_height * RayI_size);
 		framenumber = 0;
 	}
 	buffer_reset = false;
-	++framenumber;
 
 	// build a new camera for each frame on the CPU
 	interactiveCamera->buildRenderCamera(hostRendercam);
@@ -417,7 +425,7 @@ void render(){
 	queue.enqueueWriteBuffer(cl_camera, CL_TRUE, 0, sizeof(Camera), hostRendercam);
 	queue.finish();
 
-	kernel.setArg(4, framenumber);
+	kernel.setArg(4, ++framenumber);
 	kernel.setArg(5, cl_camera);
 	kernel.setArg(6, rand());
 	kernel.setArg(7, rand());
@@ -547,9 +555,9 @@ int main(int argc, char** argv){
 	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// noise texture
-	cl_noise_tex = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex2, &err);
-	cl_screens.push_back(cl_noise_tex);
-	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
+	// cl_noise_tex = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex2, &err);
+	// cl_screens.push_back(cl_noise_tex);
+	// if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// radiance
 	cl_screen = clw::ImageGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex0, &err);
@@ -557,7 +565,10 @@ int main(int argc, char** argv){
 	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// reserve memory buffer on OpenCL device to hold image buffer for accumulated samples
-	cl_accumbuffer = clw::Buffer(context, CL_MEM_WRITE_ONLY, window_width * window_height * sizeof(cl_float4));
+	cl_accumbuffer = clw::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * sizeof(cl_float4));
+
+	// 
+	cl_flattenI = clw::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * RayI_size);
 
 	// intitialise the kernel
 	initCLKernel();

@@ -93,24 +93,32 @@ float3 calcDirectLight(
 float4 radiance(
 	const Scene* scene,
 	__read_only image2d_t env_map,
-	__read_only image2d_t noise_tex,
 	Ray* ray,
+	float3* n_mask,
+	uint* n_bounce,
 	uint* seed0, uint* seed1
 ){
+	*n_bounce += 1;
+
 	int mesh_id;
 
 	if (!intersect_scene(ray, &mesh_id, scene)) {
-#ifdef ALPHA_TESTING
-		return (float4)(0.0f);
-#else
-		return (float4)(read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
-#endif
+		uint temp = *n_bounce;
+		*n_bounce = 0;
+		if(temp == 0){
+			#ifdef ALPHA_TESTING
+					return (float4)(0.0f);
+			#else
+					return (float4)(read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
+			#endif
+		} else{
+			return (float4)((*n_mask) * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
+		}
 	}
 
-	uint DIFF_BOUNCES = 0, SPEC_BOUNCES = 0, TRANS_BOUNCES = 0, SCATTERING_EVENTS = 0, bounce = 0;
+	uint DIFF_BOUNCES = 0, SPEC_BOUNCES = 0, TRANS_BOUNCES = 0, SCATTERING_EVENTS = 0;
 
 	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
-	float3 mask = (float3)(1.0f);
 	float brdfPdf = 1.0f;
 
 	SurfaceScatterEvent surfaceEvent;
@@ -131,17 +139,14 @@ float4 radiance(
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
 #endif
 
-	do {
-
 /*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
 		sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
-		mask *= gm_sample.weight;
+		(*n_mask) *= gm_sample.weight;
 		const bool hitSurface = gm_sample.exited;
 #endif
 
 		/*------------------------------------------------------*/
-
 
 #ifdef GLOBAL_MEDIUM
 		if (hitSurface) 
@@ -152,10 +157,11 @@ float4 radiance(
 
 #ifdef LIGHT
 			if (mat.t & LIGHT) {
-				if (!bounceIsSpecular)
-					acc.xyz += mask * mat.color;
+				if (!bounceIsSpecular || *n_bounce == 1)
+					acc.xyz += (*n_mask) * mat.color;
 	
-				break;
+				*n_bounce = 0;
+				return acc;
 			}
 #endif
 
@@ -168,7 +174,7 @@ float4 radiance(
 			{
 				LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
 		
-				mask *= surfaceEvent.weight;
+				(*n_mask) *= surfaceEvent.weight;
 
 				++DIFF_BOUNCES;
 				bounceIsSpecular = false;
@@ -180,10 +186,12 @@ float4 radiance(
 			else if (false)
 #endif
 			{
-				if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1))
-					break;
+				if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1)){
+					*n_bounce = 0;
+					return acc;
+				}
 
-				mask *= surfaceEvent.weight;
+				*n_mask *= surfaceEvent.weight;
 
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;
@@ -195,10 +203,12 @@ float4 radiance(
 			else if (false)
 #endif
 			{
-				if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1))
-					break;
+				if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1)){
+					*n_bounce = 0;
+					return acc;
+				}
 
-				mask *= surfaceEvent.weight;
+				*n_mask *= surfaceEvent.weight;
 
 				++SPEC_BOUNCES;
 				bounceIsSpecular = true;
@@ -212,10 +222,12 @@ float4 radiance(
 #endif
 			
 			{
-				if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1))
-					break;
+				if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1)){
+					*n_bounce = 0;
+					return acc;
+				}
 
-				mask *= surfaceEvent.weight;
+				*n_mask *= surfaceEvent.weight;
 
 				//++SPEC_BOUNCES;
 				bounceIsSpecular = true;
@@ -228,10 +240,12 @@ float4 radiance(
 #endif
 			
 			{
-				if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1))
-					break;
+				if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1)){
+					*n_bounce = 0;
+					return acc;
+				}
 
-				mask *= surfaceEvent.weight;
+				*n_mask *= surfaceEvent.weight;
 
 				//++SPEC_BOUNCES;
 				bounceIsSpecular = true;
@@ -256,7 +270,7 @@ float4 radiance(
 				else {
 					LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
 
-					mask *= surfaceEvent.weight;
+					*n_mask *= surfaceEvent.weight;
 
 					++DIFF_BOUNCES;
 					bounceIsSpecular = false;
@@ -272,7 +286,10 @@ float4 radiance(
 				// if ~backside get the ray inside the medium
 				if (!ray->backside) {
 					ray->origin = ray->pos - ray->normal * EPS;
-					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
+						*n_bounce = 0;
+						return acc;	
+					}
 					ray->backside = true;
 				}
 
@@ -292,7 +309,7 @@ float4 radiance(
 				do {
 					sampleDistance(ray, &m_sample, &medium, seed0, seed1);
 
-					mask *= m_sample.weight;
+					*n_mask *= m_sample.weight;
 
 					if (m_sample.exited) {
 						break;
@@ -306,16 +323,19 @@ float4 radiance(
 						hg_sample_fast(&ray->dir, 0.4f, &xi);
 					#endif
 
-					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
+						*n_bounce = 0;
+						return acc;
+					}
 
 					//russian roulette
-					float roulettePdf = fmax3(mask);
-					if (roulettePdf < 0.1f) {
-						if (xi.x < roulettePdf)
-							mask = native_divide(mask, roulettePdf);
-						else
-							break;
-					}
+					// float roulettePdf = fmax3((*n_mask));
+					// if (roulettePdf < 0.1f) {
+					// 	if (xi.x < roulettePdf)
+					// 		*n_mask /= roulettePdf;
+					// 	else
+					// 		break;
+					// }
 				} while(++scatters < max_scatters);
 
 				ray->origin = ray->origin + ray->dir * (ray->t + EPS);
@@ -364,7 +384,7 @@ float4 radiance(
 					while (true) {
 						sampleDistance(ray, &m_sample, &medium, seed0, seed1);
 
-						mask *= m_sample.weight;
+						*n_mask *= m_sample.weight;
 
 						if (m_sample.exited) {
 							break;
@@ -380,10 +400,10 @@ float4 radiance(
 						if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
 						//russian roulette
-						float roulettePdf = fmax3(mask);
+						float roulettePdf = fmax3((*n_mask));
 						if (roulettePdf < 0.1f) {
 							if (get_random(seed0, seed1) < roulettePdf)
-								mask = native_divide(mask, roulettePdf);
+								*n_mask = native_divide(*n_mask, roulettePdf);
 							else
 								break;
 						}
@@ -408,7 +428,7 @@ float4 radiance(
 					if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
 					float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, mesh_id);
-					acc.xyz += dLight * mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
+					acc.xyz += dLight * (*n_mask) * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 				}
 			}
 #endif
@@ -427,7 +447,7 @@ float4 radiance(
 
 				float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
 				// @ToFix - im 100% sure this is wrong
-				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
+				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * *n_mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			}
 #endif
 
@@ -439,38 +459,27 @@ float4 radiance(
 #endif
 
 		/* terminate if necessary */
-		if (DIFF_BOUNCES >= MAX_DIFF_BOUNCES || 
-			SPEC_BOUNCES >= MAX_SPEC_BOUNCES ||
-			TRANS_BOUNCES >= MAX_TRANS_BOUNCES || 
-			SCATTERING_EVENTS >= MAX_SCATTERING_EVENTS
-		) { 
-			break;
-		}
+		// if (DIFF_BOUNCES >= MAX_DIFF_BOUNCES || 
+		// 	SPEC_BOUNCES >= MAX_SPEC_BOUNCES ||
+		// 	TRANS_BOUNCES >= MAX_TRANS_BOUNCES || 
+		// 	SCATTERING_EVENTS >= MAX_SCATTERING_EVENTS
+		// ) { 
+		// 	break;
+		// }
 
 		//russian roulette
-		float roulettePdf = fmax3(mask);
-		if (roulettePdf < 0.1f && bounce > 2) {
-			if (get_random(seed0, seed1) < roulettePdf)
-				mask /= roulettePdf;
-			else
-				break;
-		}
-
-		if (!intersect_scene(ray, &mesh_id, scene)) {
-			/* cosine weighted importance sampling */
-			if (!bounceIsSpecular)
-				mask *= fmax(0.01f, dot(ray->dir, ray->normal));
-
-			acc.xyz += mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz;
-
-			break;
+		float roulettePdf = fmax3((*n_mask));
+		if (roulettePdf < 0.1f) {
+			if (get_random(seed0, seed1) < roulettePdf){
+				*n_mask /= roulettePdf;
+			} else {
+				*n_bounce = 0;
+			}
 		}
 
 #ifdef ALPHA_TESTING
 		acc.w = 1.0f;
 #endif
-
-	} while(++bounce < MAX_BOUNCES);
 
 	return acc;
 }

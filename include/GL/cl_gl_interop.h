@@ -24,7 +24,7 @@ unsigned char encoder(0);
 const GLfloat quad_vertices[] = { -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0 };
 
 // display texture
-GLuint tex0, tex1, tex2;
+GLuint tex0, tex1/*, tex2*/;
 
 // OpenGL vertex buffer object
 GLuint vbo;
@@ -109,14 +109,14 @@ bool initGL(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	// noise texture
-	glGenTextures(1, &tex2);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, tex2);
+	// glGenTextures(1, &tex2);
+	// glActiveTexture(GL_TEXTURE2);
+	// glBindTexture(GL_TEXTURE_2D, tex2);
 
-	Texture<unsigned char>* noise_tex = loadPNG("../resources/textures/rgb_noise1024.png");
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, noise_tex->width, noise_tex->height, 0, GL_RGB, GL_UNSIGNED_BYTE, &noise_tex->data[0]);
-	stbi_image_free(noise_tex->data);
-	delete noise_tex;
+	// Texture<unsigned char>* noise_tex = loadPNG("../resources/textures/rgb_noise1024.png");
+	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, noise_tex->width, noise_tex->height, 0, GL_RGB, GL_UNSIGNED_BYTE, &noise_tex->data[0]);
+	// stbi_image_free(noise_tex->data);
+	// delete noise_tex;
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

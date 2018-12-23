@@ -147,13 +147,13 @@ float3 toGlobal(const TangentFrame* tf, const float3 p){
 typedef struct {
 	float3 origin;			// origin
 	float3 dir;				// direction
-	float3 incomingRayDir;	// incoming ray direction
+	// float3 incomingRayDir;	// incoming ray direction
 	float3 normal;			// normal
-	float2 uv;				// uv
+	// float2 uv;				// uv
 	float3 pos;				// position
 	float t;				// dist from origin
 	bool backside;			// inside?
-	int hitFace;			// hitface id
+	// int hitFace;			// hitface id
 	TangentFrame tf;		// tangent frame
 } Ray;
 

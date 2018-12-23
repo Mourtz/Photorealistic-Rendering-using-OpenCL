@@ -8,7 +8,7 @@ typedef struct {
 	float focalDistance;
 } Camera;
 
-Ray createCamRay(const int2 coord, const int width, const int height, __constant Camera* cam, const uint* seed0, const uint* seed1) {
+Ray createCamRay(const int2 coord, const int width, const int height, __constant Camera* cam, uint* seed0, uint* seed1) {
 
 	/* create a local coordinate frame for the camera */
 	float3 rendercamview = cam->view; rendercamview = normalize(rendercamview);

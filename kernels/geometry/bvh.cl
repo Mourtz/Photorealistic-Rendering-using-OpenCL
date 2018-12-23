@@ -10,7 +10,7 @@ void intersectFace(
 
 	if (ray->t > *t) {
 		ray->normal = normal;
-		ray->hitFace = faceIndex;
+		// ray->hitFace = faceIndex;
 		ray->t = *t;
 	}
 }

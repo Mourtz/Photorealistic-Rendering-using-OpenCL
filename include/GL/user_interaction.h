@@ -78,3 +78,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		glfwGetCursorPos(window, &lastX, &lastY);
 	}
 }
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	interactiveCamera->changeRadius(-yoffset * 0.01);
+	buffer_reset = true;
+}

@@ -50,8 +50,7 @@ constexpr char* kernel_filepath = "../kernels/main.cl";
 
 // every pixel in the image has its own thread or "work item",
 // so the total amount of work items equals the number of pixels
-std::size_t global_work_size = window_width * window_height;
-std::size_t local_work_size;
+std::size_t global_work_size, local_work_size;
 
 // OpenCL objects
 clw::Buffer cl_output;
@@ -67,7 +66,7 @@ vector<clw::Memory> cl_screens;
 // 	cl_float3 origin, direction, mask;
 // 	cl_uint bounces;
 // };
-constexpr size_t RayI_size = 64;
+constexpr std::size_t RayI_size = 64;
 
 clw::Buffer cl_flattenI;
 
@@ -483,6 +482,7 @@ int main(int argc, char** argv){
 			encoder = atoi(argv[++i]);
 		}
 	}
+	global_work_size = window_width * window_height;
 
 	// initialise OpenGL (GLEW and GLUT window + callback functions)
 	initGL();

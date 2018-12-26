@@ -103,20 +103,16 @@ float4 radiance(
 	int mesh_id;
 
 	if (!intersect_scene(ray, &mesh_id, scene)) {
-		uint temp = *n_bounce;
 		*n_bounce = 0;
-		if(temp == 0){
-			#ifdef ALPHA_TESTING
-					return (float4)(0.0f);
-			#else
-					return (float4)(read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
-			#endif
-		} else{
+
+		#ifdef ALPHA_TESTING
+			return (float4)(0.0f);
+		#else
 			return (float4)((*n_mask) * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
-		}
+		#endif
 	}
 
-	uint DIFF_BOUNCES = 0, SPEC_BOUNCES = 0, TRANS_BOUNCES = 0, SCATTERING_EVENTS = 0;
+	// uint DIFF_BOUNCES = 0, SPEC_BOUNCES = 0, TRANS_BOUNCES = 0, SCATTERING_EVENTS = 0;
 
 	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
 	float brdfPdf = 1.0f;
@@ -125,6 +121,7 @@ float4 radiance(
 
 	bool bounceIsSpecular = true;
 
+/*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
 	const float gm_hg_g = 0.5f;
 
@@ -137,176 +134,245 @@ float4 radiance(
 	g_medium.sigmaS = GLOBAL_FOG_SIGMA_S;
 	g_medium.sigmaT = GLOBAL_FOG_SIGMA_T;
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
-#endif
 
-/*------------------- GLOBAL MEDIUM -------------------*/
-#ifdef GLOBAL_MEDIUM
-		sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
-		(*n_mask) *= gm_sample.weight;
-		const bool hitSurface = gm_sample.exited;
+	sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
+	(*n_mask) *= gm_sample.weight;
+	const bool hitSurface = gm_sample.exited;
+	
+	/*------------------------------------------------------*/
+	if (hitSurface) 
 #endif
-
-		/*------------------------------------------------------*/
-
-#ifdef GLOBAL_MEDIUM
-		if (hitSurface) 
-#endif
-		{
-			const Mesh mesh = scene->meshes[mesh_id];
-			const Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
+	{
+		const Mesh mesh = scene->meshes[mesh_id];
+		const Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
 
 #ifdef LIGHT
-			if (mat.t & LIGHT) {
-				if (!bounceIsSpecular || *n_bounce == 1)
-					acc.xyz += (*n_mask) * mat.color;
+		if (mat.t & LIGHT) {
+			if (!bounceIsSpecular || *n_bounce == 1)
+				acc.xyz += (*n_mask) * mat.color;
+
+			*n_bounce = 0;
+			return acc;
+		}
+#endif
+
+		/*-------------------- DIFFUSE --------------------*/
+#ifdef DIFF
+		if (mat.t & DIFF) 
+#else
+		if (false) 
+#endif
+		{
+			LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
 	
+			(*n_mask) *= surfaceEvent.weight;
+
+			// ++DIFF_BOUNCES;
+			bounceIsSpecular = false;
+		}
+		/*-------------------- CONDUCTOR --------------------*/
+#ifdef COND
+		else if (mat.t & COND)
+#else
+		else if (false)
+#endif
+		{
+			if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1)){
 				*n_bounce = 0;
 				return acc;
 			}
-#endif
 
-			/*-------------------- DIFFUSE --------------------*/
-#ifdef DIFF
-			if (mat.t & DIFF) 
+			*n_mask *= surfaceEvent.weight;
+
+			// ++SPEC_BOUNCES;
+			bounceIsSpecular = true;
+		}
+		/*-------------------- ROUGH CONDUCTOR (GGX|BECKMANN|PHONG) --------------------*/
+#ifdef ROUGH_COND
+		else if (mat.t & ROUGH_COND)
 #else
-			if (false) 
+		else if (false)
 #endif
-			{
-				LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
-		
-				(*n_mask) *= surfaceEvent.weight;
+		{
+			if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1)){
+				*n_bounce = 0;
+				return acc;
+			}
 
-				++DIFF_BOUNCES;
+			*n_mask *= surfaceEvent.weight;
+
+			// ++SPEC_BOUNCES;
+			bounceIsSpecular = true;
+		}
+
+		/*-------------------- DIELECTRIC --------------------*/
+#ifdef DIEL
+		else if (mat.t & DIEL) 
+#else
+		else if (false) 
+#endif
+		
+		{
+			if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1)){
+				*n_bounce = 0;
+				return acc;
+			}
+
+			*n_mask *= surfaceEvent.weight;
+
+			//++SPEC_BOUNCES;
+			bounceIsSpecular = true;
+		}
+		/*---------------- ROUGH DIELECTRIC (GGX|BECKMANN|PHONG) ----------------*/
+#ifdef ROUGH_DIEL
+		else if (mat.t & ROUGH_DIEL) 
+#else
+		else if (false) 
+#endif
+		
+		{
+			if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1)){
+				*n_bounce = 0;
+				return acc;
+			}
+
+			*n_mask *= surfaceEvent.weight;
+
+			//++SPEC_BOUNCES;
+			bounceIsSpecular = true;
+		}
+
+		/*-------------------- COAT --------------------*/
+#ifdef COAT
+		else if (mat.t & COAT)
+#else
+		else if (false)
+#endif
+		{
+			/* reflect */
+			if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
+				ray->origin = ray->pos + ray->normal * EPS;
+				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
+
+				// ++SPEC_BOUNCES;
+				bounceIsSpecular = true;
+			}
+			/* diffuse */
+			else {
+				LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
+
+				*n_mask *= surfaceEvent.weight;
+
+				// ++DIFF_BOUNCES;
 				bounceIsSpecular = false;
 			}
-			/*-------------------- CONDUCTOR --------------------*/
-#ifdef COND
-			else if (mat.t & COND)
-#else
-			else if (false)
-#endif
-			{
-				if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1)){
-					*n_bounce = 0;
-					return acc;
-				}
-
-				*n_mask *= surfaceEvent.weight;
-
-				++SPEC_BOUNCES;
-				bounceIsSpecular = true;
-			}
-			/*-------------------- ROUGH CONDUCTOR (GGX|BECKMANN|PHONG) --------------------*/
-#ifdef ROUGH_COND
-			else if (mat.t & ROUGH_COND)
-#else
-			else if (false)
-#endif
-			{
-				if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1)){
-					*n_bounce = 0;
-					return acc;
-				}
-
-				*n_mask *= surfaceEvent.weight;
-
-				++SPEC_BOUNCES;
-				bounceIsSpecular = true;
-			}
-
-			/*-------------------- DIELECTRIC --------------------*/
-#ifdef DIEL
-			else if (mat.t & DIEL) 
-#else
-			else if (false) 
-#endif
-			
-			{
-				if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1)){
-					*n_bounce = 0;
-					return acc;
-				}
-
-				*n_mask *= surfaceEvent.weight;
-
-				//++SPEC_BOUNCES;
-				bounceIsSpecular = true;
-			}
-			/*---------------- ROUGH DIELECTRIC (GGX|BECKMANN|PHONG) ----------------*/
-#ifdef ROUGH_DIEL
-			else if (mat.t & ROUGH_DIEL) 
-#else
-			else if (false) 
-#endif
-			
-			{
-				if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1)){
-					*n_bounce = 0;
-					return acc;
-				}
-
-				*n_mask *= surfaceEvent.weight;
-
-				//++SPEC_BOUNCES;
-				bounceIsSpecular = true;
-			}
-
-			/*-------------------- COAT --------------------*/
-#ifdef COAT
-			else if (mat.t & COAT)
-#else
-			else if (false)
-#endif
-			{
-				/* reflect */
-				if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
-					ray->origin = ray->pos + ray->normal * EPS;
-					ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
-
-					++SPEC_BOUNCES;
-					bounceIsSpecular = true;
-				}
-				/* diffuse */
-				else {
-					LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
-
-					*n_mask *= surfaceEvent.weight;
-
-					++DIFF_BOUNCES;
-					bounceIsSpecular = false;
-				}
-			}
-			/*-------------------- VOL --------------------*/
+		}
+		/*-------------------- VOL --------------------*/
 #ifdef VOL
-			else if (mat.t & VOL) 
+		else if (mat.t & VOL) 
 #else
-			else if (false)
+		else if (false)
 #endif
-			{
-				// if ~backside get the ray inside the medium
+		{
+			// if ~backside get the ray inside the medium
+			if (!ray->backside) {
+				ray->origin = ray->pos - ray->normal * EPS;
+				if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
+					*n_bounce = 0;
+					return acc;	
+				}
+				ray->backside = true;
+			}
+
+			MediumSample m_sample;
+
+			// medium's properties
+			Medium medium;
+			medium.density = mat.color * 80.0f;
+			medium.sigmaA = 0.2f * medium.density;
+			medium.sigmaS = 1.0f * medium.density;
+			medium.sigmaT = (medium.sigmaA + medium.sigmaS);
+			medium.absorptionOnly = (dot(medium.sigmaS, 1.0f) == 0.0f);
+
+			// max scattering events
+			const int max_scatters = 1024;
+			int scatters = 0;
+			do {
+				sampleDistance(ray, &m_sample, &medium, seed0, seed1);
+
+				*n_mask *= m_sample.weight;
+
+				if (m_sample.exited) {
+					break;
+				}
+
+				float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+				ray->origin = m_sample.p;
+				#if 0
+					ray->dir = uniformSphere(xi);
+				#else
+					hg_sample_fast(&ray->dir, 0.4f, &xi);
+				#endif
+
+				if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
+					*n_bounce = 0;
+					return acc;
+				}
+
+				//russian roulette
+				// float roulettePdf = fmax3((*n_mask));
+				// if (roulettePdf < 0.1f) {
+				// 	if (xi.x < roulettePdf)
+				// 		*n_mask /= roulettePdf;
+				// 	else
+				// 		break;
+				// }
+			} while(++scatters < max_scatters);
+
+			ray->origin = ray->origin + ray->dir * (ray->t + EPS);
+			ray->normal = ray->dir;
+			ray->backside = bounceIsSpecular = false;
+		}
+		/*-------------------- TRANS --------------------
+		else if (mat.t & TRANS) {
+
+		}
+		/*-------------------- SPECSUB --------------------*/
+#ifdef SPECSUB
+		else if (mat.t & SPECSUB)
+#else
+		else if (false)
+#endif
+		{
+			if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.3f)) {
+				ray->origin = ray->pos + ray->normal * EPS;
+				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
+
+				// ++SPEC_BOUNCES;
+				bounceIsSpecular = true;
+			}
+			else {
 				if (!ray->backside) {
 					ray->origin = ray->pos - ray->normal * EPS;
-					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
-						*n_bounce = 0;
-						return acc;	
-					}
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 					ray->backside = true;
 				}
+
+				// max scattering events
+				const int max_scatters = 1024;
 
 				MediumSample m_sample;
 
 				// medium's properties
 				Medium medium;
-				medium.density = mat.color * 80.0f;
+				medium.density = mat.color * 40.0f;
 				medium.sigmaA = 0.2f * medium.density;
 				medium.sigmaS = 1.0f * medium.density;
 				medium.sigmaT = (medium.sigmaA + medium.sigmaS);
-				medium.absorptionOnly = (dot(medium.sigmaS, 1.0f) == 0.0f);
+				medium.absorptionOnly = (dot(medium.sigmaS,1.0f) == 0.0f);
 
-				// max scattering events
-				const int max_scatters = 1024;
 				int scatters = 0;
-				do {
+				while (true) {
 					sampleDistance(ray, &m_sample, &medium, seed0, seed1);
 
 					*n_mask *= m_sample.weight;
@@ -315,170 +381,96 @@ float4 radiance(
 						break;
 					}
 
-					float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
 					ray->origin = m_sample.p;
-					#if 0
-						ray->dir = uniformSphere(xi);
-					#else
-						hg_sample_fast(&ray->dir, 0.4f, &xi);
-					#endif
+#if 0
+					hg_sample_fast(&ray->dir, 0.8f, seed0, seed1);
+#else
+					ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
+#endif
 
-					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
-						*n_bounce = 0;
-						return acc;
-					}
+					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
 					//russian roulette
-					// float roulettePdf = fmax3((*n_mask));
-					// if (roulettePdf < 0.1f) {
-					// 	if (xi.x < roulettePdf)
-					// 		*n_mask /= roulettePdf;
-					// 	else
-					// 		break;
-					// }
-				} while(++scatters < max_scatters);
+					float roulettePdf = fmax3((*n_mask));
+					if (roulettePdf < 0.1f) {
+						if (get_random(seed0, seed1) < roulettePdf)
+							*n_mask = native_divide(*n_mask, roulettePdf);
+						else
+							break;
+					}
+
+					if (++scatters > max_scatters) {
+						break;
+					}
+				}
 
 				ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 				ray->normal = ray->dir;
 				ray->backside = bounceIsSpecular = false;
 			}
-			/*-------------------- TRANS --------------------
-			else if (mat.t & TRANS) {
-
-			}
-			/*-------------------- SPECSUB --------------------*/
-#ifdef SPECSUB
-			else if (mat.t & SPECSUB)
-#else
-			else if (false)
-#endif
-			{
-				if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.3f)) {
-					ray->origin = ray->pos + ray->normal * EPS;
-					ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
-
-					++SPEC_BOUNCES;
-					bounceIsSpecular = true;
-				}
-				else {
-					if (!ray->backside) {
-						ray->origin = ray->pos - ray->normal * EPS;
-						if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
-						ray->backside = true;
-					}
-
-					// max scattering events
-					const int max_scatters = 1024;
-
-					MediumSample m_sample;
-
-					// medium's properties
-					Medium medium;
-					medium.density = mat.color * 40.0f;
-					medium.sigmaA = 0.2f * medium.density;
-					medium.sigmaS = 1.0f * medium.density;
-					medium.sigmaT = (medium.sigmaA + medium.sigmaS);
-					medium.absorptionOnly = (dot(medium.sigmaS,1.0f) == 0.0f);
-
-					int scatters = 0;
-					while (true) {
-						sampleDistance(ray, &m_sample, &medium, seed0, seed1);
-
-						*n_mask *= m_sample.weight;
-
-						if (m_sample.exited) {
-							break;
-						}
-
-						ray->origin = m_sample.p;
-#if 0
-						hg_sample_fast(&ray->dir, 0.8f, seed0, seed1);
-#else
-						ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
-#endif
-
-						if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
-
-						//russian roulette
-						float roulettePdf = fmax3((*n_mask));
-						if (roulettePdf < 0.1f) {
-							if (get_random(seed0, seed1) < roulettePdf)
-								*n_mask = native_divide(*n_mask, roulettePdf);
-							else
-								break;
-						}
-
-						if (++scatters > max_scatters) {
-							break;
-						}
-					}
-
-					ray->origin = ray->origin + ray->dir * (ray->t + EPS);
-					ray->normal = ray->dir;
-					ray->backside = bounceIsSpecular = false;
-				}
-			}
-
-#ifdef LIGHT
-			if (!bounceIsSpecular) {
-				float3 wi;
-				for (uint i = 0; i < LIGHT_COUNT; ++i) {
-					uint index = LIGHT_INDICES[i];
-
-					if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
-
-					float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, mesh_id);
-					acc.xyz += dLight * (*n_mask) * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
-				}
-			}
-#endif
-
 		}
-#ifdef GLOBAL_MEDIUM
-		else {
-			ray->origin = gm_sample.p;
 
 #ifdef LIGHT
-			float3 vwi;
+		if (!bounceIsSpecular) {
+			float3 wi;
 			for (uint i = 0; i < LIGHT_COUNT; ++i) {
 				uint index = LIGHT_INDICES[i];
 
 				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
-				float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
-				// @ToFix - im 100% sure this is wrong
-				acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * *n_mask * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
+				float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, mesh_id);
+				acc.xyz += dLight * (*n_mask) * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 			}
-#endif
-
-			/* Henyey-Greenstein phase function */
-			PhaseSample p_sample;
-			hg_sample(ray->dir, gm_hg_g, &p_sample, seed0, seed1);
-			ray->dir = p_sample.w;
 		}
 #endif
 
-		/* terminate if necessary */
-		// if (DIFF_BOUNCES >= MAX_DIFF_BOUNCES || 
-		// 	SPEC_BOUNCES >= MAX_SPEC_BOUNCES ||
-		// 	TRANS_BOUNCES >= MAX_TRANS_BOUNCES || 
-		// 	SCATTERING_EVENTS >= MAX_SCATTERING_EVENTS
-		// ) { 
-		// 	break;
-		// }
+	}
+#ifdef GLOBAL_MEDIUM
+	else 
+	{
+		ray->origin = gm_sample.p;
 
-		//russian roulette
-		float roulettePdf = fmax3((*n_mask));
-		if (roulettePdf < 0.1f) {
-			if (get_random(seed0, seed1) < roulettePdf){
-				*n_mask /= roulettePdf;
-			} else {
-				*n_bounce = 0;
-			}
+#ifdef LIGHT
+		float3 vwi;
+		for (uint i = 0; i < LIGHT_COUNT; ++i) {
+			uint index = LIGHT_INDICES[i];
+
+			if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
+
+			float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
+			// @ToFix - im 100% sure this is wrong
+			acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * (*n_mask) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 		}
+#endif
+
+		/* Henyey-Greenstein phase function */
+		PhaseSample p_sample;
+		hg_sample(ray->dir, gm_hg_g, &p_sample, seed0, seed1);
+		ray->dir = p_sample.w;
+	}
+#endif
+
+	/* terminate if necessary */
+	// if (DIFF_BOUNCES >= MAX_DIFF_BOUNCES || 
+	// 	SPEC_BOUNCES >= MAX_SPEC_BOUNCES ||
+	// 	TRANS_BOUNCES >= MAX_TRANS_BOUNCES || 
+	// 	SCATTERING_EVENTS >= MAX_SCATTERING_EVENTS
+	// ) { 
+	// 	break;
+	// }
+
+	//russian roulette
+	float roulettePdf = fmax3((*n_mask));
+	if (roulettePdf < 0.1f) {
+		if (get_random(seed0, seed1) < roulettePdf){
+			*n_mask /= roulettePdf;
+		} else {
+			*n_bounce = 0;
+		}
+	}
 
 #ifdef ALPHA_TESTING
-		acc.w = 1.0f;
+	acc.w = 1.0f;
 #endif
 
 	return acc;

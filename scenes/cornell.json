@@ -1,10 +1,10 @@
 {
   "settings": {
-    "MAX_BOUNCES": 12,
-    "MAX_DIFF_BOUNCES": 4,
-    "MAX_SPEC_BOUNCES": 6,
-    "MAX_TRANS_BOUNCES": 12,
-    "MAX_SCATTERING_EVENTS": 12,
+    "MAX_BOUNCES": 128,
+    "MAX_DIFF_BOUNCES": 32,
+    "MAX_SPEC_BOUNCES": 64,
+    "MAX_TRANS_BOUNCES": 64,
+    "MAX_SCATTERING_EVENTS": 128,
 
     "MARCHING_STEPS": 128,
     "SHADOW_MARCHING_STEPS": 64
@@ -13,9 +13,9 @@
     "obj": {
       "path": "suzanne.obj",
       "material": {
-        "color": [ 0.6, 0.7, 0.2 ],
-        "type": 3,
-        "roughness": 0.5,
+        "color": [ 0.5, 0.8, 0.2 ],
+        "type": 11,
+        "roughness": 0.2,
         "absorptive": 1
       }
     },
@@ -101,7 +101,7 @@
         ],
         "flip_normal": true,
         "material": {
-          "color": [ 8.0, 8.5, 9.5 ],
+          "color": [ 30.0, 30.0, 30.0 ],
           "type": 0
         }
       }

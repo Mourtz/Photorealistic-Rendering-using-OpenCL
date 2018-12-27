@@ -111,8 +111,6 @@ float4 radiance(
 		#endif
 	}
 
-	// uint DIFF_BOUNCES = 0, SPEC_BOUNCES = 0, TRANS_BOUNCES = 0, SCATTERING_EVENTS = 0;
-
 	SurfaceScatterEvent surfaceEvent;
 	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
 	float brdfPdf = 1.0f;
@@ -183,7 +181,7 @@ float4 radiance(
 	
 			rlh->mask *= surfaceEvent.weight;
 
-			// ++DIFF_BOUNCES;
+			++rlh->diff_bounces;
 			bounceIsSpecular = false;
 		}
 		/*-------------------- CONDUCTOR --------------------*/
@@ -200,7 +198,7 @@ float4 radiance(
 
 			rlh->mask *= surfaceEvent.weight;
 
-			// ++SPEC_BOUNCES;
+			++rlh->spec_bounces;
 			bounceIsSpecular = true;
 		}
 		/*-------------------- ROUGH CONDUCTOR (GGX|BECKMANN|PHONG) --------------------*/
@@ -217,7 +215,7 @@ float4 radiance(
 
 			rlh->mask *= surfaceEvent.weight;
 
-			// ++SPEC_BOUNCES;
+			++rlh->spec_bounces;
 			bounceIsSpecular = true;
 		}
 
@@ -236,7 +234,7 @@ float4 radiance(
 
 			rlh->mask *= surfaceEvent.weight;
 
-			//++SPEC_BOUNCES;
+			++rlh->spec_bounces;
 			bounceIsSpecular = true;
 		}
 		/*---------------- ROUGH DIELECTRIC (GGX|BECKMANN|PHONG) ----------------*/
@@ -254,7 +252,7 @@ float4 radiance(
 
 			rlh->mask *= surfaceEvent.weight;
 
-			//++SPEC_BOUNCES;
+			++rlh->spec_bounces;
 			bounceIsSpecular = true;
 		}
 
@@ -270,7 +268,7 @@ float4 radiance(
 				ray->origin = ray->pos + ray->normal * EPS;
 				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
-				// ++SPEC_BOUNCES;
+				++rlh->spec_bounces;
 				bounceIsSpecular = true;
 			}
 			/* diffuse */
@@ -279,7 +277,7 @@ float4 radiance(
 
 				rlh->mask *= surfaceEvent.weight;
 
-				// ++DIFF_BOUNCES;
+				++rlh->diff_bounces;
 				bounceIsSpecular = false;
 			}
 		}
@@ -364,7 +362,7 @@ float4 radiance(
 				ray->origin = ray->pos + ray->normal * EPS;
 				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
-				// ++SPEC_BOUNCES;
+				++rlh->spec_bounces;
 				bounceIsSpecular = true;
 			}
 			else {
@@ -443,13 +441,15 @@ float4 radiance(
 	}
 
 	/* terminate if necessary */
-	// if (DIFF_BOUNCES >= MAX_DIFF_BOUNCES || 
-	// 	SPEC_BOUNCES >= MAX_SPEC_BOUNCES ||
-	// 	TRANS_BOUNCES >= MAX_TRANS_BOUNCES || 
-	// 	SCATTERING_EVENTS >= MAX_SCATTERING_EVENTS
-	// ) { 
-	// 	break;
-	// }
+	if (rlh->bounces >= MAX_BOUNCES ||
+		rlh->diff_bounces >= MAX_DIFF_BOUNCES || 
+		rlh->spec_bounces >= MAX_SPEC_BOUNCES ||
+		rlh->trans_bounces >= MAX_TRANS_BOUNCES || 
+		rlh->scatter_events >= MAX_SCATTERING_EVENTS
+	) { 
+		rlh->bounces = 0;
+		return acc;
+	}
 
 	//russian roulette
 	float roulettePdf = fmax3(rlh->mask);

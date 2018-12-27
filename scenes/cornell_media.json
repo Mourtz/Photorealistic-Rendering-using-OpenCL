@@ -5,11 +5,11 @@
     "sigmaS": 1.0
   },
   "settings": {
-    "MAX_BOUNCES": 12,
-    "MAX_DIFF_BOUNCES": 4,
-    "MAX_SPEC_BOUNCES": 4,
-    "MAX_TRANS_BOUNCES": 12,
-    "MAX_SCATTERING_EVENTS": 12,
+    "MAX_BOUNCES": 128,
+    "MAX_DIFF_BOUNCES": 32,
+    "MAX_SPEC_BOUNCES": 64,
+    "MAX_TRANS_BOUNCES": 64,
+    "MAX_SCATTERING_EVENTS": 128,
 
     "LIGHT_BOUNCES":  2,
 
@@ -106,7 +106,7 @@
         ],
         "flip_normal": true,
         "material": {
-          "color": [ 4.0, 5.0, 6.0 ],
+          "color": [ 30.0, 30.0, 30.0 ],
           "type": 0
         }
       }

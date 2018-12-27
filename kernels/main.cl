@@ -74,8 +74,13 @@ __kernel void render_kernel(
 
 	__global RLH* rlh = &r_flat[work_item_id].data;
 
-	bool firstBounce = (rlh->bounces == 0);
+	const bool firstBounce = (rlh->bounces == 0);
 	rlh->bounces *= !firstBounce;
+	rlh->diff_bounces *= !firstBounce;
+	rlh->spec_bounces *= !firstBounce;
+	rlh->trans_bounces *= !firstBounce;
+	rlh->scatter_events *= !firstBounce;
+
 	rlh->mask = !firstBounce * rlh->mask + firstBounce;
 
 	/* seeds for random number generator */

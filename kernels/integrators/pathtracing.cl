@@ -94,31 +94,28 @@ float4 radiance(
 	const Scene* scene,
 	__read_only image2d_t env_map,
 	Ray* ray,
-	float3* n_mask,
-	uint* n_bounce,
+	__global RLH* rlh,
 	uint* seed0, uint* seed1
 ){
-	*n_bounce += 1;
+	++rlh->bounces;
 
 	int mesh_id;
 
 	if (!intersect_scene(ray, &mesh_id, scene)) {
-		*n_bounce = 0;
+		rlh->bounces = 0;
 
 		#ifdef ALPHA_TESTING
 			return (float4)(0.0f);
 		#else
-			return (float4)((*n_mask) * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
+			return (float4)(rlh->mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
 		#endif
 	}
 
 	// uint DIFF_BOUNCES = 0, SPEC_BOUNCES = 0, TRANS_BOUNCES = 0, SCATTERING_EVENTS = 0;
 
+	SurfaceScatterEvent surfaceEvent;
 	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
 	float brdfPdf = 1.0f;
-
-	SurfaceScatterEvent surfaceEvent;
-
 	bool bounceIsSpecular = true;
 
 /*------------------- GLOBAL MEDIUM -------------------*/
@@ -136,22 +133,41 @@ float4 radiance(
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
 
 	sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
-	(*n_mask) *= gm_sample.weight;
-	const bool hitSurface = gm_sample.exited;
+	rlh->mask *= gm_sample.weight;
 	
-	/*------------------------------------------------------*/
-	if (hitSurface) 
+	if (!gm_sample.exited){
+		ray->origin = gm_sample.p;
+
+#ifdef LIGHT
+		float3 vwi;
+		for (uint i = 0; i < LIGHT_COUNT; ++i) {
+			uint index = LIGHT_INDICES[i];
+
+			if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
+
+			float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
+			// @ToFix - im 100% sure this is wrong
+			acc.xyz += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
+		}
 #endif
+
+		/* Henyey-Greenstein phase function */
+		PhaseSample p_sample;
+		hg_sample(ray->dir, gm_hg_g, &p_sample, seed0, seed1);
+		ray->dir = p_sample.w;
+	} else 
+#endif
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	{
 		const Mesh mesh = scene->meshes[mesh_id];
 		const Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
 
 #ifdef LIGHT
 		if (mat.t & LIGHT) {
-			if (!bounceIsSpecular || *n_bounce == 1)
-				acc.xyz += (*n_mask) * mat.color;
+			if (!bounceIsSpecular || rlh->bounces == 1)
+				acc.xyz += rlh->mask * mat.color;
 
-			*n_bounce = 0;
+			rlh->bounces = 0;
 			return acc;
 		}
 #endif
@@ -165,7 +181,7 @@ float4 radiance(
 		{
 			LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
 	
-			(*n_mask) *= surfaceEvent.weight;
+			rlh->mask *= surfaceEvent.weight;
 
 			// ++DIFF_BOUNCES;
 			bounceIsSpecular = false;
@@ -178,11 +194,11 @@ float4 radiance(
 #endif
 		{
 			if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1)){
-				*n_bounce = 0;
+				rlh->bounces = 0;
 				return acc;
 			}
 
-			*n_mask *= surfaceEvent.weight;
+			rlh->mask *= surfaceEvent.weight;
 
 			// ++SPEC_BOUNCES;
 			bounceIsSpecular = true;
@@ -195,11 +211,11 @@ float4 radiance(
 #endif
 		{
 			if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1)){
-				*n_bounce = 0;
+				rlh->bounces = 0;
 				return acc;
 			}
 
-			*n_mask *= surfaceEvent.weight;
+			rlh->mask *= surfaceEvent.weight;
 
 			// ++SPEC_BOUNCES;
 			bounceIsSpecular = true;
@@ -214,11 +230,11 @@ float4 radiance(
 		
 		{
 			if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1)){
-				*n_bounce = 0;
+				rlh->bounces = 0;
 				return acc;
 			}
 
-			*n_mask *= surfaceEvent.weight;
+			rlh->mask *= surfaceEvent.weight;
 
 			//++SPEC_BOUNCES;
 			bounceIsSpecular = true;
@@ -232,11 +248,11 @@ float4 radiance(
 		
 		{
 			if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1)){
-				*n_bounce = 0;
+				rlh->bounces = 0;
 				return acc;
 			}
 
-			*n_mask *= surfaceEvent.weight;
+			rlh->mask *= surfaceEvent.weight;
 
 			//++SPEC_BOUNCES;
 			bounceIsSpecular = true;
@@ -261,7 +277,7 @@ float4 radiance(
 			else {
 				LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
 
-				*n_mask *= surfaceEvent.weight;
+				rlh->mask *= surfaceEvent.weight;
 
 				// ++DIFF_BOUNCES;
 				bounceIsSpecular = false;
@@ -278,7 +294,7 @@ float4 radiance(
 			if (!ray->backside) {
 				ray->origin = ray->pos - ray->normal * EPS;
 				if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
-					*n_bounce = 0;
+					rlh->bounces = 0;
 					return acc;	
 				}
 				ray->backside = true;
@@ -300,7 +316,7 @@ float4 radiance(
 			do {
 				sampleDistance(ray, &m_sample, &medium, seed0, seed1);
 
-				*n_mask *= m_sample.weight;
+				rlh->mask *= m_sample.weight;
 
 				if (m_sample.exited) {
 					break;
@@ -315,15 +331,15 @@ float4 radiance(
 				#endif
 
 				if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
-					*n_bounce = 0;
+					rlh->bounces = 0;
 					return acc;
 				}
 
 				//russian roulette
-				// float roulettePdf = fmax3((*n_mask));
+				// float roulettePdf = fmax3((rlh->mask));
 				// if (roulettePdf < 0.1f) {
 				// 	if (xi.x < roulettePdf)
-				// 		*n_mask /= roulettePdf;
+				// 		rlh->mask /= roulettePdf;
 				// 	else
 				// 		break;
 				// }
@@ -375,7 +391,7 @@ float4 radiance(
 				while (true) {
 					sampleDistance(ray, &m_sample, &medium, seed0, seed1);
 
-					*n_mask *= m_sample.weight;
+					rlh->mask *= m_sample.weight;
 
 					if (m_sample.exited) {
 						break;
@@ -391,10 +407,10 @@ float4 radiance(
 					if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) return acc;
 
 					//russian roulette
-					float roulettePdf = fmax3((*n_mask));
+					float roulettePdf = fmax3(rlh->mask);
 					if (roulettePdf < 0.1f) {
 						if (get_random(seed0, seed1) < roulettePdf)
-							*n_mask = native_divide(*n_mask, roulettePdf);
+							rlh->mask = native_divide(rlh->mask, roulettePdf);
 						else
 							break;
 					}
@@ -419,36 +435,12 @@ float4 radiance(
 				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
 				float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, mesh_id);
-				acc.xyz += dLight * (*n_mask) * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
+				acc.xyz += dLight * rlh->mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 			}
 		}
 #endif
 
 	}
-#ifdef GLOBAL_MEDIUM
-	else 
-	{
-		ray->origin = gm_sample.p;
-
-#ifdef LIGHT
-		float3 vwi;
-		for (uint i = 0; i < LIGHT_COUNT; ++i) {
-			uint index = LIGHT_INDICES[i];
-
-			if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
-
-			float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
-			// @ToFix - im 100% sure this is wrong
-			acc.xyz += dLight * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * (*n_mask) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
-		}
-#endif
-
-		/* Henyey-Greenstein phase function */
-		PhaseSample p_sample;
-		hg_sample(ray->dir, gm_hg_g, &p_sample, seed0, seed1);
-		ray->dir = p_sample.w;
-	}
-#endif
 
 	/* terminate if necessary */
 	// if (DIFF_BOUNCES >= MAX_DIFF_BOUNCES || 
@@ -460,12 +452,12 @@ float4 radiance(
 	// }
 
 	//russian roulette
-	float roulettePdf = fmax3((*n_mask));
+	float roulettePdf = fmax3(rlh->mask);
 	if (roulettePdf < 0.1f) {
 		if (get_random(seed0, seed1) < roulettePdf){
-			*n_mask /= roulettePdf;
+			rlh->mask /= roulettePdf;
 		} else {
-			*n_bounce = 0;
+			rlh->bounces = 0;
 		}
 	}
 

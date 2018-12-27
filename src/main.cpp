@@ -65,6 +65,7 @@ vector<clw::Memory> cl_screens;
 // struct RayI {
 // 	cl_float3 origin, direction, mask;
 // 	cl_uint bounces;
+// 	cl_ushort diff_bounces, spec_bounces, trans_bounces, scatter_events;
 // };
 constexpr std::size_t RayI_size = 64;
 

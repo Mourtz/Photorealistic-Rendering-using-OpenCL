@@ -2,7 +2,7 @@
 
 #include <Camera/camera.h>
 
-bool buffer_reset(false);
+bool buffer_reset(true);
 bool render_to_file(false);
 InteractiveCamera* interactiveCamera = nullptr;
 
@@ -56,6 +56,7 @@ void cursor_pos_callback(GLFWwindow* window, double x, double y)
 		else if (theButtonState == GLFW_MOUSE_BUTTON_MIDDLE) // Zoom
 		{
 			interactiveCamera->changeAltitude(-deltaY * 0.01);
+			// interactiveCamera->strafe(-deltaX * 0.01);
 		}
 
 		if (theButtonState == GLFW_MOUSE_BUTTON_RIGHT) // camera move

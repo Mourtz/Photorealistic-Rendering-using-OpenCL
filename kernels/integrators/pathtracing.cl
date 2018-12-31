@@ -97,12 +97,12 @@ float4 radiance(
 	__global RLH* rlh,
 	uint* seed0, uint* seed1
 ){
-	++rlh->bounces;
+	++rlh->bounce.total;
 
 	int mesh_id;
 
 	if (!intersect_scene(ray, &mesh_id, scene)) {
-		rlh->bounces = 0;
+		rlh->bounce.total = 0;
 
 		#ifdef ALPHA_TESTING
 			return (float4)(0.0f);
@@ -114,13 +114,10 @@ float4 radiance(
 	SurfaceScatterEvent surfaceEvent;
 	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
 	float brdfPdf = 1.0f;
-	bool bounceIsSpecular = true;
 
 /*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
 	const float gm_hg_g = 0.5f;
-
-	MediumSample gm_sample;
 
 	// global medium
 	Medium g_medium;
@@ -130,6 +127,7 @@ float4 radiance(
 	g_medium.sigmaT = GLOBAL_FOG_SIGMA_T;
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
 
+	MediumSample gm_sample;
 	sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
 	rlh->mask *= gm_sample.weight;
 	
@@ -162,10 +160,10 @@ float4 radiance(
 
 #ifdef LIGHT
 		if (mat.t & LIGHT) {
-			if (!bounceIsSpecular || rlh->bounces == 1)
+			if (!rlh->bounce.isSpecular || rlh->bounce.total == 1)
 				acc.xyz += rlh->mask * mat.color;
 
-			rlh->bounces = 0;
+			rlh->bounce.total = 0;
 			return acc;
 		}
 #endif
@@ -181,8 +179,8 @@ float4 radiance(
 	
 			rlh->mask *= surfaceEvent.weight;
 
-			++rlh->diff_bounces;
-			bounceIsSpecular = false;
+			++rlh->bounce.diff;
+			rlh->bounce.isSpecular = false;
 		}
 		/*-------------------- CONDUCTOR --------------------*/
 #ifdef COND
@@ -192,14 +190,14 @@ float4 radiance(
 #endif
 		{
 			if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1)){
-				rlh->bounces = 0;
+				rlh->bounce.total = 0;
 				return acc;
 			}
 
 			rlh->mask *= surfaceEvent.weight;
 
-			++rlh->spec_bounces;
-			bounceIsSpecular = true;
+			++rlh->bounce.spec;
+			rlh->bounce.isSpecular = true;
 		}
 		/*-------------------- ROUGH CONDUCTOR (GGX|BECKMANN|PHONG) --------------------*/
 #ifdef ROUGH_COND
@@ -209,14 +207,14 @@ float4 radiance(
 #endif
 		{
 			if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1)){
-				rlh->bounces = 0;
+				rlh->bounce.total = 0;
 				return acc;
 			}
 
 			rlh->mask *= surfaceEvent.weight;
 
-			++rlh->spec_bounces;
-			bounceIsSpecular = true;
+			++rlh->bounce.spec;
+			rlh->bounce.isSpecular = true;
 		}
 
 		/*-------------------- DIELECTRIC --------------------*/
@@ -228,14 +226,14 @@ float4 radiance(
 		
 		{
 			if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1)){
-				rlh->bounces = 0;
+				rlh->bounce.total = 0;
 				return acc;
 			}
 
 			rlh->mask *= surfaceEvent.weight;
 
-			++rlh->spec_bounces;
-			bounceIsSpecular = true;
+			++rlh->bounce.spec;
+			rlh->bounce.isSpecular = true;
 		}
 		/*---------------- ROUGH DIELECTRIC (GGX|BECKMANN|PHONG) ----------------*/
 #ifdef ROUGH_DIEL
@@ -246,14 +244,14 @@ float4 radiance(
 		
 		{
 			if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1)){
-				rlh->bounces = 0;
+				rlh->bounce.total = 0;
 				return acc;
 			}
 
 			rlh->mask *= surfaceEvent.weight;
 
-			++rlh->spec_bounces;
-			bounceIsSpecular = true;
+			++rlh->bounce.spec;
+			rlh->bounce.isSpecular = true;
 		}
 
 		/*-------------------- COAT --------------------*/
@@ -268,8 +266,8 @@ float4 radiance(
 				ray->origin = ray->pos + ray->normal * EPS;
 				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
-				++rlh->spec_bounces;
-				bounceIsSpecular = true;
+				++rlh->bounce.spec;
+				rlh->bounce.isSpecular = true;
 			}
 			/* diffuse */
 			else {
@@ -277,8 +275,8 @@ float4 radiance(
 
 				rlh->mask *= surfaceEvent.weight;
 
-				++rlh->diff_bounces;
-				bounceIsSpecular = false;
+				++rlh->bounce.diff;
+				rlh->bounce.isSpecular = false;
 			}
 		}
 		/*-------------------- VOL --------------------*/
@@ -292,7 +290,7 @@ float4 radiance(
 			if (!ray->backside) {
 				ray->origin = ray->pos - ray->normal * EPS;
 				if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
-					rlh->bounces = 0;
+					rlh->bounce.total = 0;
 					return acc;	
 				}
 				ray->backside = true;
@@ -329,7 +327,7 @@ float4 radiance(
 				#endif
 
 				if (!get_dist(&ray->t, ray, &mesh, scene, mesh_id == -1)) {
-					rlh->bounces = 0;
+					rlh->bounce.total = 0;
 					return acc;
 				}
 
@@ -345,7 +343,7 @@ float4 radiance(
 
 			ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 			ray->normal = ray->dir;
-			ray->backside = bounceIsSpecular = false;
+			ray->backside = rlh->bounce.isSpecular = false;
 		}
 		/*-------------------- TRANS --------------------
 		else if (mat.t & TRANS) {
@@ -362,8 +360,8 @@ float4 radiance(
 				ray->origin = ray->pos + ray->normal * EPS;
 				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
-				++rlh->spec_bounces;
-				bounceIsSpecular = true;
+				++rlh->bounce.spec;
+				rlh->bounce.isSpecular = true;
 			}
 			else {
 				if (!ray->backside) {
@@ -420,12 +418,12 @@ float4 radiance(
 
 				ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 				ray->normal = ray->dir;
-				ray->backside = bounceIsSpecular = false;
+				ray->backside = rlh->bounce.isSpecular = false;
 			}
 		}
 
 #ifdef LIGHT
-		if (!bounceIsSpecular) {
+		if (!rlh->bounce.isSpecular) {
 			float3 wi;
 			for (uint i = 0; i < LIGHT_COUNT; ++i) {
 				uint index = LIGHT_INDICES[i];
@@ -441,13 +439,12 @@ float4 radiance(
 	}
 
 	/* terminate if necessary */
-	if (rlh->bounces >= MAX_BOUNCES ||
-		rlh->diff_bounces >= MAX_DIFF_BOUNCES || 
-		rlh->spec_bounces >= MAX_SPEC_BOUNCES ||
-		rlh->trans_bounces >= MAX_TRANS_BOUNCES || 
-		rlh->scatter_events >= MAX_SCATTERING_EVENTS
+	if (rlh->bounce.total >= MAX_BOUNCES ||
+		rlh->bounce.diff >= MAX_DIFF_BOUNCES || 
+		rlh->bounce.spec >= MAX_SPEC_BOUNCES ||
+		rlh->bounce.trans >= MAX_TRANS_BOUNCES
 	) { 
-		rlh->bounces = 0;
+		rlh->bounce.total = 0;
 		return acc;
 	}
 
@@ -457,7 +454,7 @@ float4 radiance(
 		if (get_random(seed0, seed1) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {
-			rlh->bounces = 0;
+			rlh->bounce.total = 0;
 		}
 	}
 

@@ -67,7 +67,7 @@ vector<clw::Memory> cl_screens;
 // 	cl_uint bounces;
 // 	cl_ushort diff_bounces, spec_bounces, trans_bounces, scatter_events;
 // };
-constexpr std::size_t RayI_size = 64;
+constexpr std::size_t RayI_size = 16*4;
 
 clw::Buffer cl_flattenI;
 
@@ -101,7 +101,7 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 
 	bool skipNext = false;
 
-	for (cl_uint i = 0; i < bvhNodes.size(); i++) {
+	for (std::size_t i = 0; i < bvhNodes.size(); i++) {
 		BVHNode* node = bvhNodes[i];
 
 		if (skipNext) {
@@ -117,7 +117,7 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 		sn.bbMax = bbMax;
 
 		vector<Tri> facesVec = node->faces;
-		cl_uint fvecLen = facesVec.size();
+		std::size_t fvecLen = facesVec.size();
 		sn.bbMin.s[3] = (fvecLen > 0) ? (cl_float)facesV.size() + 0 : -1.0f;
 		sn.bbMax.s[3] = (fvecLen > 1) ? (cl_float)facesV.size() + 1 : -1.0f;
 
@@ -163,7 +163,7 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 		bvhNodesCL.push_back(sn);
 
 		// Faces
-		for (int j = 0; j < fvecLen; j++) {
+		for (std::size_t j = 0; j < fvecLen; j++) {
 			Tri tri = facesVec[j];
 			cl_uint4 fv;
 			cl_uint4 fn;
@@ -209,12 +209,12 @@ std::size_t initOpenCLBuffers_Faces(
 	vector<cl_float4> vertices4;
 	vector<cl_float4> normals4;
 
-	for (int i = 0; i < vertices.size(); i += 3) {
+	for (std::size_t i = 0; i < vertices.size(); i += 3) {
 		cl_float4 v = { vertices[i], vertices[i + 1], vertices[i + 2], 0.0f };
 		vertices4.push_back(v);
 	}
 
-	for (int i = 0; i < normals.size(); i += 3) {
+	for (std::size_t i = 0; i < normals.size(); i += 3) {
 		cl_float4 n = { normals[i], normals[i + 1], normals[i + 2], 0.0f };
 		normals4.push_back(n);
 	}
@@ -274,7 +274,7 @@ void initOpenCL()
 	vector<clw::Platform> platforms;
 	clw::Platform::get(&platforms);
 	cout << "Available OpenCL platforms : " << endl << endl;
-	for (int i = 0; i < platforms.size(); i++)
+	for (std::size_t i = 0; i < platforms.size(); i++)
 		cout << "\t" << i + 1 << ": " << platforms[i].getInfo<CL_PLATFORM_NAME>() << endl;
 
 	// Pick one platform
@@ -287,7 +287,7 @@ void initOpenCL()
 	platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
 	cout << "Available OpenCL devices on this platform: " << endl << endl;
-	for (int i = 0; i < devices.size(); i++){
+	for (std::size_t i = 0; i < devices.size(); i++){
 		cout << "\t" << i + 1 << ": " << devices[i].getInfo<CL_DEVICE_NAME>() << endl;
 		cout << "\t\tMax compute units: " << devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << endl;
 		cout << "\t\tMax work group size: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << endl << endl;

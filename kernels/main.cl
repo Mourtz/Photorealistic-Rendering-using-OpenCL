@@ -3,14 +3,21 @@
 __constant sampler_t samplerA = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
 
 typedef struct {
+	// throughput
 	float3 mask;
-	// total bounces
-	uint bounces;
-	// explicit light controls
-	ushort diff_bounces,
-		spec_bounces,
-		trans_bounces,
-		scatter_events;
+
+	struct {
+		// total bounces
+		uint total;
+		// explicit light controls
+		ushort diff, spec, trans;
+		bool isSpecular;
+	} bounce;
+
+	// participating medium
+	struct {
+		ushort scatters, mat;
+	} media;
 } RLH;
 
 #FILE:header.cl
@@ -74,20 +81,20 @@ __kernel void render_kernel(
 
 	__global RLH* rlh = &r_flat[work_item_id].data;
 
-	const bool firstBounce = (rlh->bounces == 0);
-	rlh->bounces *= !firstBounce;
-	rlh->diff_bounces *= !firstBounce;
-	rlh->spec_bounces *= !firstBounce;
-	rlh->trans_bounces *= !firstBounce;
-	rlh->scatter_events *= !firstBounce;
+	const bool firstBounce = (rlh->bounce.total == 0);
+	rlh->bounce.total		*= !firstBounce;
+	rlh->bounce.diff		*= !firstBounce;
+	rlh->bounce.spec		*= !firstBounce;
+	rlh->bounce.trans		*= !firstBounce;
+	rlh->bounce.isSpecular	|= firstBounce;
+	rlh->media.scatters		*= !firstBounce;
+	rlh->media.mat			*= !firstBounce;
 
 	rlh->mask = !firstBounce * rlh->mask + firstBounce;
 
 	/* seeds for random number generator */
-	uint seed0 = i_coord.x * framenumber % 1000 + (rlh->bounces)*random0;
-	uint seed1 = i_coord.y * framenumber % 1000 + (rlh->bounces)*random1;
-
-	// rlh->bounces  *= (rlh->bounces <= 32);
+	uint seed0 = i_coord.x * framenumber % 1000 + (rlh->bounce.total+33)*random0;
+	uint seed1 = i_coord.y * framenumber % 1000 + (rlh->bounce.total+100)*random1;
 
 	Ray ray;
 	ray.origin 	= r_flat[work_item_id].origin;

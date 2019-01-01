@@ -112,7 +112,11 @@ float4 radiance(
 	}
 
 	SurfaceScatterEvent surfaceEvent;
-	float4 acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
+	
+	float alpha = 1.0f;
+	float3 emmision = (float3)(0.0f);
+#define acc (float4)(emmision, alpha)
+
 	float brdfPdf = 1.0f;
 
 /*------------------- GLOBAL MEDIUM -------------------*/
@@ -143,7 +147,7 @@ float4 radiance(
 
 			float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
 			// @ToFix - im 100% sure this is wrong
-			acc.xyz += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
+			emmision += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 		}
 #endif
 
@@ -161,7 +165,7 @@ float4 radiance(
 #ifdef LIGHT
 		if (mat.t & LIGHT) {
 			if (!rlh->bounce.isSpecular || rlh->bounce.total == 1)
-				acc.xyz += rlh->mask * mat.color;
+				emmision += rlh->mask * mat.color;
 
 			rlh->bounce.total = 0;
 			return acc;
@@ -431,7 +435,7 @@ float4 radiance(
 				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
 				float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, mesh_id);
-				acc.xyz += dLight * rlh->mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
+				emmision += dLight * rlh->mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 			}
 		}
 #endif
@@ -459,10 +463,12 @@ float4 radiance(
 	}
 
 #ifdef ALPHA_TESTING
-	acc.w = 1.0f;
+	alpha = 1.0f;
 #endif
 
 	return acc;
+
+#undef acc
 }
 
 #endif

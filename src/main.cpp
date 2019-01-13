@@ -584,13 +584,14 @@ int main(int argc, char** argv){
 
 	// render loop
 	while (!glfwWindowShouldClose(window)) {
-		// poll for events
-		glfwPollEvents();
-		// render call
 		render();
+
 		// swap front and back buffers
 		glfwSwapBuffers(window);
-
+		// poll for events
+		glfwPollEvents();
+		
+		// render call
 		if (render_to_file) {
 			saveImage();
 			render_to_file = false;

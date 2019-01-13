@@ -453,7 +453,7 @@ float4 radiance(
 	}
 
 	//russian roulette
-	float roulettePdf = fmax3(rlh->mask);
+	const float roulettePdf = fmax3(rlh->mask);
 	if (roulettePdf < 0.1f) {
 		if (get_random(seed0, seed1) < roulettePdf){
 			rlh->mask /= roulettePdf;
@@ -461,10 +461,6 @@ float4 radiance(
 			rlh->bounce.total = 0;
 		}
 	}
-
-#ifdef ALPHA_TESTING
-	alpha = 1.0f;
-#endif
 
 	return acc;
 

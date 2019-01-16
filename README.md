@@ -1,5 +1,5 @@
 # WIP
-- [X] flatten recursive loops to reduce divergence between different threads
+- [X] flatten raytracing loop to reduce divergence between threads
 - [ ] write a new kernel for ray traversal in participating media
 - [ ] parallelize BVH builder
 - [ ] an OpenCL kernel for building the BVH would be cool

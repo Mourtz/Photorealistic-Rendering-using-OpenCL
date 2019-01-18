@@ -1,6 +1,27 @@
 #ifndef __UTILS__
 #define __UTILS__
 
+typedef union { half f;		ushort ui;	short i; 	} union_16;
+typedef union { float f;	uint ui;	int i;		} union_32;
+typedef union { double f;	ulong ui;	long i;		} union_64;
+
+inline float uintBitsToFloat(uint i){
+	union_32 unionHack;
+	unionHack.ui = i;
+	return unionHack.f;
+}
+
+inline uint floatBitsToUint(float f){
+	union_32 unionHack;
+	unionHack.f = f;
+	return unionHack.ui;
+}
+
+// 2x-5x faster than i/float(UINT_MAX)
+inline float normalizedUint(uint i){
+	return uintBitsToFloat((i >> 9u) | 0x3F800000u) - 1.0f;
+}
+
 #FILE:prng/prng.cl
 
 /* max component */

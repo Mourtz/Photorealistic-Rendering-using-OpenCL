@@ -1,8 +1,6 @@
 #ifndef __PRNG__
 #define __PRNG__
 
-union prng_r { float f; uint ui; };
-
 float get_random(uint *seed0, uint *seed1) {
 
 	/* hash the seeds */
@@ -11,7 +9,7 @@ float get_random(uint *seed0, uint *seed1) {
 
 	uint ires = ((*seed0) << 16) + (*seed1);
 
-	union prng_r res;
+	union_32 res;
 
 	res.ui = (ires & 0x007fffff) | 0x40000000;
 	return (res.f - 2.0f) * 0.5f;

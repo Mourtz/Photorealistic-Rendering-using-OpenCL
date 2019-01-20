@@ -26,9 +26,12 @@
 *.exe
 *.out
 *.app
+
 /build/
 *.log
 *.mtl
 kernels/bxdf/disney.cl
 *.hdr
 include/BVH/bvh_morton_code.h
+
+.vscode

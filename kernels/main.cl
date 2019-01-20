@@ -16,8 +16,11 @@ typedef struct {
 
 	// participating medium
 	struct {
-		ushort scatters, mat;
+		bool in;
+		ushort scatters;
 	} media;
+
+	int mesh_id;
 } RLH;
 
 #FILE:header.cl
@@ -27,12 +30,13 @@ typedef struct {
 #FILE:bxdf/bxdf.cl
 #FILE:intersect.cl
 #FILE:media.cl
-#FILE:integrators/pathtracing.cl
 
 typedef struct {
-	float3 origin, dir;
+	Ray ray;
 	RLH data;
 } RTD;
+
+#FILE:integrators/pathtracing.cl
 
 __kernel void render_kernel(
 	/* scene's Meshes */
@@ -71,7 +75,7 @@ __kernel void render_kernel(
 	/* enviroment map */
 	__read_only image2d_t env_map,
 
-	__global RTD* r_flat // 0-2: origin, 3-5: dir, 6-8: mask, 9: traces
+	__global RTD* r_flat
 ) {
 	const int work_item_id = get_global_id(0);			/* the unique global id of the work item for the current pixel */
 	
@@ -88,7 +92,7 @@ __kernel void render_kernel(
 	rlh->bounce.trans		*= !firstBounce;
 	rlh->bounce.isSpecular	|= firstBounce;
 	rlh->media.scatters		*= !firstBounce;
-	rlh->media.mat			*= !firstBounce;
+	rlh->media.in			&= !firstBounce;
 
 	rlh->mask = !firstBounce * rlh->mask + firstBounce;
 
@@ -96,19 +100,14 @@ __kernel void render_kernel(
 	uint seed0 = i_coord.x * framenumber % 1000 + (rlh->bounce.total+33)*random0;
 	uint seed1 = i_coord.y * framenumber % 1000 + (rlh->bounce.total+100)*random1;
 
-	Ray ray;
-	ray.origin 	= r_flat[work_item_id].origin;
-	ray.dir 	= r_flat[work_item_id].dir;
-	ray = firstBounce ? createCamRay(i_coord, width, height, cam, &seed0, &seed1) : ray;
+	Ray ray = firstBounce ? createCamRay(i_coord, width, height, cam, &seed0, &seed1) : r_flat[work_item_id].ray;
 
 	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
 	
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
 	accumbuffer[work_item_id] += radiance(&scene, env_map, &ray, rlh, &seed0, &seed1);
-
-	/* update r_flat buffer */
-	r_flat[work_item_id].origin = ray.origin;
-	r_flat[work_item_id].dir	= ray.dir;
+	
+	r_flat[work_item_id].ray = ray;
 
 	/* update the output GLTexture */
 	write_imagef(output_tex, i_coord, accumbuffer[work_item_id] / (float)(framenumber));

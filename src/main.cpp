@@ -67,13 +67,12 @@ vector<clw::Memory> cl_screens;
 // 	cl_uint bounces;
 // 	cl_ushort diff_bounces, spec_bounces, trans_bounces, scatter_events;
 // };
-constexpr std::size_t RayI_size = 16*4;
+constexpr std::size_t RayI_size = 16*11;
 
 clw::Buffer cl_flattenI;
 
 cl_uint BVH_NUM_NODES(0);
 clw::Buffer mBufBVH;
-clw::Buffer mBufBVHFaces;
 clw::Buffer mBufFacesV;
 clw::Buffer mBufFacesN;
 clw::Buffer mBufVertices;

@@ -603,18 +603,44 @@ cl_float BVH::splitFaces(
 	const vector<Tri> faces, const cl_float pos, const cl_uint axis,
 	vector<Tri>* leftFaces, vector<Tri>* rightFaces
 ) {
-	{
-		cl_float sah = FLT_MAX;
-		vector<vec3> bbMinsL, bbMinsR, bbMaxsL, bbMaxsR;
+	cl_float sah = FLT_MAX;
+	vector<vec3> bbMinsL, bbMinsR, bbMaxsL, bbMaxsR;
 
+	leftFaces->clear();
+	rightFaces->clear();
+
+	for (cl_uint i = 0; i < faces.size(); i++) {
+		Tri tri = faces[i];
+		vec3 cen = (tri.bbMin + tri.bbMax) * 0.5f;
+
+		if (cen[axis] <= pos) {
+			leftFaces->push_back(tri);
+			bbMinsL.push_back(tri.bbMin);
+			bbMaxsL.push_back(tri.bbMax);
+		}
+		else {
+			rightFaces->push_back(tri);
+			bbMinsR.push_back(tri.bbMin);
+			bbMaxsR.push_back(tri.bbMax);
+		}
+	}
+
+	// Just do it 50:50.
+	if (leftFaces->size() == 0 || rightFaces->size() == 0) {
+#ifdef __DEBUG__
+		std::cout << "[BVH] Dividing faces by center left one side empty. Just doing it 50:50 now." << std::endl;
+#endif
+		bbMinsL.clear();
+		bbMaxsL.clear();
+		bbMinsR.clear();
+		bbMaxsR.clear();
 		leftFaces->clear();
 		rightFaces->clear();
 
 		for (cl_uint i = 0; i < faces.size(); i++) {
 			Tri tri = faces[i];
-			vec3 cen = (tri.bbMin + tri.bbMax) * 0.5f;
 
-			if (cen[axis] <= pos) {
+			if (i < faces.size() / 2) {
 				leftFaces->push_back(tri);
 				bbMinsL.push_back(tri.bbMin);
 				bbMaxsL.push_back(tri.bbMax);
@@ -625,55 +651,28 @@ cl_float BVH::splitFaces(
 				bbMaxsR.push_back(tri.bbMax);
 			}
 		}
-
-		// Just do it 50:50.
-		if (leftFaces->size() == 0 || rightFaces->size() == 0) {
-			//Logger::logDebugVerbose("[BVH] Dividing faces by center left one side empty. Just doing it 50:50 now.");
-
-			bbMinsL.clear();
-			bbMaxsL.clear();
-			bbMinsR.clear();
-			bbMaxsR.clear();
-			leftFaces->clear();
-			rightFaces->clear();
-
-			for (cl_uint i = 0; i < faces.size(); i++) {
-				Tri tri = faces[i];
-
-				if (i < faces.size() / 2) {
-					leftFaces->push_back(tri);
-					bbMinsL.push_back(tri.bbMin);
-					bbMaxsL.push_back(tri.bbMax);
-				}
-				else {
-					rightFaces->push_back(tri);
-					bbMinsR.push_back(tri.bbMin);
-					bbMaxsR.push_back(tri.bbMax);
-				}
-			}
-		}
-
-		vec3 bbMinL, bbMinR, bbMaxL, bbMaxR;
-		MathHelp::getAABB(bbMinsL, bbMaxsL, &bbMinL, &bbMaxL);
-		cl_float leftSA = MathHelp::getSurfaceArea(bbMinL, bbMaxL);
-		cl_float rightSA = MathHelp::getSurfaceArea(bbMinR, bbMaxR);
-
-		sah = leftSA * leftFaces->size() + rightSA * rightFaces->size();
-
-		// There has to be somewhere else something wrong.
-		if (leftFaces->size() == 0 || rightFaces->size() == 0) {
-			char msg[256];
-			snprintf(
-				msg, 256, "[BVH] Dividing faces 50:50 left one side empty. Faces: %lu.",
-				faces.size()
-			);
-			cout << msg << "\n";
-
-			sah = FLT_MAX;
-		}
-
-		return sah;
 	}
+
+	vec3 bbMinL, bbMinR, bbMaxL, bbMaxR;
+	MathHelp::getAABB(bbMinsL, bbMaxsL, &bbMinL, &bbMaxL);
+	cl_float leftSA = MathHelp::getSurfaceArea(bbMinL, bbMaxL);
+	cl_float rightSA = MathHelp::getSurfaceArea(bbMinR, bbMaxR);
+
+	sah = leftSA * leftFaces->size() + rightSA * rightFaces->size();
+
+	// There has to be somewhere else something wrong.
+	if (leftFaces->size() == 0 || rightFaces->size() == 0) {
+		char msg[256];
+		snprintf(
+			msg, 256, "[BVH] Dividing faces 50:50 left one side empty. Faces: %lu.",
+			faces.size()
+		);
+		cout << msg << "\n";
+
+		sah = FLT_MAX;
+	}
+
+	return sah;
 }
 
 void BVH::splitNodes(

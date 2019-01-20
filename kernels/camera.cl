@@ -51,6 +51,7 @@ Ray createCamRay(const int2 coord, const int width, const int height, __constant
 
 	/* create camera ray*/
 	Ray ray;
+	ray.backside = false;
 	ray.origin = aperturePoint;
 	ray.dir = apertureToImagePlane;
 

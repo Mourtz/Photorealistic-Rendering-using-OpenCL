@@ -1,8 +1,17 @@
 #ifndef __PRNG__
 #define __PRNG__
 
-float get_random(uint *seed0, uint *seed1) {
+float next1D(ulong* state){
+	ulong oldState = *state;
+	*state = oldState*6364136223846793005UL + 1;
+	uint xorShifted = (uint)(((oldState >> 18u) ^ oldState) >> 27u);
+	uint rot = oldState >> 59u;
+	return normalizedUint((xorShifted >> rot) | (xorShifted << ((uint)(-(int)(rot)) & 31)));
+}
 
+#define hash_2ui_2f32(state) (float2)(next1D(state), next1D(state))
+
+float get_random(uint *seed0, uint *seed1) {
 	/* hash the seeds */
 	*seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);
 	*seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);

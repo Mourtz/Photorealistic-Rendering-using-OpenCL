@@ -7,6 +7,28 @@ typedef struct {
 	float pdf;
 } PhaseSample;
 
+typedef struct {
+	float3 p;
+	float continuedT;
+	/*float3 continuedWeight;*/
+	float t;
+	float3 weight;
+	float pdf;
+	bool exited;
+} MediumSample;
+
+typedef struct {
+	float3 density;
+	float3 sigmaA;
+	float3 sigmaS;
+	float3 sigmaT;
+	bool absorptionOnly;
+} Medium;
+
+//----------------------------------------------------
+
+#ifdef LIGHT
+
 /* only for point and sphere lights */
 void sampleEquiAngular(
 	const Ray* ray,
@@ -31,30 +53,11 @@ void sampleEquiAngular(
 	*pdf = D / ((thetaB - thetaA)*(D*D + t*t));
 }
 
+#endif
+
+//----------------------------------------------------
+
 #FILE:phasefunctions/HenyeyGreenstein.cl
-
-//----------------------------------------------------
-
-typedef struct {
-	float3 p;
-	float continuedT;
-	/*float3 continuedWeight;*/
-	float t;
-	float3 weight;
-	float pdf;
-	bool exited;
-} MediumSample;
-
-typedef struct {
-	float3 density;
-	float3 sigmaA;
-	float3 sigmaS;
-	float3 sigmaT;
-	bool absorptionOnly;
-} Medium;
-
-//----------------------------------------------------
-
 #FILE:media/homogeneous.cl
 
 #endif

@@ -1,6 +1,7 @@
 #ifndef __INTEGRATOR__
 #define __INTEGRATOR__
 
+__constant bool enableLightSampling 	= true;
 __constant bool enableVolumeLightSampling 	= true;
 __constant bool lowOrderScattering 			= false;
 
@@ -128,6 +129,14 @@ float4 radiance(
 	const float gm_hg_g = 0.5f;
 
 	// global medium
+	// const Medium g_medium = {
+		// (float3)(GLOBAL_FOG_DENSITY),
+		// (float3)(GLOBAL_FOG_SIGMA_A),
+		// (float3)(GLOBAL_FOG_SIGMA_S),
+		// (float3)(GLOBAL_FOG_SIGMA_T),
+		// GLOBAL_FOG_ABS_ONLY
+	// };
+
 	Medium g_medium;
 	g_medium.density = GLOBAL_FOG_DENSITY;
 	g_medium.sigmaA = GLOBAL_FOG_SIGMA_A;
@@ -139,26 +148,21 @@ float4 radiance(
 	sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
 	rlh->mask *= gm_sample.weight;
 	
-	if (!gm_sample.exited){
+	if (++rlh->media.scatters < 1024 && !gm_sample.exited){
 		ray->origin = gm_sample.p;
 
-#ifdef LIGHT
-		float3 vwi;
-		for (uint i = 0; i < LIGHT_COUNT; ++i) {
-			uint index = LIGHT_INDICES[i];
+		rlh->bounce.isSpecular = !(enableVolumeLightSampling && (lowOrderScattering || rlh->media.scatters > 1));
 
-			if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
-
-			float3 dLight = calcDirectLight(ray, scene, &index, &vwi, seed0, seed1, mesh_id);
-			// @ToFix - im 100% sure this is wrong
-			emmision += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
-		}
-#endif
-
+#if 0
 		/* Henyey-Greenstein phase function */
 		PhaseSample p_sample;
 		hg_sample(ray->dir, gm_hg_g, &p_sample, seed0, seed1);
 		ray->dir = p_sample.w;
+#else 
+		ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
+#endif
+		// @ToDo clear this thing out, fix the light sampling code!!!!!!!
+		ray->normal = ray->dir;
 	} else 
 #endif
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -353,7 +357,7 @@ float4 radiance(
 
 //@ToDo Volume Light Sampling needs work
 #if 0
-			rlh->bounce.isSpecular = ray->backside && !(enableVolumeLightSampling && (lowOrderScattering || rlh->media.scatters > 1));
+			rlh->bounce.isSpecular = !(enableVolumeLightSampling && (lowOrderScattering || rlh->media.scatters > 1));
 #else
 			rlh->bounce.isSpecular = ray->backside;
 #endif
@@ -434,21 +438,6 @@ float4 radiance(
 				ray->backside = rlh->bounce.isSpecular = false;
 			}
 		}
-
-#ifdef LIGHT
-		if (!rlh->bounce.isSpecular) {
-			float3 wi;
-			for (uint i = 0; i < LIGHT_COUNT; ++i) {
-				uint index = LIGHT_INDICES[i];
-
-				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
-
-				float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, rlh->mesh_id);
-				emmision += dLight * rlh->mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
-			}
-		}
-#endif
-
 	}
 
 	/* terminate if necessary */
@@ -470,6 +459,21 @@ float4 radiance(
 			rlh->media.in = rlh->bounce.total = 0;
 		}
 	}
+
+#ifdef LIGHT
+		if (enableLightSampling && !rlh->bounce.isSpecular) {
+			float3 wi;
+			for (uint i = 0; i < LIGHT_COUNT; ++i) {
+				uint index = LIGHT_INDICES[i];
+
+				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
+
+				float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, rlh->mesh_id);
+				// emmision += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
+				emmision += dLight * rlh->mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
+			}
+		}
+#endif
 
 	return acc;
 

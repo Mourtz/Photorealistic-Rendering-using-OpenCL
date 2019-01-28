@@ -367,77 +367,81 @@ float4 radiance(
 
 		}
 		/*-------------------- SPECSUB --------------------*/
-#ifdef SPECSUB
+#ifdef SPECSUB		// SPECSUB
 		else if (mat.t & SPECSUB)
-#else
-		else if (false)
-#endif
 		{
-			if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.3f)) {
-				ray->origin = ray->pos + ray->normal * EPS;
-				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
+			if (!ray->backside) {
+				if(get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)){
+					ray->origin = ray->pos + ray->normal * EPS;
+					ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
-				++rlh->bounce.spec;
-				rlh->bounce.isSpecular = true;
-			}
-			else {
-				if (!ray->backside) {
+					++rlh->bounce.spec;
+					rlh->bounce.isSpecular = true;
+				}
+				else {
 					ray->origin = ray->pos - ray->normal * EPS;
-					if (!get_dist(&ray->t, ray, &mesh, scene, rlh->mesh_id == -1)) return acc;
+					if (!get_dist(&ray->t, ray, &mesh, scene, rlh->mesh_id == -1)) {
+						rlh->bounce.total = 0;
+						return acc;	
+					}
 					ray->backside = true;
 				}
-
+			}
+			else {
 				// max scattering events
-				const int max_scatters = 1024;
+				if(rlh->media.scatters++ < 1024){
+					const float3 density = mat.color * 80.0f;
+					const float sigmaA = 0.5f;
+					const float sigmaS = 1.0f;
+					const float sigmaT = sigmaA + sigmaS;
 
-				MediumSample m_sample;
+					// medium's properties
+					const Medium medium = {
+						density,
+						sigmaA*density,
+						sigmaS*density,
+						sigmaT*density,
+						(dot(sigmaS, 1.0f) == 0.0f)
+					};
 
-				// medium's properties
-				Medium medium;
-				medium.density = mat.color * 40.0f;
-				medium.sigmaA = 0.2f * medium.density;
-				medium.sigmaS = 1.0f * medium.density;
-				medium.sigmaT = (medium.sigmaA + medium.sigmaS);
-				medium.absorptionOnly = (dot(medium.sigmaS,1.0f) == 0.0f);
-
-				int scatters = 0;
-				while (true) {
+					MediumSample m_sample;
 					sampleDistance(ray, &m_sample, &medium, seed0, seed1);
 
 					rlh->mask *= m_sample.weight;
 
 					if (m_sample.exited) {
-						break;
+						ray->origin = ray->origin + ray->dir * (ray->t + EPS);
+						ray->backside = false;
+					} else {
+						float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+						ray->origin = m_sample.p;
+						#if 1
+							ray->dir = uniformSphere(xi);
+						#else
+							hg_sample_fast(&ray->dir, 0.4f, &xi);
+						#endif
+
+						if (!get_dist(&ray->t, ray, &mesh, scene, rlh->mesh_id == -1)) {
+							rlh->bounce.total = 0;
+							return acc;
+						}
 					}
-
-					ray->origin = m_sample.p;
-#if 0
-					hg_sample_fast(&ray->dir, 0.8f, seed0, seed1);
-#else
-					ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
-#endif
-
-					if (!get_dist(&ray->t, ray, &mesh, scene, rlh->mesh_id == -1)) return acc;
-
-					//russian roulette
-					float roulettePdf = fmax3(rlh->mask);
-					if (roulettePdf < 0.1f) {
-						if (get_random(seed0, seed1) < roulettePdf)
-							rlh->mask = native_divide(rlh->mask, roulettePdf);
-						else
-							break;
-					}
-
-					if (++scatters > max_scatters) {
-						break;
-					}
+				} else {
+					ray->origin = ray->origin + ray->dir * (ray->t + EPS);
+					ray->backside = false;
 				}
-
-				ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 				ray->normal = ray->dir;
-				ray->backside = rlh->bounce.isSpecular = false;
+				rlh->media.in = ray->backside;
+
+	//@ToDo Volume Light Sampling needs work
+	#if 0
+				rlh->bounce.isSpecular = !(enableVolumeLightSampling && (lowOrderScattering || rlh->media.scatters > 1));
+	#else
+				rlh->bounce.isSpecular = ray->backside;
+	#endif
 			}
 		}
+#endif		//END OF SPECSUB
 	}
 
 	/* terminate if necessary */

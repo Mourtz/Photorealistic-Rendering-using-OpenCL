@@ -13,7 +13,7 @@
 
 #include <Scene/geometry.h>
 
-string scene_filepath = "../scenes/test.json";
+std::string scene_filepath = "../scenes/test.json";
 bool ALPHA_TESTING(false);
 
 struct cl_medium {
@@ -29,7 +29,7 @@ struct host_scene {
 	// n_sphere, n_sdf, n_box, n_quad,
 	// _____, _____, _____, total_count
 	cl_uint8 object_count;
-	vector<Mesh> cpu_meshes;
+	std::vector<Mesh> cpu_meshes;
 
 	// seperate bounce controls
 	cl_int MAX_BOUNCES = 12;
@@ -47,7 +47,7 @@ struct host_scene {
 
 	// lights
 	cl_uint LIGHT_COUNT = 0;
-	vector<cl_uint> LIGHT_INDICES;
+	std::vector<cl_uint> LIGHT_INDICES;
 
 	// Volumetric pathtracing
 	cl_bool HAS_GLOBAL_MEDIUM = false;
@@ -59,19 +59,19 @@ struct host_scene {
 
 	// obj scene
 	cl_bool BUILD_BVH = false;
-	string obj_path;
+	std::string obj_path;
 	Material* obj_mat = new Material();
 
 	void getLights(){
 		for(cl_uint i = 0; i < object_count.s[7]; ++i){
 			if(cpu_meshes[i].mat.t & LIGHT){
-				cout << "-> Light Source (" << LIGHT_COUNT << ", " << i << ")" << std::endl;
+				std::cout << "-> Light Source (" << LIGHT_COUNT << ", " << i << ")" << std::endl;
 				++LIGHT_COUNT;
 				LIGHT_INDICES.push_back(i);
 			}
 		}
 
-		cout << "--------------------------------" << std::endl;
+		std::cout << "--------------------------------" << std::endl;
 	}
 
 
@@ -105,8 +105,8 @@ struct host_scene {
 	void load() {
 		using namespace rapidjson;
 
-		cout << "--------------------------------" << std::endl;
-		cout << "Loading (" << scene_filepath << ")\n";
+		std::cout << "--------------------------------" << std::endl;
+		std::cout << "Loading (" << scene_filepath << ")\n";
 		std::ifstream ifs(scene_filepath);
 		IStreamWrapper isw(ifs);
 

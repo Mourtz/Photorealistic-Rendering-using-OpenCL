@@ -8,8 +8,6 @@
 #include <Math/linear_algebra.h>
 #include <vector>
 
-using std::vector;
-
 struct Tri {
 	cl_uint4 face;
 	cl_uint4 normals;
@@ -21,10 +19,10 @@ class MathHelp {
 public:
 	static cl_float degToRad(cl_float deg);
 	static void getAABB(
-		vector<cl_float4> vertices, vec3* bbMin, vec3* bbMax
+		std::vector<cl_float4> vertices, vec3* bbMin, vec3* bbMax
 	);
 	static void getAABB(
-		vector<vec3> bbMins, vector<vec3> bbMaxs,
+		std::vector<vec3> bbMins, std::vector<vec3> bbMaxs,
 		vec3* bbMin, vec3* bbMax
 	);
 	static cl_float getOverlapSA(vec3 bbA, vec3 bbB);
@@ -49,7 +47,7 @@ public:
 	);
 	static vec3 projectOnPlane(vec3 q, vec3 p, vec3 n);
 	static cl_float radToDeg(cl_float rad);
-	static void triCalcAABB(Tri* tri, const vector<cl_float4>* vertices, const vector<cl_float4>* normals);
+	static void triCalcAABB(Tri* tri, const std::vector<cl_float4>* vertices, const std::vector<cl_float4>* normals);
 	static void triThicknessAndSidedrop(
 		const vec3 p1, const vec3 p2, const vec3 p3,
 		const vec3 n1, const vec3 n2, const vec3 n3,

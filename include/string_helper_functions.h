@@ -4,30 +4,33 @@
 #include <algorithm> 
 #include <string>
 #include <vector>
+#include <fstream>
 
 // trim from start (in place)
-inline void ltrim(string &s) {
+inline void ltrim(std::string &s) {
 	s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) {
 		return !isspace(ch);
 	}));
 }
 
 // trim from end (in place)
-inline void rtrim(string &s) {
+inline void rtrim(std::string &s) {
 	s.erase(find_if(s.rbegin(), s.rend(), [](int ch) {
 		return !isspace(ch);
 	}).base(), s.end());
 }
 
 // trim from both ends (in place)
-inline void trim(string &s) {
+inline void trim(std::string &s) {
 	ltrim(s);
 	rtrim(s);
 }
 
-vector<string> split(const string& str, const string& delim)
+std::vector<std::string> split(const std::string& str, const std::string& delim)
 {
-    vector<string> tokens;
+    using std::string;
+    
+    std::vector<string> tokens;
     unsigned int prev = 0, pos = 0;
     do
     {

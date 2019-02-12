@@ -1,5 +1,7 @@
 #include <Math/MathHelp.h>
 
+using std::vector;
+
 const cl_float RENDER_PHONGTESS = 0;
 
 cl_float MathHelp::degToRad(cl_float deg) {

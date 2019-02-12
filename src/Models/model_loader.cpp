@@ -1,8 +1,6 @@
 #include <Model/model_loader.h>
-
+// #include <CL/cl_help.h>
 #include <iostream>
-
-using namespace std;
 
 ModelLoader::ModelLoader() {
 	mObjParser = new ObjParser();
@@ -13,8 +11,10 @@ ModelLoader::~ModelLoader() {
 }
 
 void ModelLoader::getFacesOfObject(
-	object3D object, vector<cl_uint4>* faces, cl_int offset
+	object3D object, std::vector<cl_uint4>* faces, cl_int offset
 ) {
+	// cl::Program bvh = cl_help::program::LoadProgram("../kernels/bvh.cl", { device });
+
 	cl_uint a, b, c;
 
 	for (cl_uint i = 0; i < object.facesV.size(); i += 3) {
@@ -28,7 +28,7 @@ void ModelLoader::getFacesOfObject(
 }
 
 void ModelLoader::getFaceNormalsOfObject(
-	object3D object, vector<cl_uint4>* faceNormals, cl_int offset
+	object3D object, std::vector<cl_uint4>* faceNormals, cl_int offset
 ) {
 	cl_uint a, b, c;
 
@@ -46,10 +46,12 @@ ObjParser* ModelLoader::getObjParser() {
 	return mObjParser;
 }
 
-void ModelLoader::loadModel(string filepath, string filename) {
+void ModelLoader::loadModel(std::string filepath, std::string filename) {
+	using std::vector;
+	
 	char msg[256];
 	snprintf(msg, 256, "[ModelLoader] Importing model \"%s\" ...", filename.c_str());
-	cout << msg << std::endl;
+	std::cout << msg << std::endl;
 
 	mObjParser->load(filepath, filename);
 
@@ -57,5 +59,5 @@ void ModelLoader::loadModel(string filepath, string filename) {
 	vector<cl_uint> facesVN = mObjParser->getFacesVN();
 	vector<cl_float> vertices = mObjParser->getVertices();
 
-	cout << "[ModelLoader] ... Done." << std::endl;
+	std::cout << "[ModelLoader] ... Done." << std::endl;
 }

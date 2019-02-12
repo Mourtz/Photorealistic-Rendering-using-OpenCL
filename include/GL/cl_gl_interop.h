@@ -5,6 +5,7 @@
 #include <math.h>
 #include <vector>
 
+#include <utils.h>
 #include <Texture/texture.h>
 #include <GL/user_interaction.h>
 
@@ -16,7 +17,7 @@ int window_width = 1280;
 // window height
 int window_height = 720;
 // enviroment map filepath
-string env_map_filepath = "";
+std::string env_map_filepath = "";
 // encoder
 unsigned char encoder(0);
 
@@ -29,30 +30,12 @@ GLuint tex0, tex1/*, tex2*/;
 // OpenGL vertex buffer object
 GLuint vbo;
 
-const string vert_filepath = "../shaders/vert.glsl";
-const string tonemapper_filepath = "../shaders/tonemapper.glsl";
-
-string readFile(string filepath) {
-	string str;
-
-	std::ifstream file(filepath);
-	if (!file) {
-		cout << "\nCouldn't find OpenCL file (" + filepath + ')' << endl << "Exiting..." << endl;
-		cin.get();
-		exit(1);
-	}
-
-	string line;
-	while (std::getline(file, line)) {
-		str += line + '\n';
-	}
-
-	return str;
-}
+const std::string vert_filepath = "../shaders/vert.glsl";
+const std::string tonemapper_filepath = "../shaders/tonemapper.glsl";
 
 bool initGL(){
 
-	if(glfwInit()) cout << "GLFW initialized!" << std::endl;
+	if(glfwInit()) std::cout << "GLFW initialized!" << std::endl;
 	else return false;
 
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
@@ -68,7 +51,7 @@ bool initGL(){
 	//glfwSetWindowSizeCallback(window, window_size_callback);
 
 	// initialise OpenGL extensions
-	if(glewInit() == GLEW_OK) cout << "GLEW initialized \n";
+	if(glewInit() == GLEW_OK) std::cout << "GLEW initialized \n";
 	else return false;
 
 	// initialise OpenGL
@@ -128,7 +111,7 @@ bool initGL(){
 	// glBindTexture(GL_TEXTURE_2D, tex0);
 
 	// Create and compile the vertex shader
-	string vertStr = readFile(vert_filepath);
+	std::string vertStr = utils::ReadFile(vert_filepath);
 	const char* vertSrc = vertStr.c_str();
 
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -136,7 +119,7 @@ bool initGL(){
 	glCompileShader(vertexShader);
 
 	// Create and compile the fragment shader
-	string fragmentStr = readFile(tonemapper_filepath);
+	std::string fragmentStr = utils::ReadFile(tonemapper_filepath);
 	const char* fragmentSrc = fragmentStr.c_str();
 
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -158,7 +141,7 @@ bool initGL(){
 	glEnableVertexAttribArray(posAttrib);
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-	cout << "OpenGL initialized \n";
+	std::cout << "OpenGL initialized \n";
 
 	stbi_flip_vertically_on_write(true);
 
@@ -180,7 +163,7 @@ void saveImage() {
 		delete pixels;
 	}
 
-	cout << std::endl << "succesfully saved in ( " << glfwGetTime() - tStart << "s )" << std::endl;
+	std::cout << std::endl << "succesfully saved in ( " << glfwGetTime() - tStart << "s )" << std::endl;
 }
 
 void createVBO(GLuint* vbo){

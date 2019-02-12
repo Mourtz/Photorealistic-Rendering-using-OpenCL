@@ -1,9 +1,11 @@
 #include <BVH/bvh.h>
 
 #include <iostream>
+#include <vector>
 #include <algorithm>
 
-using namespace std;
+using std::vector;
+using std::cout;
 
 struct sortFacesCmp {
 	cl_uint axis;

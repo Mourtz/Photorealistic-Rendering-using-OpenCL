@@ -45,7 +45,7 @@ void traverseShadows(const Scene* scene, Ray* ray) {
 		bool isNodeHit = (
 			intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) &&
 			tFar > EPS
-			);
+		);
 
 		if (!isNodeHit) {
 			continue;

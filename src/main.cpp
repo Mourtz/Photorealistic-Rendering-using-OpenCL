@@ -23,25 +23,17 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
-//-----------------------------------------------------------------
-
-using std::vector;
-using std::string;
-using std::cout;
-using std::cin;
-using std::endl;
-
-#include <CL/cl_help.h>
-namespace clw = cl_help;
-
-//-----------------------------------------------------------------
-
 #include <BVH/bvh.h>
 #include <GL/cl_gl_interop.h>
 #include <Math/linear_algebra.h>
 #include <Math/random.h>
 #include <Camera/camera.h>
 #include <Scene/scene.h>
+
+#include <CL/cl_help.h>
+namespace clw = cl_help;
+
+//-----------------------------------------------------------------
 
 #define __DEBUG__
 
@@ -52,16 +44,6 @@ constexpr char* kernel_filepath = "../kernels/main.cl";
 // so the total amount of work items equals the number of pixels
 std::size_t global_work_size, local_work_size;
 
-// OpenCL objects
-clw::Buffer cl_output;
-clw::Buffer cl_meshes;
-clw::Buffer cl_camera;
-clw::Buffer cl_accumbuffer;
-clw::ImageGL cl_screen;
-clw::ImageGL cl_env_map;
-// clw::ImageGL cl_noise_tex;
-vector<clw::Memory> cl_screens;
-
 // struct RayI {
 // 	cl_float3 origin, direction, mask;
 // 	cl_uint bounces;
@@ -69,15 +51,9 @@ vector<clw::Memory> cl_screens;
 // };
 constexpr std::size_t RayI_size = 16*11;
 
-clw::Buffer cl_flattenI;
+cl::Buffer cl_flattenI;
 
 cl_uint BVH_NUM_NODES(0);
-clw::Buffer mBufBVH;
-clw::Buffer mBufFacesV;
-clw::Buffer mBufFacesN;
-clw::Buffer mBufVertices;
-clw::Buffer mBufNormals;
-clw::Buffer mBufMaterial;
 
 // current frame number
 cl_uint framenumber = 0;
@@ -89,14 +65,14 @@ host_scene* scene = nullptr;
 
 //-----------------------------------------------------------------
 
-std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> faces) {
-	vector<BVHNode*> bvhNodes = bvh->getNodes();
-	vector<bvhNode_cl> bvhNodesCL;
+std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, std::vector<cl_uint> faces) {
+	std::vector<BVHNode*> bvhNodes = bvh->getNodes();
+	std::vector<bvhNode_cl> bvhNodesCL;
 
-	vector<cl_uint> facesVN = ml->getObjParser()->getFacesVN();
-	vector<cl_int> facesMtl = ml->getObjParser()->getFacesMtl();
-	vector<cl_uint4> facesV;
-	vector<cl_uint4> facesN;
+	std::vector<cl_uint> facesVN = ml->getObjParser()->getFacesVN();
+	std::vector<cl_int> facesMtl = ml->getObjParser()->getFacesMtl();
+	std::vector<cl_uint4> facesV;
+	std::vector<cl_uint4> facesN;
 
 	bool skipNext = false;
 
@@ -115,7 +91,7 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 		sn.bbMin = bbMin;
 		sn.bbMax = bbMax;
 
-		vector<Tri> facesVec = node->faces;
+		std::vector<Tri> facesVec = node->faces;
 		std::size_t fvecLen = facesVec.size();
 		sn.bbMin.s[3] = (fvecLen > 0) ? (cl_float)facesV.size() + 0 : -1.0f;
 		sn.bbMax.s[3] = (fvecLen > 1) ? (cl_float)facesV.size() + 1 : -1.0f;
@@ -184,29 +160,29 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, vector<cl_uint> fac
 	}
 
 	std::size_t bytesBVH = sizeof(bvhNode_cl) * bvhNodesCL.size();
-	mBufBVH = clw::createBuffer(bvhNodesCL, bytesBVH);
+	mBufBVH = clw::buffer::create(bvhNodesCL, bytesBVH);
 
 	BVH_NUM_NODES = bvhNodesCL.size();
 	//mCL->setReplacement(string("#BVH_NUM_NODES#"), string(msg));
 
 	char msg[16];
 	snprintf(msg, 16, "%lu", BVH_NUM_NODES);
-	cout << "BVH_NODES: " << msg << endl;
+	std::cout << "BVH_NODES: " << msg << std::endl;
 
 	std::size_t bytesFV = sizeof(cl_uint4) * facesV.size();
-	mBufFacesV = clw::createBuffer(facesV, bytesFV);
+	mBufFacesV = clw::buffer::create(facesV, bytesFV);
 
 	std::size_t bytesFN = sizeof(cl_uint4) * facesN.size();
-	mBufFacesN = clw::createBuffer(facesN, bytesFN);
+	mBufFacesN = clw::buffer::create(facesN, bytesFN);
 
 	return bytesBVH + bytesFV + bytesFN;
 }
 
 std::size_t initOpenCLBuffers_Faces(
-	ModelLoader* ml, vector<cl_float> vertices, vector<cl_uint> faces, vector<cl_float> normals
+	ModelLoader* ml, std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals
 ) {
-	vector<cl_float4> vertices4;
-	vector<cl_float4> normals4;
+	std::vector<cl_float4> vertices4;
+	std::vector<cl_float4> normals4;
 
 	for (std::size_t i = 0; i < vertices.size(); i += 3) {
 		cl_float4 v = { vertices[i], vertices[i + 1], vertices[i + 2], 0.0f };
@@ -221,11 +197,11 @@ std::size_t initOpenCLBuffers_Faces(
 	std::size_t bytesV = sizeof(cl_float4) * vertices4.size();
 	std::size_t bytesN = sizeof(cl_float4) * normals4.size();
 
-	mBufVertices = clw::Buffer(context, CL_MEM_READ_ONLY, bytesV);
+	mBufVertices = cl::Buffer(context, CL_MEM_READ_ONLY, bytesV);
 	queue.enqueueWriteBuffer(mBufVertices, CL_TRUE, 0, bytesV, vertices4.data());
 	//mBufVertices = mCL->createBuffer(vertices4, bytesV);
 
-	mBufNormals = clw::Buffer(context, CL_MEM_READ_ONLY, bytesN);
+	mBufNormals = cl::Buffer(context, CL_MEM_READ_ONLY, bytesN);
 	queue.enqueueWriteBuffer(mBufNormals, CL_TRUE, 0, bytesN, normals4.data());
 	//mBufNormals = mCL->createBuffer(normals4, bytesN);
 
@@ -233,7 +209,7 @@ std::size_t initOpenCLBuffers_Faces(
 }
 
 void initOpenCLBuffers(
-	vector<cl_float> vertices, vector<cl_uint> faces, vector<cl_float> normals,
+	std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals,
 	ModelLoader* ml, BVH* accelStruc
 ) {
 	double timerStart;
@@ -241,12 +217,12 @@ void initOpenCLBuffers(
 	double timeDiff;
 	std::size_t bytes;
 	float bytesFloat;
-	string unit;
+	std::string unit;
 
 	const int MSG_LENGTH = 128;
 	char msg[MSG_LENGTH];
 
-	cout << "Initializing OpenCL buffers ..." << endl;
+	std::cout << "Initializing OpenCL buffers ..." << std::endl;
 	
 	// Buffer: Faces
 	timerStart = glfwGetTime();
@@ -255,7 +231,7 @@ void initOpenCLBuffers(
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
 	snprintf( msg, MSG_LENGTH, "[PathTracer] Created faces buffer in %g ms -- %.2f %s.", timeDiff, bytesFloat, unit.c_str() );
-	cout << msg << endl;
+	std::cout << msg << std::endl;
 
 	// Buffer: Acceleration Structure
 	timerStart = glfwGetTime();
@@ -264,40 +240,40 @@ void initOpenCLBuffers(
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
 	snprintf(msg, MSG_LENGTH, "[PathTracer] Created BVH buffer in %g ms -- %.2f %s.", timeDiff, bytesFloat, unit.c_str());
-	cout << msg << endl;
+	std::cout << msg << std::endl;
 }
 
 void initOpenCL()
 {
 	// Get all available OpenCL platforms (e.g. AMD OpenCL, Nvidia CUDA, Intel OpenCL)
-	vector<clw::Platform> platforms;
-	clw::Platform::get(&platforms);
-	cout << "Available OpenCL platforms : " << endl << endl;
+	std::vector<cl::Platform> platforms;
+	cl::Platform::get(&platforms);
+	std::cout << "Available OpenCL platforms : " << std::endl << std::endl;
 	for (std::size_t i = 0; i < platforms.size(); i++)
-		cout << "\t" << i + 1 << ": " << platforms[i].getInfo<CL_PLATFORM_NAME>() << endl;
+		std::cout << "\t" << i + 1 << ": " << platforms[i].getInfo<CL_PLATFORM_NAME>() << std::endl;
 
 	// Pick one platform
-	clw::Platform platform;
-	clw::pickPlatform(platform, platforms);
-	cout << "\nUsing OpenCL platform: \t" << platform.getInfo<CL_PLATFORM_NAME>() << endl;
+	cl::Platform platform;
+	clw::platform::select(platform, platforms);
+	std::cout << "\nUsing OpenCL platform: \t" << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
 
 	// Get available OpenCL devices on platform
-	vector<clw::Device> devices;
+	std::vector<cl::Device> devices;
 	platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
-	cout << "Available OpenCL devices on this platform: " << endl << endl;
+	std::cout << "Available OpenCL devices on this platform: " << std::endl << std::endl;
 	for (std::size_t i = 0; i < devices.size(); i++){
-		cout << "\t" << i + 1 << ": " << devices[i].getInfo<CL_DEVICE_NAME>() << endl;
-		cout << "\t\tMax compute units: " << devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << endl;
-		cout << "\t\tMax work group size: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << endl << endl;
+		std::cout << "\t" << i + 1 << ": " << devices[i].getInfo<CL_DEVICE_NAME>() << std::endl;
+		std::cout << "\t\tMax compute units: " << devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
+		std::cout << "\t\tMax work group size: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << std::endl << std::endl;
 	}
 
 	// Pick one device
 	//Device device;
-	clw::pickDevice(device, devices);
-	cout << "\nUsing OpenCL device: \t" << device.getInfo<CL_DEVICE_NAME>() << endl;
-	cout << "\t\t\tMax compute units: " << device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << endl;
-	cout << "\t\t\tMax work group size: " << device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << endl;
+	clw::device::select(device, devices);
+	std::cout << "\nUsing OpenCL device: \t" << device.getInfo<CL_DEVICE_NAME>() << std::endl;
+	std::cout << "\t\t\tMax compute units: " << device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
+	std::cout << "\t\t\tMax work group size: " << device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << std::endl;
 
 	std::vector<cl_context_properties> properties;
 #if defined OS_WIN
@@ -322,18 +298,18 @@ void initOpenCL()
 #endif
 
 	// Create an OpenCL context
-	context = clw::Context(device, properties.data());
+	context = cl::Context(device, properties.data());
 
 	// Create a command queue
-	queue = clw::CommandQueue(context, device);
+	queue = cl::CommandQueue(context, device);
 
 	// Create an OpenCL program with source
-	program = clw::Program(context, clw::loadKernelFile(kernel_filepath, scene).c_str());
+	program = cl::Program(context, clw::kernel::parse(kernel_filepath, scene).c_str());
 
 	// Build the program for the selected device
 	cl_int result = program.build({ device }); // "-cl-fast-relaxed-math"
-	if (result) cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << endl;
-	if (result == CL_BUILD_PROGRAM_FAILURE) clw::printErrorLog(program, device);
+	if (result) std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
+	if (result == CL_BUILD_PROGRAM_FAILURE) clw::err::printErrorLog(program, device);
 }
 
 //---------------------------------------------------------------------------------------
@@ -341,7 +317,7 @@ void initOpenCL()
 void initCLKernel(){
 
 	// Create a kernel (entry point in the OpenCL source program)
-	kernel = clw::Kernel(program, "render_kernel");
+	kernel = cl::Kernel(program, "render_kernel");
 
 	// specify OpenCL kernel arguments
 	kernel.setArg(0, cl_meshes);
@@ -392,7 +368,7 @@ void runKernel(){
 #if 1
 	acc_time += (glfwGetTime() - tStart);
 	// display avg render time per frame
-	cout << "\rRender Time: " << (acc_time / framenumber) << "s  " << std::flush;
+	std::cout << "\rRender Time: " << (acc_time / framenumber) << "s  " << std::flush;
 #else
 	// display render time per frame
 	cout << "\rRender Time: " << (glfwGetTime() - tStart) << "s  " << std::flush;
@@ -452,21 +428,21 @@ int main(int argc, char** argv){
 
 	// debug statements
 #ifdef __DEBUG__
-	cout << "size of int: " << sizeof(int) << std::endl;
-	cout << "size of cl_int: " << sizeof(cl_int) << std::endl;
-	cout << "size of float: " << sizeof(float) << std::endl;
-	cout << "size of cl_float: " << sizeof(cl_float) << std::endl;
-	cout << "size of cl_float3: " << sizeof(cl_float3) << std::endl;
-	cout << "size of cl_float4: " << sizeof(cl_float4) << std::endl;
-	cout << "size of cl_float8: " << sizeof(cl_float8) << std::endl;
-	cout << "size of cl_float16: " << sizeof(cl_float16) << std::endl;
-	cout << "size of Mesh: " << sizeof(Mesh) << std::endl;
-	cout << "size of Camera: " << sizeof(Camera) << std::endl;
+	std::cout << "size of int: " << sizeof(int) << std::endl;
+	std::cout << "size of cl_int: " << sizeof(cl_int) << std::endl;
+	std::cout << "size of float: " << sizeof(float) << std::endl;
+	std::cout << "size of cl_float: " << sizeof(cl_float) << std::endl;
+	std::cout << "size of cl_float3: " << sizeof(cl_float3) << std::endl;
+	std::cout << "size of cl_float4: " << sizeof(cl_float4) << std::endl;
+	std::cout << "size of cl_float8: " << sizeof(cl_float8) << std::endl;
+	std::cout << "size of cl_float16: " << sizeof(cl_float16) << std::endl;
+	std::cout << "size of Mesh: " << sizeof(Mesh) << std::endl;
+	std::cout << "size of Camera: " << sizeof(Camera) << std::endl;
 #endif
 
 	// parse command line arguments
 	for (int i = 0; i < argc; ++i) {
-		string arg = argv[i];
+		std::string arg = argv[i];
 
 		if (arg == "-scene") { // scene to render
 			scene_filepath = argv[++i];
@@ -502,7 +478,7 @@ int main(int argc, char** argv){
 		OPENCL_EXPECTED_ERROR("Images are not supported on this device!");
 	}
 
-	cout << "> max image2D size (" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(&err) << "x" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>(&err) << ")" << std::endl;
+	std::cout << "> max image2D size (" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(&err) << "x" << device.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>(&err) << ")" << std::endl;
 #endif
 
 	std::cout << "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" << std::endl;
@@ -513,7 +489,7 @@ int main(int argc, char** argv){
 	glFinish();
 
 	if (scene->BUILD_BVH) {
-		mBufMaterial = clw::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
+		mBufMaterial = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
 		queue.enqueueWriteBuffer(mBufMaterial, CL_TRUE, 0, sizeof(Material), scene->obj_mat);
 
 		ModelLoader* ml = new ModelLoader();
@@ -521,9 +497,9 @@ int main(int argc, char** argv){
 
 		ObjParser* op = ml->getObjParser();
 
-		vector<cl_uint> mFaces = op->getFacesV();
-		vector<cl_float> mNormals = op->getNormals();
-		vector<cl_float> mVertices = op->getVertices();
+		std::vector<cl_uint> mFaces = op->getFacesV();
+		std::vector<cl_float> mNormals = op->getNormals();
+		std::vector<cl_float> mVertices = op->getVertices();
 
 		BVH* accelStruct = new BVH(op->getObjects(), mVertices, mNormals);
 
@@ -534,7 +510,7 @@ int main(int argc, char** argv){
 	}
 
 	//
-	cl_meshes = clw::createBuffer(scene->cpu_meshes, scene->object_count.s[7] * sizeof(Mesh));
+	cl_meshes = clw::buffer::create(scene->cpu_meshes, scene->object_count.s[7] * sizeof(Mesh));
 
 	// initialise an interactive camera on the CPU side
 	initCamera();
@@ -542,17 +518,17 @@ int main(int argc, char** argv){
 	// create a CPU camera
 	hostRendercam = new Camera();
 	// camera's CL memory buffer
-	cl_camera = clw::Buffer(context, CL_MEM_READ_ONLY, sizeof(Camera));
+	cl_camera = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(Camera));
 	queue.enqueueWriteBuffer(cl_camera, CL_TRUE, 0, sizeof(Camera), hostRendercam);
 
 #if 0
 	Texture* cubemap = loadHDR(env_map_filepath.c_str());
 	cl_env_map = cl::Image2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, cl::ImageFormat( CL_RGBA, CL_HALF_FLOAT ), cubemap->width, cubemap->height, 0, cubemap->data, &err);
 #else
-	cl_env_map = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex1, &err);
+	cl_env_map = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex1, &err);
 	cl_screens.push_back(cl_env_map);
 #endif
-	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
+	if (err) std::cout << cl_help::err::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// noise texture
 	// cl_noise_tex = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex2, &err);
@@ -560,15 +536,15 @@ int main(int argc, char** argv){
 	// if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// radiance
-	cl_screen = clw::ImageGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex0, &err);
+	cl_screen = cl::ImageGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex0, &err);
 	cl_screens.push_back(cl_screen);
-	if (err) cout << cl_help::getOpenCLErrorCodeStr(err) << std::endl;
+	if (err) std::cout << cl_help::err::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// reserve memory buffer on OpenCL device to hold image buffer for accumulated samples
-	cl_accumbuffer = clw::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * sizeof(cl_float4));
+	cl_accumbuffer = cl::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * sizeof(cl_float4));
 
 	// 
-	cl_flattenI = clw::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * RayI_size);
+	cl_flattenI = cl::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * RayI_size);
 
 	// intitialise the kernel
 	initCLKernel();

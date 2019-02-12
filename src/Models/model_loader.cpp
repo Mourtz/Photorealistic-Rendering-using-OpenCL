@@ -1,6 +1,5 @@
 #include <Model/model_loader.h>
 #include <Types/CL_Objects.h>
-// #include <CL/cl_help.h>
 #include <iostream>
 
 ModelLoader::ModelLoader() {

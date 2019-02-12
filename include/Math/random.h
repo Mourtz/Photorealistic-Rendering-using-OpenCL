@@ -8,7 +8,7 @@ namespace PRNG
 //  http://www.burtleburtle.net/bob/hash/doobs.html
 // suggestes by Spatial on stackoverflow:
 //  http://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
-static uint32_t BJXorShift(uint32_t x)
+inline uint32_t BJXorShift(uint32_t x)
 {
 	x += x << 10u;
 	x ^= x >> 6u;
@@ -23,7 +23,7 @@ static uint32_t BJXorShift(uint32_t x)
 //  https://www.thecodingforums.com/threads/re-rngs-a-super-kiss.704080/
 // suggestes by Nathan Reed:
 //  http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
-static uint32_t GMXorShift(uint32_t x)
+inline uint32_t GMXorShift(uint32_t x)
 {
 	x ^= x << 13u;
 	x ^= x >> 17u;
@@ -36,7 +36,7 @@ static uint32_t GMXorShift(uint32_t x)
 //  http://www.burtleburtle.net/bob/hash/integer.html
 // suggestes by Nathan Reed:
 //  http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
-static uint32_t WangHash(uint32_t x)
+inline uint32_t WangHash(uint32_t x)
 {
 	x = (x ^ 61u) ^ (x >> 16u);
 	x *= 9u;
@@ -48,17 +48,17 @@ static uint32_t WangHash(uint32_t x)
 }
 
 // classic sin hash function
-static float sinHash(float seed)
+inline float sinHash(float seed)
 {
 	return fract(sin(seed) * 43758.5453123);
 }
 
-static vec2 sinHash2(float seed)
+inline vec2 sinHash2(float seed)
 {
 	return vec2(sin(seed) * 43758.5453123, sin(seed) * 22578.1459123);
 }
 
-static vec3 sinHash3(float seed)
+inline vec3 sinHash3(float seed)
 {
 	return vec3(sin(seed) * 43758.5453123, sin(seed) * 22578.1459123, sin(seed) * 19642.3490423);
 }

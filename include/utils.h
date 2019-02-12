@@ -5,7 +5,7 @@
 
 namespace utils {
 
-	static std::string ReadFile(std::string filepath)
+	inline std::string ReadFile(std::string filepath)
 	{
 		std::ifstream t(filepath);
 		std::string str;

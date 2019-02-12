@@ -18,7 +18,7 @@ struct Texture
 	T* data;
 };
 
-static Texture<unsigned char>* loadPNG(const char* filepath) {
+inline Texture<unsigned char>* loadPNG(const char* filepath) {
 	Texture<unsigned char>* res = new Texture<unsigned char>();
 
 	//stbi_set_flip_vertically_on_load(true);
@@ -28,7 +28,7 @@ static Texture<unsigned char>* loadPNG(const char* filepath) {
 	return res;
 }
 
-static Texture<float>* loadHDR(const char* filepath) {
+inline Texture<float>* loadHDR(const char* filepath) {
 	Texture<float>* res = new Texture<float>();
 
 	//stbi_set_flip_vertically_on_load(true);

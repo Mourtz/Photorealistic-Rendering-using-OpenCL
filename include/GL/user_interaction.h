@@ -4,13 +4,11 @@
 
 bool buffer_reset(true);
 bool render_to_file(false);
-InteractiveCamera* interactiveCamera = nullptr;
 
-// prototype
 void initCamera();
 
 // keyboard interaction
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+inline void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	switch (key) {
 		case GLFW_KEY_ESCAPE: glfwDestroyWindow(window); glfwTerminate(); exit(0);
@@ -39,7 +37,7 @@ bool updateCamera = false;
 int theButtonState = 0;
 
 // camera mouse controls in X and Y direction
-void cursor_pos_callback(GLFWwindow* window, double x, double y)
+inline void cursor_pos_callback(GLFWwindow* window, double x, double y)
 {
 	if (!updateCamera) return;
 
@@ -70,7 +68,7 @@ void cursor_pos_callback(GLFWwindow* window, double x, double y)
 	}
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+inline void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	updateCamera = (action == GLFW_PRESS);
 
@@ -80,7 +78,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+inline void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	interactiveCamera->changeRadius(-yoffset * 0.01);
 	buffer_reset = true;

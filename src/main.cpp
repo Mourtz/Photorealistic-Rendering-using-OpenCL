@@ -1,46 +1,39 @@
-#include <iostream>
-#include <cstdlib>
-#include <fstream>
-#include <vector>
-#include <string>
+#include <header.h>
 
-#include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
+cl::Device device;
+cl::Context context;
+cl::CommandQueue queue;
+cl::Kernel kernel;
+cl::Program program;
+cl::Buffer cl_output;
+cl::Buffer cl_meshes;
+cl::Buffer cl_camera;
+cl::Buffer cl_accumbuffer;
+cl::ImageGL cl_screen;
+cl::ImageGL cl_env_map;
+//  clw::ImageGL cl_noise_tex;
+std::vector<cl::Memory> cl_screens;
+cl::Buffer mBufBVH;
+cl::Buffer mBufFacesV;
+cl::Buffer mBufFacesN;
+cl::Buffer mBufVertices;
+cl::Buffer mBufNormals;
+cl::Buffer mBufMaterial;
+cl::Buffer cl_flattenI;
 
-#include <GL/glew.h>
-#define CL_VERSION_1_2
-#define __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
+std::size_t global_work_size, local_work_size;
+cl_uint BVH_NUM_NODES = 0;
+cl_uint framenumber = 0;
+Camera *hostRendercam = nullptr;
+InteractiveCamera *interactiveCamera = nullptr;
+host_scene *scene = nullptr;
+std::string scene_filepath = "../scenes/test.json";
+bool ALPHA_TESTING = false;
 
-#if defined OS_WIN
-	#define GLFW_EXPOSE_NATIVE_WIN32
-	#define GLFW_EXPOSE_NATIVE_WGL
-#elif defined OS_LNX
-	#define GLFW_EXPOSE_NATIVE_X11
-	#define GLFW_EXPOSE_NATIVE_GLX
-#endif
-
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-
-#include <BVH/bvh.h>
-#include <GL/cl_gl_interop.h>
-#include <Math/linear_algebra.h>
-#include <Camera/camera.h>
-#include <Scene/scene.h>
-
-#include <CL/cl_help.h>
-namespace clw = cl_help;
-
-#include <Types/params.h>
-
-//-----------------------------------------------------------------
-
-#define __DEBUG__
-//-----------------------------------------------------------------
-
-std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, std::vector<cl_uint> faces) {
-	std::vector<BVHNode*> bvhNodes = bvh->getNodes();
+std::size_t
+initOpenCLBuffers_BVH(BVH *bvh, ModelLoader *ml, std::vector<cl_uint> faces)
+{
+	std::vector<BVHNode *> bvhNodes = bvh->getNodes();
 	std::vector<bvhNode_cl> bvhNodesCL;
 
 	std::vector<cl_uint> facesVN = ml->getObjParser()->getFacesVN();
@@ -50,16 +43,18 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, std::vector<cl_uint
 
 	bool skipNext = false;
 
-	for (std::size_t i = 0; i < bvhNodes.size(); i++) {
-		BVHNode* node = bvhNodes[i];
+	for (std::size_t i = 0; i < bvhNodes.size(); i++)
+	{
+		BVHNode *node = bvhNodes[i];
 
-		if (skipNext) {
+		if (skipNext)
+		{
 			skipNext = node->skipNextLeft;
 			continue;
 		}
 
-		cl_float4 bbMin = { node->bbMin[0], node->bbMin[1], node->bbMin[2], 0.0f };
-		cl_float4 bbMax = { node->bbMax[0], node->bbMax[1], node->bbMax[2], 0.0f };
+		cl_float4 bbMin = {node->bbMin[0], node->bbMin[1], node->bbMin[2], 0.0f};
+		cl_float4 bbMax = {node->bbMax[0], node->bbMax[1], node->bbMax[2], 0.0f};
 
 		bvhNode_cl sn;
 		sn.bbMin = bbMin;
@@ -71,40 +66,48 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, std::vector<cl_uint
 		sn.bbMax.s[3] = (fvecLen > 1) ? (cl_float)facesV.size() + 1 : -1.0f;
 
 		// Set the flag to skip the next left child node.
-		if (fvecLen == 0 && node->skipNextLeft) {
+		if (fvecLen == 0 && node->skipNextLeft)
+		{
 			skipNext = true;
 		}
 
 		// No parent means it's the root node.
 		// Otherwise it is some other node, including leaves.
 		// Also for leaf nodes the next node to visit is given by the position in memory.
-		if (node->parent != NULL && fvecLen == 0) {
+		if (node->parent != NULL && fvecLen == 0)
+		{
 			bool isLeftNode = (node->parent->leftChild == node);
 
-			if (!isLeftNode) {
-				if (node->parent->parent != NULL) {
-					BVHNode* dummy = new BVHNode();
+			if (!isLeftNode)
+			{
+				if (node->parent->parent != NULL)
+				{
+					BVHNode *dummy = new BVHNode();
 					dummy->parent = node->parent;
 
 					// As long as we are on the right side of a (sub)tree,
 					// skip parents until we either are at the root or
 					// our parent has a true sibling again.
-					while (dummy->parent->parent->rightChild == dummy->parent) {
+					while (dummy->parent->parent->rightChild == dummy->parent)
+					{
 						dummy->parent = dummy->parent->parent;
 
-						if (dummy->parent->parent == NULL) {
+						if (dummy->parent->parent == NULL)
+						{
 							break;
 						}
 					}
 
 					// Reached a parent with a true sibling.
-					if (dummy->parent->parent != NULL) {
+					if (dummy->parent->parent != NULL)
+					{
 						sn.bbMax.s[3] = dummy->parent->parent->rightChild->id - dummy->parent->parent->rightChild->numSkipsToHere;
 					}
 				}
 			}
 			// Node on the left, go to the right sibling.
-			else {
+			else
+			{
 				sn.bbMax.s[3] = node->parent->rightChild->id - node->parent->rightChild->numSkipsToHere;
 			}
 		}
@@ -112,7 +115,8 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, std::vector<cl_uint
 		bvhNodesCL.push_back(sn);
 
 		// Faces
-		for (std::size_t j = 0; j < fvecLen; j++) {
+		for (std::size_t j = 0; j < fvecLen; j++)
+		{
 			Tri tri = facesVec[j];
 			cl_uint4 fv;
 			cl_uint4 fn;
@@ -153,18 +157,20 @@ std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, std::vector<cl_uint
 }
 
 std::size_t initOpenCLBuffers_Faces(
-	ModelLoader* ml, std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals
-) {
+	ModelLoader *ml, std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals)
+{
 	std::vector<cl_float4> vertices4;
 	std::vector<cl_float4> normals4;
 
-	for (std::size_t i = 0; i < vertices.size(); i += 3) {
-		cl_float4 v = { vertices[i], vertices[i + 1], vertices[i + 2], 0.0f };
+	for (std::size_t i = 0; i < vertices.size(); i += 3)
+	{
+		cl_float4 v = {vertices[i], vertices[i + 1], vertices[i + 2], 0.0f};
 		vertices4.push_back(v);
 	}
 
-	for (std::size_t i = 0; i < normals.size(); i += 3) {
-		cl_float4 n = { normals[i], normals[i + 1], normals[i + 2], 0.0f };
+	for (std::size_t i = 0; i < normals.size(); i += 3)
+	{
+		cl_float4 n = {normals[i], normals[i + 1], normals[i + 2], 0.0f};
 		normals4.push_back(n);
 	}
 
@@ -184,8 +190,8 @@ std::size_t initOpenCLBuffers_Faces(
 
 void initOpenCLBuffers(
 	std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals,
-	ModelLoader* ml, BVH* accelStruc
-) {
+	ModelLoader *ml, BVH *accelStruc)
+{
 	double timerStart;
 	double timerEnd;
 	double timeDiff;
@@ -197,14 +203,14 @@ void initOpenCLBuffers(
 	char msg[MSG_LENGTH];
 
 	std::cout << "Initializing OpenCL buffers ..." << std::endl;
-	
+
 	// Buffer: Faces
 	timerStart = glfwGetTime();
 	bytes = initOpenCLBuffers_Faces(ml, vertices, faces, normals);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
-	snprintf( msg, MSG_LENGTH, "[PathTracer] Created faces buffer in %g ms -- %.2f %s.", timeDiff, bytesFloat, unit.c_str() );
+	snprintf(msg, MSG_LENGTH, "[PathTracer] Created faces buffer in %g ms -- %.2f %s.", timeDiff, bytesFloat, unit.c_str());
 	std::cout << msg << std::endl;
 
 	// Buffer: Acceleration Structure
@@ -222,7 +228,8 @@ void initOpenCL()
 	// Get all available OpenCL platforms (e.g. AMD OpenCL, Nvidia CUDA, Intel OpenCL)
 	std::vector<cl::Platform> platforms;
 	cl::Platform::get(&platforms);
-	std::cout << "Available OpenCL platforms : " << std::endl << std::endl;
+	std::cout << "Available OpenCL platforms : " << std::endl
+			  << std::endl;
 	for (std::size_t i = 0; i < platforms.size(); i++)
 		std::cout << "\t" << i + 1 << ": " << platforms[i].getInfo<CL_PLATFORM_NAME>() << std::endl;
 
@@ -235,11 +242,14 @@ void initOpenCL()
 	std::vector<cl::Device> devices;
 	platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
-	std::cout << "Available OpenCL devices on this platform: " << std::endl << std::endl;
-	for (std::size_t i = 0; i < devices.size(); i++){
+	std::cout << "Available OpenCL devices on this platform: " << std::endl
+			  << std::endl;
+	for (std::size_t i = 0; i < devices.size(); i++)
+	{
 		std::cout << "\t" << i + 1 << ": " << devices[i].getInfo<CL_DEVICE_NAME>() << std::endl;
 		std::cout << "\t\tMax compute units: " << devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
-		std::cout << "\t\tMax work group size: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << std::endl << std::endl;
+		std::cout << "\t\tMax work group size: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << std::endl
+				  << std::endl;
 	}
 
 	// Pick one device
@@ -251,23 +261,21 @@ void initOpenCL()
 
 	std::vector<cl_context_properties> properties;
 #if defined OS_WIN
-    properties =
-	{
-		CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetWGLContext(window),
-		CL_WGL_HDC_KHR, (cl_context_properties)GetDC(glfwGetWin32Window(window)),
-		CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
-		0
-	};
+	properties =
+		{
+			CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetWGLContext(window),
+			CL_WGL_HDC_KHR, (cl_context_properties)GetDC(glfwGetWin32Window(window)),
+			CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
+			0};
 #elif defined OS_LNX
-    properties =
-	{
-		CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetGLXContext(window),
-		CL_GLX_DISPLAY_KHR, (cl_context_properties)glfwGetX11Display(),
-		CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
-		0
-	};
+	properties =
+		{
+			CL_GL_CONTEXT_KHR, (cl_context_properties)glfwGetGLXContext(window),
+			CL_GLX_DISPLAY_KHR, (cl_context_properties)glfwGetX11Display(),
+			CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
+			0};
 #else
-	std::cout << "there's only support for Windows and Linux at the moment" << std::endl; 
+	std::cout << "there's only support for Windows and Linux at the moment" << std::endl;
 	exit(1);
 #endif
 
@@ -281,14 +289,17 @@ void initOpenCL()
 	program = cl::Program(context, clw::kernel::parse(kernel_filepath, scene).c_str());
 
 	// Build the program for the selected device
-	cl_int result = program.build({ device }); // "-cl-fast-relaxed-math"
-	if (result) std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
-	if (result == CL_BUILD_PROGRAM_FAILURE) clw::err::printErrorLog(program, device);
+	cl_int result = program.build({device}); // "-cl-fast-relaxed-math"
+	if (result)
+		std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
+	if (result == CL_BUILD_PROGRAM_FAILURE)
+		clw::err::printErrorLog(program, device);
 }
 
 //---------------------------------------------------------------------------------------
 
-void initCLKernel(){
+void initCLKernel()
+{
 
 	// Create a kernel (entry point in the OpenCL source program)
 	kernel = cl::Kernel(program, "render_kernel");
@@ -324,7 +335,8 @@ void initCLKernel(){
 double acc_time(0);
 #endif
 
-void runKernel(){
+void runKernel()
+{
 	//Make sure OpenGL is done using the VBOs
 	glFinish();
 
@@ -356,9 +368,11 @@ void runKernel(){
 
 //---------------------------------------------------------------------------------------
 
-void render(){
+void render()
+{
 
-	if (buffer_reset){
+	if (buffer_reset)
+	{
 #ifdef __DEBUG__
 		acc_time = 0;
 #endif
@@ -398,7 +412,8 @@ void initCamera()
 
 //---------------------------------------------------------------------------------------
 
-int main(int argc, char** argv){
+int main(int argc, char **argv)
+{
 
 	// debug statements
 #ifdef __DEBUG__
@@ -415,20 +430,32 @@ int main(int argc, char** argv){
 #endif
 
 	// parse command line arguments
-	for (int i = 0; i < argc; ++i) {
+	for (int i = 0; i < argc; ++i)
+	{
 		std::string arg = argv[i];
 
-		if (arg == "-scene") { // scene to render
+		if (arg == "-scene")
+		{ // scene to render
 			scene_filepath = argv[++i];
-		} else if (arg == "-width") { // window width
+		}
+		else if (arg == "-width")
+		{ // window width
 			window_width = atoi(argv[++i]);
-		} else if (arg == "-height") { // window height
+		}
+		else if (arg == "-height")
+		{ // window height
 			window_height = atoi(argv[++i]);
-		} else if (arg == "-hdr") {// hdr enviroment map
+		}
+		else if (arg == "-hdr")
+		{ // hdr enviroment map
 			env_map_filepath = argv[++i];
-		} else if (arg == "-alpha") {// alpha channel
+		}
+		else if (arg == "-alpha")
+		{ // alpha channel
 			ALPHA_TESTING = true;
-		} else if (arg == "-encoder") {// encoder { 0: ".png", 1: ".hdr" } 
+		}
+		else if (arg == "-encoder")
+		{ // encoder { 0: ".png", 1: ".hdr" }
 			encoder = atoi(argv[++i]);
 		}
 	}
@@ -448,7 +475,8 @@ int main(int argc, char** argv){
 
 #ifdef __DEBUG__
 	std::cout << "device specifications:" << std::endl;
-	if (!device.getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err)) {
+	if (!device.getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err))
+	{
 		OPENCL_EXPECTED_ERROR("Images are not supported on this device!");
 	}
 
@@ -456,26 +484,27 @@ int main(int argc, char** argv){
 #endif
 
 	std::cout << "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" << std::endl;
-	
+
 	glfwShowWindow(window);
 
 	//make sure OpenGL is finished before we proceed
 	glFinish();
 
-	if (scene->BUILD_BVH) {
+	if (scene->BUILD_BVH)
+	{
 		mBufMaterial = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
 		queue.enqueueWriteBuffer(mBufMaterial, CL_TRUE, 0, sizeof(Material), scene->obj_mat);
 
-		ModelLoader* ml = new ModelLoader();
+		ModelLoader *ml = new ModelLoader();
 		ml->loadModel(models_directory, scene->obj_path);
 
-		ObjParser* op = ml->getObjParser();
+		ObjParser *op = ml->getObjParser();
 
 		std::vector<cl_uint> mFaces = op->getFacesV();
 		std::vector<cl_float> mNormals = op->getNormals();
 		std::vector<cl_float> mVertices = op->getVertices();
 
-		BVH* accelStruct = new BVH(op->getObjects(), mVertices, mNormals);
+		BVH *accelStruct = new BVH(op->getObjects(), mVertices, mNormals);
 
 		initOpenCLBuffers(mVertices, mFaces, mNormals, ml, accelStruct);
 
@@ -502,7 +531,8 @@ int main(int argc, char** argv){
 	cl_env_map = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex1, &err);
 	cl_screens.push_back(cl_env_map);
 #endif
-	if (err) std::cout << cl_help::err::getOpenCLErrorCodeStr(err) << std::endl;
+	if (err)
+		std::cout << cl_help::err::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// noise texture
 	// cl_noise_tex = clw::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex2, &err);
@@ -512,12 +542,13 @@ int main(int argc, char** argv){
 	// radiance
 	cl_screen = cl::ImageGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex0, &err);
 	cl_screens.push_back(cl_screen);
-	if (err) std::cout << cl_help::err::getOpenCLErrorCodeStr(err) << std::endl;
+	if (err)
+		std::cout << cl_help::err::getOpenCLErrorCodeStr(err) << std::endl;
 
 	// reserve memory buffer on OpenCL device to hold image buffer for accumulated samples
 	cl_accumbuffer = cl::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * sizeof(cl_float4));
 
-	// 
+	//
 	cl_flattenI = cl::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * RayI_size);
 
 	// intitialise the kernel
@@ -532,16 +563,18 @@ int main(int argc, char** argv){
 		global_work_size = (global_work_size / local_work_size + 1) * local_work_size;
 
 	// render loop
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(window))
+	{
 		render();
 
 		// swap front and back buffers
 		glfwSwapBuffers(window);
 		// poll for events
 		glfwPollEvents();
-		
+
 		// render call
-		if (render_to_file) {
+		if (render_to_file)
+		{
 			saveImage();
 			render_to_file = false;
 		}

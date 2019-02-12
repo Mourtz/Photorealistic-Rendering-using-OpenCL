@@ -5,8 +5,11 @@
 #include <string>
 
 #include <utils.h>
-#include <CL_Objects.h>
-#include <Scene/scene.h>
+
+#include <Types/CL_Objects.h>
+#include <Scene/geometry.h>
+
+struct host_scene;
 
 namespace cl_help
 {

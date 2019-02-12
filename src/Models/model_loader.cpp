@@ -1,4 +1,5 @@
 #include <Model/model_loader.h>
+#include <Types/CL_Objects.h>
 // #include <CL/cl_help.h>
 #include <iostream>
 
@@ -14,6 +15,13 @@ void ModelLoader::getFacesOfObject(
 	object3D object, std::vector<cl_uint4>* faces, cl_int offset
 ) {
 	// cl::Program bvh = cl_help::program::LoadProgram("../kernels/bvh.cl", { device });
+	// cl::Program program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
+
+	// cl_int result = program.build({device}, ""); // "-cl-fast-relaxed-math"
+	// if (result)
+	// 	std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
+	// if (result == CL_BUILD_PROGRAM_FAILURE)
+	// 	std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
 
 	cl_uint a, b, c;
 

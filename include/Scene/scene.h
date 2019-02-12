@@ -12,17 +12,8 @@
 #include <CL/cl.hpp>
 
 #include <Scene/geometry.h>
-
-std::string scene_filepath = "../scenes/test.json";
-bool ALPHA_TESTING(false);
-
-struct cl_medium {
-	cl_float density;
-	cl_float sigmaA;
-	cl_float sigmaS;
-	cl_float sigmaT;
-	bool absorptionOnly;
-};
+#include <Types/media.h>
+#include <Types/params.h>
 
 struct host_scene {
 	

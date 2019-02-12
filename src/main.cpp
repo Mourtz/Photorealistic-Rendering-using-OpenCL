@@ -26,43 +26,17 @@
 #include <BVH/bvh.h>
 #include <GL/cl_gl_interop.h>
 #include <Math/linear_algebra.h>
-#include <Math/random.h>
 #include <Camera/camera.h>
 #include <Scene/scene.h>
 
 #include <CL/cl_help.h>
 namespace clw = cl_help;
 
+#include <Types/params.h>
+
 //-----------------------------------------------------------------
 
 #define __DEBUG__
-
-constexpr char* models_directory = "../resources/models/";
-constexpr char* kernel_filepath = "../kernels/main.cl";
-
-// every pixel in the image has its own thread or "work item",
-// so the total amount of work items equals the number of pixels
-std::size_t global_work_size, local_work_size;
-
-// struct RayI {
-// 	cl_float3 origin, direction, mask;
-// 	cl_uint bounces;
-// 	cl_ushort diff_bounces, spec_bounces, trans_bounces, scatter_events;
-// };
-constexpr std::size_t RayI_size = 16*11;
-
-cl::Buffer cl_flattenI;
-
-cl_uint BVH_NUM_NODES(0);
-
-// current frame number
-cl_uint framenumber = 0;
-
-// cpu_camera
-Camera* hostRendercam = nullptr;
-
-host_scene* scene = nullptr;
-
 //-----------------------------------------------------------------
 
 std::size_t initOpenCLBuffers_BVH(BVH* bvh, ModelLoader* ml, std::vector<cl_uint> faces) {

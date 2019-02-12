@@ -26,3 +26,5 @@ static cl::Buffer mBufFacesN;
 static cl::Buffer mBufVertices;
 static cl::Buffer mBufNormals;
 static cl::Buffer mBufMaterial;
+
+static cl::Buffer cl_flattenI;

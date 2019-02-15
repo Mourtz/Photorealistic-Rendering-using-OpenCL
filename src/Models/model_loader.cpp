@@ -25,7 +25,7 @@ void ModelLoader::getFacesOfObject(
 	if (result == CL_BUILD_PROGRAM_FAILURE)
 		std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
 
-	cl::Kernel bvh_kernel = cl::Kernel(bvh_program, "getFacesOfObject");
+	cl::Kernel kernel = cl::Kernel(bvh_program, "getFacesOfObject");
 
 	cl::Buffer b_facesV = cl::Buffer(
 		context, 
@@ -33,7 +33,7 @@ void ModelLoader::getFacesOfObject(
 		object.facesV.size()*sizeof(uint),
 		&object.facesV[0]
 	);
-	bvh_kernel.setArg(0, b_facesV);
+	kernel.setArg(0, b_facesV);
 
 	faces = std::vector<cl_uint4>(object.facesV.size()/3);
 	cl::Buffer b_faces = cl::Buffer(
@@ -41,12 +41,12 @@ void ModelLoader::getFacesOfObject(
 		CL_MEM_WRITE_ONLY, 
 		(object.facesV.size()/3)*sizeof(cl_uint4)
 	);
-	bvh_kernel.setArg(1, b_faces);
-	bvh_kernel.setArg(2, offset);
+	kernel.setArg(1, b_faces);
+	kernel.setArg(2, offset);
 
 	// launch the kernel
 	// std::cout << queue.enqueueWriteBuffer(b_facesV, CL_TRUE, 0, object.facesV.size()*sizeof(uint),object.facesV.data());
-	queue.enqueueNDRangeKernel(bvh_kernel, 0, (object.facesV.size()/3));
+	queue.enqueueNDRangeKernel(kernel, 0, (object.facesV.size()/3));
 	queue.finish();
 	queue.enqueueReadBuffer(b_faces, CL_TRUE, 0, (object.facesV.size()/3)*sizeof(cl_uint4), &faces[0]);
 #else
@@ -74,8 +74,41 @@ void ModelLoader::getFacesOfObject(
 }
 
 void ModelLoader::getFaceNormalsOfObject(
-	object3D object, std::vector<cl_uint4>* faceNormals, cl_int offset
+	object3D object, std::vector<cl_uint4>& faceNormals, cl_int offset
 ) {
+#if 1
+	cl::Program bvh_program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
+
+	cl_int result = bvh_program.build({device}, ""); // "-cl-fast-relaxed-math"
+	if (result)
+		std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
+	if (result == CL_BUILD_PROGRAM_FAILURE)
+		std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
+
+	cl::Kernel kernel = cl::Kernel(bvh_program, "getFaceNormalsOfObject");
+
+	cl::Buffer b_facesVN = cl::Buffer(
+		context, 
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
+		object.facesVN.size()*sizeof(uint),
+		&object.facesVN[0]
+	);
+	kernel.setArg(0, b_facesVN);
+
+	faceNormals = std::vector<cl_uint4>(object.facesVN.size()/3);
+	cl::Buffer b_normals = cl::Buffer(
+		context, 
+		CL_MEM_WRITE_ONLY, 
+		(object.facesVN.size()/3)*sizeof(cl_uint4)
+	);
+	kernel.setArg(1, b_normals);
+	kernel.setArg(2, offset);
+
+	// launch the kernel
+	queue.enqueueNDRangeKernel(kernel, 0, (object.facesVN.size()/3));
+	queue.finish();
+	queue.enqueueReadBuffer(b_normals, CL_TRUE, 0, (object.facesVN.size()/3)*sizeof(cl_uint4), &faceNormals[0]);
+#else
 	cl_uint a, b, c;
 
 	for (cl_uint i = 0; i < object.facesVN.size(); i += 3) {
@@ -86,6 +119,7 @@ void ModelLoader::getFaceNormalsOfObject(
 		cl_uint4 fn = { a, b, c, offset + faceNormals->size() };
 		faceNormals->push_back(fn);
 	}
+#endif
 }
 
 ObjParser* ModelLoader::getObjParser() {

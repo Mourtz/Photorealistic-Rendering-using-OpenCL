@@ -175,7 +175,7 @@ vector<BVHNode*> BVH::buildTreesFromObjects(
 
 
 		vector<cl_uint4> faceNormalsThisObj;
-		ModelLoader::getFaceNormalsOfObject((*sceneObjects)[i], &faceNormalsThisObj, offsetN);
+		ModelLoader::getFaceNormalsOfObject((*sceneObjects)[i], faceNormalsThisObj, offsetN);
 		offsetN += faceNormalsThisObj.size();
 
 		vector<Tri> triFaces = this->facesToTriStructs(

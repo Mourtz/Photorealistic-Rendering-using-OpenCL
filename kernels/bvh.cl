@@ -69,7 +69,21 @@ __kernel void getFacesOfObject(
 		facesV[work_item_id*3 + 2],
 		offset + work_item_id
 	);
+}
 
+__kernel void getFaceNormalsOfObject(
+	__global const uint* facesVN,
+	__global uint4* normals, 
+	int offset
+){
+	const uint work_item_id = get_global_id(0);
+
+	normals[work_item_id] = (uint4)(
+		facesVN[work_item_id*3 + 0],
+		facesVN[work_item_id*3 + 1],
+		facesVN[work_item_id*3 + 2],
+		offset + work_item_id
+	);
 }
 
 //---------------------- BVH ----------------------

@@ -590,7 +590,7 @@ int main(int argc, char **argv)
 
 		delete ml;
 		delete accelStruct;
-		clReleaseProgram(bvh_program.operator());
+		clReleaseProgram(bvh_program());
 	}
 
 	//

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <algorithm>
 
 #ifndef M_PI
 #define M_PI 3.14156265
@@ -45,8 +46,8 @@ struct vec4
 
 	// operators
 
-	inline float& operator[](const int i) { if (i == 0) return x; else if (i == 1) return y; else if (i == 2) return z; else return w; }
-	inline float  operator[](const int i) const { if (i == 0) return x; else if (i == 1) return y; else if (i == 2) return z; else return w; }
+	inline float& operator[](const int i) { return _v[std::min(i,3)]; }
+	inline float  operator[](const int i) const { return _v[std::min(i,3)]; }
 
 	inline vec4 operator+(float a) const { return vec4(x + a, y + a, z + a, w + a); }
 	inline vec4 operator-(float a) const { return vec4(x - a, y - a, z - a, w - a); }

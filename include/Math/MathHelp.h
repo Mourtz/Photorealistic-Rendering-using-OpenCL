@@ -19,7 +19,7 @@ class MathHelp {
 public:
 	static cl_float degToRad(cl_float deg);
 	static void getAABB(
-		std::vector<cl_float4> vertices, vec3* bbMin, vec3* bbMax
+		std::vector<cl_float4> vertices, vec3& bbMin, vec3& bbMax
 	);
 	static void getAABB(
 		std::vector<vec3> bbMins, std::vector<vec3> bbMaxs,

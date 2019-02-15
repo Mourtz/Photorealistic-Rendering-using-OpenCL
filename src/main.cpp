@@ -69,6 +69,7 @@ cl::Context context;
 cl::CommandQueue queue;
 cl::Kernel kernel;
 cl::Program program;
+cl::Program bvh_program;
 cl::Buffer cl_output;
 cl::Buffer cl_meshes;
 cl::Buffer cl_camera;
@@ -352,15 +353,27 @@ void initOpenCL()
 	// Create a command queue
 	queue = cl::CommandQueue(context, device);
 
-	// Create an OpenCL program with source
-	program = cl::Program(context, clw::kernel::parse(kernel_filepath, scene).c_str());
+	{
+		// Create an OpenCL program with source
+		program = cl::Program(context, clw::kernel::parse(kernel_filepath, scene).c_str());
 
-	// Build the program for the selected device
-	cl_int result = program.build({device}); // "-cl-fast-relaxed-math"
-	if (result)
-		std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
-	if (result == CL_BUILD_PROGRAM_FAILURE)
-		clw::err::printErrorLog(program, device);
+		// Build the program for the selected device
+		cl_int result = program.build({device}); // "-cl-fast-relaxed-math"
+		if (result)
+			std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
+		if (result == CL_BUILD_PROGRAM_FAILURE)
+			clw::err::printErrorLog(program, device);
+	}
+
+	{
+		bvh_program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
+
+		cl_int result = bvh_program.build({device}); // "-cl-fast-relaxed-math"
+		if (result)
+			std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
+		if (result == CL_BUILD_PROGRAM_FAILURE)
+			std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
+	}
 }
 
 //---------------------------------------------------------------------------------------
@@ -577,6 +590,7 @@ int main(int argc, char **argv)
 
 		delete ml;
 		delete accelStruct;
+		clReleaseProgram(bvh_program.operator());
 	}
 
 	//

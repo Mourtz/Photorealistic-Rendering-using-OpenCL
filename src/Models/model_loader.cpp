@@ -4,6 +4,7 @@
 extern cl::Context context;
 extern cl::Device device;
 extern cl::CommandQueue queue;
+extern cl::Program bvh_program;
 
 ModelLoader::ModelLoader() {
 	mObjParser = new ObjParser();
@@ -17,14 +18,6 @@ void ModelLoader::getFacesOfObject(
 	object3D object, std::vector<cl_uint4>& faces, cl_int offset
 ) {
 #if 1
-	cl::Program bvh_program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
-
-	cl_int result = bvh_program.build({device}, ""); // "-cl-fast-relaxed-math"
-	if (result)
-		std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
-	if (result == CL_BUILD_PROGRAM_FAILURE)
-		std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
-
 	cl::Kernel kernel = cl::Kernel(bvh_program, "getFacesOfObject");
 
 	cl::Buffer b_facesV = cl::Buffer(
@@ -77,14 +70,6 @@ void ModelLoader::getFaceNormalsOfObject(
 	object3D object, std::vector<cl_uint4>& faceNormals, cl_int offset
 ) {
 #if 1
-	cl::Program bvh_program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
-
-	cl_int result = bvh_program.build({device}, ""); // "-cl-fast-relaxed-math"
-	if (result)
-		std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
-	if (result == CL_BUILD_PROGRAM_FAILURE)
-		std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
-
 	cl::Kernel kernel = cl::Kernel(bvh_program, "getFaceNormalsOfObject");
 
 	cl::Buffer b_facesVN = cl::Buffer(

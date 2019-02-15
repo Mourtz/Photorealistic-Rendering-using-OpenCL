@@ -8,20 +8,20 @@ cl_float MathHelp::degToRad(cl_float deg) {
 	return (deg * M_PI / 180.0f);
 }
 
-void MathHelp::getAABB(vector<cl_float4> vertices, vec3* bbMin, vec3* bbMax) {
-	*bbMin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
-	*bbMax = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
+void MathHelp::getAABB(vector<cl_float4> vertices, vec3& bbMin, vec3& bbMax) {
+	bbMin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
+	bbMax = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
 
 	for (cl_uint i = 1; i < vertices.size(); i++) {
 		cl_float4 v = vertices[i];
 
-		(*bbMin)[0] = ((*bbMin)[0] < v.x) ? (*bbMin)[0] : v.x;
-		(*bbMin)[1] = ((*bbMin)[1] < v.y) ? (*bbMin)[1] : v.y;
-		(*bbMin)[2] = ((*bbMin)[2] < v.z) ? (*bbMin)[2] : v.z;
+		(bbMin)[0] = ((bbMin)[0] < v.x) ? (bbMin)[0] : v.x;
+		(bbMin)[1] = ((bbMin)[1] < v.y) ? (bbMin)[1] : v.y;
+		(bbMin)[2] = ((bbMin)[2] < v.z) ? (bbMin)[2] : v.z;
 
-		(*bbMax)[0] = ((*bbMax)[0] > v.x) ? (*bbMax)[0] : v.x;
-		(*bbMax)[1] = ((*bbMax)[1] > v.y) ? (*bbMax)[1] : v.y;
-		(*bbMax)[2] = ((*bbMax)[2] > v.z) ? (*bbMax)[2] : v.z;
+		(bbMax)[0] = ((bbMax)[0] > v.x) ? (bbMax)[0] : v.x;
+		(bbMax)[1] = ((bbMax)[1] > v.y) ? (bbMax)[1] : v.y;
+		(bbMax)[2] = ((bbMax)[2] > v.z) ? (bbMax)[2] : v.z;
 	}
 }
 
@@ -76,7 +76,7 @@ void MathHelp::getTriangleAABB(cl_float4 v0, cl_float4 v1, cl_float4 v2, vec3* b
 	vertices.push_back(v1);
 	vertices.push_back(v2);
 
-	MathHelp::getAABB(vertices, bbMin, bbMax);
+	MathHelp::getAABB(vertices, *bbMin, *bbMax);
 }
 
 vec3 MathHelp::getTriangleCenter(cl_float4 v0, cl_float4 v1, cl_float4 v2) {
@@ -211,7 +211,7 @@ void MathHelp::triCalcAABB(
 	v.push_back((*vertices)[tri->face.z]);
 
 	vec3 bbMin, bbMax;
-	MathHelp::getAABB(v, &bbMin, &bbMax);
+	MathHelp::getAABB(v, bbMin, bbMax);
 	tri->bbMin = bbMin;
 	tri->bbMax = bbMax;
 

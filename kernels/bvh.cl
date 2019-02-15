@@ -57,21 +57,19 @@ typedef struct { float4 bbMin, bbMax; } bvhNode_cl;
 //---------------------- ModelLoader----------------------
 
 __kernel void getFacesOfObject(
-	__constant uint* facesV,
+	__global const uint* facesV,
 	__global uint4* faces, 
 	int offset
 ) {
-	uint a, b, c;
-	
-	// 0 < facesV.size()
-	const int work_item_id = get_global_id(0);
+	const uint work_item_id = get_global_id(0);
 
-	faces[work_item_id] = (uint4){
+	faces[work_item_id] = (uint4)(
 		facesV[work_item_id*3 + 0],
 		facesV[work_item_id*3 + 1],
 		facesV[work_item_id*3 + 2],
-		offset + work_item_id*3
-	};
+		offset + work_item_id
+	);
+
 }
 
 //---------------------- BVH ----------------------

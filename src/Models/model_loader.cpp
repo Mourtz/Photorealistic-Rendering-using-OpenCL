@@ -1,6 +1,9 @@
 #include <Model/model_loader.h>
-#include <Types/CL_Objects.h>
 #include <iostream>
+
+extern cl::Context context;
+extern cl::Device device;
+extern cl::CommandQueue queue;
 
 ModelLoader::ModelLoader() {
 	mObjParser = new ObjParser();
@@ -11,17 +14,42 @@ ModelLoader::~ModelLoader() {
 }
 
 void ModelLoader::getFacesOfObject(
-	object3D object, std::vector<cl_uint4>* faces, cl_int offset
+	object3D object, std::vector<cl_uint4>& faces, cl_int offset
 ) {
-	// cl::Program bvh = cl_help::program::LoadProgram("../kernels/bvh.cl", { device });
-	// cl::Program program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
+#if 1
+	cl::Program bvh_program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
 
-	// cl_int result = program.build({device}, ""); // "-cl-fast-relaxed-math"
-	// if (result)
-	// 	std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
-	// if (result == CL_BUILD_PROGRAM_FAILURE)
-	// 	std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
+	cl_int result = bvh_program.build({device}, ""); // "-cl-fast-relaxed-math"
+	if (result)
+		std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
+	if (result == CL_BUILD_PROGRAM_FAILURE)
+		std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
 
+	cl::Kernel bvh_kernel = cl::Kernel(bvh_program, "getFacesOfObject");
+
+	cl::Buffer b_facesV = cl::Buffer(
+		context, 
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
+		object.facesV.size()*sizeof(uint),
+		&object.facesV[0]
+	);
+	bvh_kernel.setArg(0, b_facesV);
+
+	faces = std::vector<cl_uint4>(object.facesV.size()/3);
+	cl::Buffer b_faces = cl::Buffer(
+		context, 
+		CL_MEM_WRITE_ONLY, 
+		(object.facesV.size()/3)*sizeof(cl_uint4)
+	);
+	bvh_kernel.setArg(1, b_faces);
+	bvh_kernel.setArg(2, offset);
+
+	// launch the kernel
+	// std::cout << queue.enqueueWriteBuffer(b_facesV, CL_TRUE, 0, object.facesV.size()*sizeof(uint),object.facesV.data());
+	queue.enqueueNDRangeKernel(bvh_kernel, 0, (object.facesV.size()/3));
+	queue.finish();
+	queue.enqueueReadBuffer(b_faces, CL_TRUE, 0, (object.facesV.size()/3)*sizeof(cl_uint4), &faces[0]);
+#else
 	cl_uint a, b, c;
 
 	for (cl_uint i = 0; i < object.facesV.size(); i += 3) {
@@ -29,9 +57,20 @@ void ModelLoader::getFacesOfObject(
 		b = object.facesV[i + 1];
 		c = object.facesV[i + 2];
 
-		cl_uint4 f = { a, b, c, offset + faces->size() };
-		faces->push_back(f);
+		cl_uint4 f = { a, b, c, offset + faces.size() };
+		faces.push_back(f);
 	}
+#endif
+
+#if 0
+	for(size_t i = 0; i < object.facesV.size()/3; ++i){
+		std::cout << faces[i].s0 << ", "
+			<< faces[i].s1 << ", "
+			<< faces[i].s2 << ", "
+			<< faces[i].s3 << ", "
+		 	<< std::endl;
+	}
+#endif
 }
 
 void ModelLoader::getFaceNormalsOfObject(

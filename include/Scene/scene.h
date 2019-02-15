@@ -5,18 +5,18 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <CL/cl.hpp>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 
-#include <CL/cl.hpp>
-
 #include <Scene/geometry.h>
 #include <Types/media.h>
 
-struct host_scene
-{
+extern std::string scene_filepath;
 
+struct host_scene
+{	
 	// n_sphere, n_sdf, n_box, n_quad,
 	// _____, _____, _____, total_count
 	cl_uint8 object_count;

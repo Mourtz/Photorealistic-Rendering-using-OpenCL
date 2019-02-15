@@ -4,8 +4,6 @@
 #include <vector>
 #include <string>
 
-// #include <CL/cl_help.h>
-
 #include <Model/obj_parser.h>
 #include <utils.h>
 
@@ -18,7 +16,7 @@ public:
 	void loadModel(std::string filepath, std::string filename);
 
 	static void getFaceNormalsOfObject(object3D object, std::vector<cl_uint4>* faceNormals, cl_int offset);
-	static void getFacesOfObject(object3D object, std::vector<cl_uint4>* faces, cl_int offset);
+	static void getFacesOfObject(object3D object, std::vector<cl_uint4>& faces, cl_int offset);
 
 private:
 	ObjParser * mObjParser;

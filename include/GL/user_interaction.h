@@ -1,11 +1,16 @@
 #pragma once
 
+#include <GLFW/glfw3.h>
 #include <Camera/camera.h>
 
 bool buffer_reset(true);
 bool render_to_file(false);
 
 void initCamera();
+
+extern InteractiveCamera *interactiveCamera;
+extern int window_width;
+extern int window_height;
 
 // keyboard interaction
 inline void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)

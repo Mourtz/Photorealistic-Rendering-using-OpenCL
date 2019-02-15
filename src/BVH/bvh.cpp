@@ -164,7 +164,7 @@ vector<BVHNode*> BVH::buildTreesFromObjects(
 
 	for (cl_uint i = 0; i < sceneObjects->size(); i++) {
 		vector<cl_uint4> facesThisObj;
-		ModelLoader::getFacesOfObject((*sceneObjects)[i], &facesThisObj, offset);
+		ModelLoader::getFacesOfObject((*sceneObjects)[i], facesThisObj, offset);
 		offset += facesThisObj.size();
 
 		snprintf(

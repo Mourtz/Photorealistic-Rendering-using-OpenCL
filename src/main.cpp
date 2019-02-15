@@ -1,4 +1,68 @@
-#include <header.h>
+/**
+ *	@author Alex Mourtziapis - 2019 
+ */
+
+#define __DEBUG__
+
+#include <iostream>
+#include <cstdlib>
+#include <fstream>
+#include <vector>
+#include <string>
+
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
+#include <GL/glew.h>
+#define CL_VERSION_1_2
+#define __CL_ENABLE_EXCEPTIONS
+#include <CL/cl.hpp>
+
+#if defined OS_WIN
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#elif defined OS_LNX
+#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_GLX
+#endif
+
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
+//----------------------------------------------
+
+constexpr char *models_directory = "../resources/models/";
+constexpr char *kernel_filepath = "../kernels/main.cl";
+
+// struct RayI {
+// 	cl_float3 origin, direction, mask;
+// 	cl_uint bounces;
+// 	cl_ushort diff_bounces, spec_bounces, trans_bounces, scatter_events;
+// };
+constexpr std::size_t RayI_size = 16 * 11;
+
+//----------------------------------------------
+
+#include <Camera/camera.h>
+#include <Scene/scene.h>
+#include <GL/cl_gl_interop.h>
+#include <BVH/bvh.h>
+
+#include <CL/cl_help.h>
+#if 1
+namespace clw = cl_help;
+#else
+#define clw cl_help
+#endif
+
+// window width
+int window_width = 1280;
+// window height
+int window_height = 720;
+// enviroment map filepath
+std::string env_map_filepath = "";
+// encoder
+unsigned char encoder = 0;
 
 cl::Device device;
 cl::Context context;
@@ -21,7 +85,8 @@ cl::Buffer mBufNormals;
 cl::Buffer mBufMaterial;
 cl::Buffer cl_flattenI;
 
-std::size_t global_work_size, local_work_size;
+std::size_t global_work_size;
+std::size_t local_work_size;
 cl_uint BVH_NUM_NODES = 0;
 cl_uint framenumber = 0;
 Camera *hostRendercam = nullptr;
@@ -29,6 +94,8 @@ InteractiveCamera *interactiveCamera = nullptr;
 host_scene *scene = nullptr;
 std::string scene_filepath = "../scenes/test.json";
 bool ALPHA_TESTING = false;
+
+//----------------------------------------------
 
 std::size_t
 initOpenCLBuffers_BVH(BVH *bvh, ModelLoader *ml, std::vector<cl_uint> faces)

@@ -12,15 +12,6 @@
 // OpenGL window
 GLFWwindow* window;
 
-// window width
-int window_width = 1280;
-// window height
-int window_height = 720;
-// enviroment map filepath
-std::string env_map_filepath = "";
-// encoder
-unsigned char encoder(0);
-
 // quad vertices
 const GLfloat quad_vertices[] = { -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0 };
 
@@ -32,6 +23,9 @@ GLuint vbo;
 
 const std::string vert_filepath = "../shaders/vert.glsl";
 const std::string tonemapper_filepath = "../shaders/tonemapper.glsl";
+
+extern std::string env_map_filepath;
+extern unsigned char encoder;
 
 bool initGL(){
 

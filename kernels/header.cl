@@ -94,6 +94,27 @@
 #define ABS_REFR	#ABS_REFR#
 #define ABS_REFR2	#ABS_REFR2#
 
+/* Lobes */
+#define NullLobe                  0
+#define GlossyReflectionLobe      (1 << 0)
+#define GlossyTransmissionLobe    (1 << 1)
+#define DiffuseReflectionLobe     (1 << 2)
+#define DiffuseTransmissionLobe   (1 << 3)
+#define SpecularReflectionLobe    (1 << 4)
+#define SpecularTransmissionLobe  (1 << 5)
+#define AnisotropicLobe           (1 << 6)
+#define ForwardLobe               (1 << 7)
+
+#define GlossyLobe                (  GlossyReflectionLobe |   GlossyTransmissionLobe)
+#define DiffuseLobe               ( DiffuseReflectionLobe |  DiffuseTransmissionLobe)
+#define SpecularLobe              (SpecularReflectionLobe | SpecularTransmissionLobe)
+
+#define TransmissiveLobe          (GlossyTransmissionLobe | DiffuseTransmissionLobe | SpecularTransmissionLobe)
+#define ReflectiveLobe            (GlossyReflectionLobe   | DiffuseReflectionLobe   | SpecularReflectionLobe)
+
+#define AllLobes                  (TransmissiveLobe | ReflectiveLobe | AnisotropicLobe)
+#define AllButSpecular            (~(SpecularLobe | ForwardLobe))
+
 /* Light Sources */
 #ifdef LIGHT
 
@@ -162,8 +183,8 @@ typedef struct {
 typedef struct {
 	float3 color;		// albedo/specular
 	float roughness;	// surface roughness
-	int t;				// mesh type
-	int tex;			// asigned texture/s
+	ushort t;			// mesh type
+	uchar tex;			// asigned texture/s
 	bool b;				// backface culling
 } Material;
 
@@ -173,7 +194,7 @@ typedef struct {
 	Material mat;	// assigned material
 	float3 pos;		// position
 	float16 joker;	// generic data
-	int t;			// type
+	uchar t;		// type
 } Mesh;
 
 //------------- BVH -------------

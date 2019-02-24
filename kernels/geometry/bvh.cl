@@ -18,7 +18,7 @@ void intersectFace(
 void intersectFaces(const Scene* scene, Ray* ray, const bvhNode* node, const float tNear, float tFar) {
 	float t = INF;
 
-	intersectFace(scene, ray, (int)node->bbMin.w, &t, tNear, tFar);
+	intersectFace(scene, ray, node->bbMin.w, &t, tNear, tFar);
 
 	if (node->bbMax.w == -1) {
 		return;
@@ -34,7 +34,7 @@ void traverseShadows(const Scene* scene, Ray* ray) {
 
 	do {
 		const bvhNode node = scene->bvh[index];
-		int currentIndex = index;
+		const int currentIndex = index;
 
 		// @see traverse() for an explanation.
 		index = (node.bbMin.w <= -1.0f) ? (int)node.bbMax.w : currentIndex + 1;
@@ -42,12 +42,8 @@ void traverseShadows(const Scene* scene, Ray* ray) {
 		float tNear = 0.0f;
 		float tFar = INFINITY;
 
-		bool isNodeHit = (
-			intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) &&
-			tFar > EPS
-		);
-
-		if (!isNodeHit) {
+		if (!intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) ||
+			tFar <= EPS) {
 			continue;
 		}
 
@@ -77,19 +73,15 @@ void traverse(const Scene* scene, Ray* ray) {
 
 	do {
 		const bvhNode node = scene->bvh[index];
-		int currentIndex = index;
+		const int currentIndex = index;
 
 		index = (node.bbMin.w <= -1.0f) ? (int)node.bbMax.w : currentIndex + 1;
 
 		float tNear = 0.0f;
 		float tFar = INF;
 
-		bool isNodeHit = (
-			intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) &&
-			tFar > EPS && ray->t > tNear
-		);
-
-		if (!isNodeHit) {
+		if (!intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) ||
+			tFar <= EPS || ray->t <= tNear) {
 			continue;
 		}
 

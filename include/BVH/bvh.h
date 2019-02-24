@@ -103,7 +103,7 @@ protected:
 	void visualizeNextNode(
 		const BVHNode* node, std::vector<cl_float>* vertices, std::vector<cl_uint>* indices
 	);
-
+private:
 	std::vector<BVHNode*> mContainerNodes;
 	std::vector<BVHNode*> mLeafNodes;
 	std::vector<BVHNode*> mNodes;

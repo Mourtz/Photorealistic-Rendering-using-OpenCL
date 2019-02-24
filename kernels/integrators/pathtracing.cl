@@ -1,7 +1,7 @@
 #ifndef __INTEGRATOR__
 #define __INTEGRATOR__
 
-__constant bool enableLightSampling 	= true;
+__constant bool enableLightSampling			= true;
 __constant bool enableVolumeLightSampling 	= true;
 __constant bool lowOrderScattering 			= false;
 

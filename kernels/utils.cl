@@ -45,6 +45,12 @@ inline float normalizedUint(uint i){
 /* equirectangular mapping */
 #define envMapEquirect(dir) (float2)((atan2(dir.z, dir.x) * INV_TWO_PI) + 0.5f, acos(dir.y) * INV_PI)
 
+inline float invertPhi(float3 w, float mu){
+    float result = (w.x == 0.0f && w.y == 0.0f) ? mu*INV_TWO_PI : atan2(w.y, w.x)*INV_TWO_PI;
+	result += (result < 0.0f);
+    return result;
+}
+
 /// Translate cartesian coordinates to spherical system
 void CartesianToSpherical(
 	float3 cart, 
@@ -58,7 +64,7 @@ void CartesianToSpherical(
 }
 
 /// Translate polar coordinates to cartesian
-float3 polar_to_cartesian(
+inline float3 polar_to_cartesian(
 	const float sinTheta, const float cosTheta,
 	const float sinPhi, const float cosPhi
 ){
@@ -71,7 +77,7 @@ float3 polar_to_cartesian(
 
 //--------------------------------------------------------------------
 
-float3 uniformSphere(const float2 xi){
+inline float3 uniformSphere(const float2 xi){
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*2.0f - 1.0f;
 	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
@@ -84,20 +90,22 @@ float3 uniformSphere(const float2 xi){
 }
 
 #define uniformSpherePdf() INV_FOUR_PI
+#define invertUniformSphere(w, mu) (float2)(invertPhi(w, mu), (w.z + 1.0f)*0.5f)
 
 //--------------------------------------------------------------------
 
-float3 uniformHemisphere(const float2* xi){
+inline float3 uniformHemisphere(const float2* xi){
     float phi  = TWO_PI*xi->x;
     float r = native_sqrt(fmax(1.0f - xi->y*xi->y, 0.0f));
     return (float3)(native_cos(phi)*r, native_sin(phi)*r, xi->y);
 }
 
 #define uniformHemispherePdf() INV_TWO_PI
+#define invertUniformHemisphere(w, mu) (float2)(invertPhi(w, mu), w.z)
 
 //--------------------------------------------------------------------
 
-float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
+inline float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*(1.0f - cosThetaMax) + cosThetaMax;
 	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
@@ -109,10 +117,19 @@ float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
 }
 
 #define uniformSphericalCapPdf(cosThetaMax) INV_TWO_PI/(1.0f - cosThetaMax)
+inline bool invertUniformSphericalCap(float3 w, float cosThetaMax, float2* xi, float mu)
+{
+    float xiY = (w.z - cosThetaMax)/(1.0f - cosThetaMax);
+    if (xiY >= 1.0f || xiY < 0.0f)
+        return false;
+
+    *xi = (float2)(invertPhi(w, mu), xiY);
+    return true;
+}
 
 //--------------------------------------------------------------------
 
-float3 cosineHemisphere(const float2* xi){ 
+inline float3 cosineHemisphere(const float2* xi){ 
     float phi = xi->x*TWO_PI;
     float r = native_sqrt(xi->y);
     return (float3)(
@@ -123,10 +140,11 @@ float3 cosineHemisphere(const float2* xi){
 }
 
 #define cosineHemispherePdf(p) fabs(p.z)*INV_PI
+#define invertCosineHemisphere(w, mu) (float2)(invertPhi(w, mu), fmax(1.0f - w.z*w.z, 0.0f))
 
 //--------------------------------------------------------------------
 
-float3 phongHemisphere(const float2* xi, float n){
+inline float3 phongHemisphere(const float2* xi, float n){
     float phi = xi->x*TWO_PI;
     float cosTheta = pow(xi->y, 1.0f/(n + 1.0f));
     float r = native_sqrt(fmax(1.0f - cosTheta*cosTheta, 0.0f));
@@ -134,6 +152,7 @@ float3 phongHemisphere(const float2* xi, float n){
 }
 
 #define phongHemispherePdf(v, n) INV_TWO_PI*(n + 1.0f)*pow(v->z, n)
+#define invertPhongHemisphere(w, n, mu) (float2)(invertPhi(w, mu), pow(w.z, n + 1.0f))
 
 //--------------------------------------------------------------------
 

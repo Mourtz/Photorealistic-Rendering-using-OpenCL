@@ -1,7 +1,7 @@
 #ifndef __PRNG__
 #define __PRNG__
 
-float next1D(ulong* state){
+inline float next1D(ulong* state){
 	ulong oldState = *state;
 	*state = oldState*6364136223846793005UL + 1;
 	uint xorShifted = (uint)(((oldState >> 18u) ^ oldState) >> 27u);
@@ -10,8 +10,9 @@ float next1D(ulong* state){
 }
 
 #define hash_2ui_2f32(state) (float2)(next1D(state), next1D(state))
+#define nextBoolean(c, state) (next1D(state) < c)
 
-float get_random(uint *seed0, uint *seed1) {
+inline float get_random(uint *seed0, uint *seed1) {
 	/* hash the seeds */
 	*seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);
 	*seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
@@ -24,6 +25,7 @@ float get_random(uint *seed0, uint *seed1) {
 	return (res.f - 2.0f) * 0.5f;
 }
 
+#define nextBoolean(c, seed0, seed1) (get_random(seed0, seed1) < c)
 // 2ui -> 2f32
 #define hash_2ui_2f32(seed0, seed1) (float2)(get_random(seed0, seed1), get_random(seed0, seed1))
 

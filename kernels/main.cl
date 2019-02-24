@@ -5,6 +5,8 @@ __constant sampler_t samplerA = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
 typedef struct {
 	// throughput
 	float3 mask;
+	// accumulation buffer
+	float4 acc;
 
 	struct {
 		// total bounces
@@ -56,9 +58,6 @@ __kernel void render_kernel(
 
 	/* seeds */
 	const int random0, const int random1,
-
-	/* accumulation buffer */
-	__global float4* accumbuffer,
 	
 	/* new frame */
 	__write_only image2d_t output_tex,
@@ -105,10 +104,10 @@ __kernel void render_kernel(
 	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
 	
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
-	accumbuffer[work_item_id] += radiance(&scene, env_map, &ray, rlh, &seed0, &seed1);
+	rlh->acc += radiance(&scene, env_map, &ray, rlh, &seed0, &seed1);
 	
 	r_flat[work_item_id].ray = ray;
 
 	/* update the output GLTexture */
-	write_imagef(output_tex, i_coord, accumbuffer[work_item_id] / (float)(framenumber));
+	write_imagef(output_tex, i_coord, rlh->acc / (float)(framenumber));
 }

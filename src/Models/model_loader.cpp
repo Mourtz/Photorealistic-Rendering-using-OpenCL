@@ -1,10 +1,11 @@
 #include <Model/model_loader.h>
 #include <iostream>
 
+/*
 extern cl::Context context;
-extern cl::Device device;
 extern cl::CommandQueue queue;
 extern cl::Program bvh_program;
+*/
 
 ModelLoader::ModelLoader() {
 	mObjParser = new ObjParser();
@@ -17,7 +18,7 @@ ModelLoader::~ModelLoader() {
 void ModelLoader::getFacesOfObject(
 	object3D object, std::vector<cl_uint4>& faces, cl_int offset
 ) {
-#if 1
+#if 0
 	cl::Kernel kernel = cl::Kernel(bvh_program, "getFacesOfObject");
 
 	cl::Buffer b_facesV = cl::Buffer(
@@ -43,15 +44,13 @@ void ModelLoader::getFacesOfObject(
 	queue.finish();
 	queue.enqueueReadBuffer(b_faces, CL_TRUE, 0, (object.facesV.size()/3)*sizeof(cl_uint4), &faces[0]);
 #else
-	cl_uint a, b, c;
-
 	for (cl_uint i = 0; i < object.facesV.size(); i += 3) {
-		a = object.facesV[i + 0];
-		b = object.facesV[i + 1];
-		c = object.facesV[i + 2];
-
-		cl_uint4 f = { a, b, c, offset + faces.size() };
-		faces.push_back(f);
+		faces.push_back({ 
+			object.facesV[i + 0], 
+			object.facesV[i + 1], 
+			object.facesV[i + 2], 
+			offset + faces.size() 
+		});
 	}
 #endif
 
@@ -69,7 +68,7 @@ void ModelLoader::getFacesOfObject(
 void ModelLoader::getFaceNormalsOfObject(
 	object3D object, std::vector<cl_uint4>& faceNormals, cl_int offset
 ) {
-#if 1
+#if 0
 	cl::Kernel kernel = cl::Kernel(bvh_program, "getFaceNormalsOfObject");
 
 	cl::Buffer b_facesVN = cl::Buffer(
@@ -94,15 +93,13 @@ void ModelLoader::getFaceNormalsOfObject(
 	queue.finish();
 	queue.enqueueReadBuffer(b_normals, CL_TRUE, 0, (object.facesVN.size()/3)*sizeof(cl_uint4), &faceNormals[0]);
 #else
-	cl_uint a, b, c;
-
 	for (cl_uint i = 0; i < object.facesVN.size(); i += 3) {
-		a = object.facesVN[i + 0];
-		b = object.facesVN[i + 1];
-		c = object.facesVN[i + 2];
-
-		cl_uint4 fn = { a, b, c, offset + faceNormals->size() };
-		faceNormals->push_back(fn);
+		faceNormals.push_back({
+			object.facesVN[i + 0],
+			object.facesVN[i + 1],
+			object.facesVN[i + 2],
+			offset + faceNormals.size()
+		});
 	}
 #endif
 }

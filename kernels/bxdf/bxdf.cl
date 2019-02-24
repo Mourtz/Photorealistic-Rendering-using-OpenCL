@@ -122,6 +122,9 @@ void LambertBSDF(
 	ray->dir = toGlobal(&ray->tf, ray->dir);
 }
 
+#define LambertBSDF_eval(ray, mat) mat->color*INV_PI*ray->dir.z
+#define LambertBSDF_pdf(ray) cosineHemispherePdf(ray->dir)
+
 /*----------------- FIBER -----------------*/
 
 float lambertianCylinder(const float3* wo){
@@ -153,6 +156,8 @@ void LambertianFiberBCSDF(
 	ray->origin = ray->pos + ray->normal * EPS;
 	ray->dir = toGlobal(&ray->tf, ray->dir);
 }
+
+#define LambertianFiberBCSDF_pdf(ray) lambertianCylinder(&ray->dir)
 
 /*---------------------------------- DIELECTRIC ----------------------------------*/
 

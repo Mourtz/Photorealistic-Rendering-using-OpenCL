@@ -164,26 +164,26 @@ void ObjParser::parseFace(std::string line, std::vector<cl_uint>* facesV, std::v
 	}
 }
 
-void ObjParser::parseVertex(std::string line, std::vector<cl_float>* vertices) {
-	std::vector<std::string> parts = split(line, delimiter);
+inline void ObjParser::parseVertex(std::string line, std::vector<cl_float>* vertices) {
+	const std::vector<std::string> parts = split(line, delimiter);
 
 	vertices->push_back(atof(parts[1].c_str()));
 	vertices->push_back(atof(parts[2].c_str()));
 	vertices->push_back(atof(parts[3].c_str()));
 }
 
-void ObjParser::parseVertexNormal(std::string line, std::vector<cl_float>* normals) {
-	std::vector<std::string> parts = split(line, delimiter);
+inline void ObjParser::parseVertexNormal(std::string line, std::vector<cl_float>* normals) {
+	const std::vector<std::string> parts = split(line, delimiter);
 
 	normals->push_back(atof(parts[1].c_str()));
 	normals->push_back(atof(parts[2].c_str()));
 	normals->push_back(atof(parts[3].c_str()));
 }
 
-void ObjParser::parseVertexTexture(std::string line, std::vector<cl_float>* texCoords) {
-	std::vector<std::string> parts = split(line, delimiter);
+inline void ObjParser::parseVertexTexture(std::string line, std::vector<cl_float>* texCoords) {
+	const std::vector<std::string> parts = split(line, delimiter);
 
-	float weight = (parts.size() >= 4) ? atof(parts[3].c_str()) : 0.0f;
+	const float weight = (parts.size() >= 4) ? atof(parts[3].c_str()) : 0.0f;
 
 	texCoords->push_back(atof(parts[1].c_str()));
 	texCoords->push_back(atof(parts[2].c_str()));

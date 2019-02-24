@@ -34,12 +34,7 @@
 constexpr char *models_directory = "../resources/models/";
 constexpr char *kernel_filepath = "../kernels/main.cl";
 
-// struct RayI {
-// 	cl_float3 origin, direction, mask;
-// 	cl_uint bounces;
-// 	cl_ushort diff_bounces, spec_bounces, trans_bounces, scatter_events;
-// };
-constexpr std::size_t RayI_size = 16 * 11;
+constexpr std::size_t RayI_size = 16 * 12;
 
 //----------------------------------------------
 
@@ -69,11 +64,10 @@ cl::Context context;
 cl::CommandQueue queue;
 cl::Kernel kernel;
 cl::Program program;
-cl::Program bvh_program;
+// cl::Program bvh_program;
 cl::Buffer cl_output;
 cl::Buffer cl_meshes;
 cl::Buffer cl_camera;
-cl::Buffer cl_accumbuffer;
 cl::ImageGL cl_screen;
 cl::ImageGL cl_env_map;
 //  clw::ImageGL cl_noise_tex;
@@ -365,6 +359,7 @@ void initOpenCL()
 			clw::err::printErrorLog(program, device);
 	}
 
+/*
 	{
 		bvh_program = cl::Program(context, utils::ReadFile("../kernels/bvh.cl").c_str());
 
@@ -374,6 +369,7 @@ void initOpenCL()
 		if (result == CL_BUILD_PROGRAM_FAILURE)
 			std::cerr << "couldn't load the program '" << "../kernels/bvh.cl" << "'\n";
 	}
+*/
 }
 
 //---------------------------------------------------------------------------------------
@@ -393,20 +389,19 @@ void initCLKernel()
 	kernel.setArg(5, cl_camera);
 	kernel.setArg(6, rand());
 	kernel.setArg(7, rand());
-	kernel.setArg(8, cl_accumbuffer);
-	kernel.setArg(9, cl_screen);
+	kernel.setArg(8, cl_screen);
 
-	kernel.setArg(10, BVH_NUM_NODES);
-	kernel.setArg(11, mBufBVH);
-	kernel.setArg(12, mBufFacesV);
-	kernel.setArg(13, mBufFacesN);
-	kernel.setArg(14, mBufVertices);
-	kernel.setArg(15, mBufNormals);
-	kernel.setArg(16, mBufMaterial);
+	kernel.setArg(9, BVH_NUM_NODES);
+	kernel.setArg(10, mBufBVH);
+	kernel.setArg(11, mBufFacesV);
+	kernel.setArg(12, mBufFacesN);
+	kernel.setArg(13, mBufVertices);
+	kernel.setArg(14, mBufNormals);
+	kernel.setArg(15, mBufMaterial);
 
-	kernel.setArg(17, cl_env_map);
+	kernel.setArg(16, cl_env_map);
 	// kernel.setArg(18, cl_noise_tex);
-	kernel.setArg(18, cl_flattenI);
+	kernel.setArg(17, cl_flattenI);
 }
 
 //---------------------------------------------------------------------------------------
@@ -456,7 +451,6 @@ void render()
 #ifdef __DEBUG__
 		acc_time = 0;
 #endif
-		queue.enqueueFillBuffer(cl_accumbuffer, 0, 0, window_width * window_height * sizeof(cl_float4));
 		queue.enqueueFillBuffer(cl_flattenI, 0, 0, window_width * window_height * RayI_size);
 		framenumber = 0;
 	}
@@ -590,7 +584,7 @@ int main(int argc, char **argv)
 
 		delete ml;
 		delete accelStruct;
-		clReleaseProgram(bvh_program());
+		// clReleaseProgram(bvh_program());
 	}
 
 	//
@@ -625,9 +619,6 @@ int main(int argc, char **argv)
 	cl_screens.push_back(cl_screen);
 	if (err)
 		std::cout << cl_help::err::getOpenCLErrorCodeStr(err) << std::endl;
-
-	// reserve memory buffer on OpenCL device to hold image buffer for accumulated samples
-	cl_accumbuffer = cl::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * sizeof(cl_float4));
 
 	//
 	cl_flattenI = cl::Buffer(context, CL_MEM_READ_WRITE, window_width * window_height * RayI_size);

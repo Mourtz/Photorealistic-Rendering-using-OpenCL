@@ -35,3 +35,4 @@ kernels/bxdf/disney.cl
 include/BVH/bvh_morton_code.h
 
 .vscode
+*.old

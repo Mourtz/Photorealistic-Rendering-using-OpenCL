@@ -49,7 +49,7 @@ void ModelLoader::getFacesOfObject(
 			object.facesV[i + 0], 
 			object.facesV[i + 1], 
 			object.facesV[i + 2], 
-			offset + faces.size() 
+			cl_uint(offset + faces.size()) 
 		});
 	}
 #endif
@@ -98,7 +98,7 @@ void ModelLoader::getFaceNormalsOfObject(
 			object.facesVN[i + 0],
 			object.facesVN[i + 1],
 			object.facesVN[i + 2],
-			offset + faceNormals.size()
+			cl_uint(offset + faceNormals.size())
 		});
 	}
 #endif

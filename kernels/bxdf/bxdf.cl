@@ -112,7 +112,7 @@ void LambertBSDF(
 	const Material* mat, 
 	RNG_SEED_PARAM
 ){ 
-	float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
+	float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
 
 	ray->dir = cosineHemisphere(&xi);
 
@@ -142,11 +142,11 @@ void LambertianFiberBCSDF(
 	const Material* mat, 
 	RNG_SEED_PARAM
 ){
-	float h = get_random(RNG_SEED_VALUE)*2.0f - 1.0f;
+	float h = next1D(RNG_SEED_VALUE)*2.0f - 1.0f;
 	float nx = h;
     float nz = trigInverse(nx);
 
-	float2 xi = hash_2ui_2f32(RNG_SEED_VALUE);
+	float2 xi = next2D(RNG_SEED_VALUE);
 	float3 d = cosineHemisphere(&xi);
 
 	ray->dir = (float3)(d.z*nx + d.x*nz, d.y, d.z*nz - d.x*nx);
@@ -175,7 +175,7 @@ bool DielectricBSDF(
 	float cosThetaT = 0.0f;
     float F = dielectricReflectance(eta, fabs(wi.z), &cosThetaT);
 
-	if(get_random(RNG_SEED_VALUE) < F){ 
+	if(next1D(RNG_SEED_VALUE) < F){ 
 		event->wo = (float3)(-wi.x, -wi.y, wi.z);
 		event->pdf = F;
 	} else { 
@@ -217,7 +217,7 @@ bool RoughDielectricBSDF(
     float alpha = roughnessToAlpha(dist, mat->roughness);
     float sampleAlpha = roughnessToAlpha(dist, sampleRoughness);
 
-	float3 m = Microfacet_sample(dist, sampleAlpha, hash_2ui_2f32(RNG_SEED_VALUE));
+	float3 m = Microfacet_sample(dist, sampleAlpha, next2D(RNG_SEED_VALUE));
 	float pm = Microfacet_pdf(dist, sampleAlpha, m);
 
 	if (pm < 1e-10f)
@@ -228,7 +228,7 @@ bool RoughDielectricBSDF(
 	float F = dielectricReflectance(1.0f/ior, wiDotM, &cosThetaT);
 	float etaM = wiDotM < 0.0f ? ior : 1.0f/ior;
 
-	bool reflect = get_random(RNG_SEED_VALUE) < F;
+	bool reflect = next1D(RNG_SEED_VALUE) < F;
 
 	if (reflect)
 		event->wo = 2.0f*wiDotM*m - wi;
@@ -302,7 +302,7 @@ bool RoughConductor(
 
 	float alpha = roughnessToAlpha(dist, mat->roughness);
 
-	float3 m = Microfacet_sample(dist, alpha, hash_2ui_2f32(RNG_SEED_VALUE));
+	float3 m = Microfacet_sample(dist, alpha, next2D(RNG_SEED_VALUE));
 	float wiDotM = dot(wi, m);
 	float3 wo = 2.0f*wiDotM*m - wi;
 	if (wiDotM <= 0.0f || wo.z <= 0.0f)

@@ -13,7 +13,7 @@ bool iso_sample(
 	RNG_SEED_PARAM
 ) {
 
-	float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
+	float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
 	sample->w = uniformSphere(xi);
 	sample->weight = 1.0f;
 	sample->pdf = INV_FOUR_PI;

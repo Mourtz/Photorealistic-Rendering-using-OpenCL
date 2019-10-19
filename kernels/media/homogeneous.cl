@@ -18,9 +18,9 @@ void sampleDistance(
 	}
 	else {
 		const float* sigmaT = &medium->sigmaT;
-		float sigmaTc = sigmaT[(int)(round(get_random(RNG_SEED_VALUE)*3.0f))];
+		float sigmaTc = sigmaT[(int)(round(next1D(RNG_SEED_VALUE)*3.0f))];
 
-		float t = -native_log(1.0f - get_random(RNG_SEED_VALUE)) / sigmaTc;
+		float t = -native_log(1.0f - next1D(RNG_SEED_VALUE)) / sigmaTc;
 		m_sample->t = fmin(t, maxT);
 		m_sample->continuedT = t;
 		m_sample->weight = native_exp(-m_sample->t*medium->sigmaT);

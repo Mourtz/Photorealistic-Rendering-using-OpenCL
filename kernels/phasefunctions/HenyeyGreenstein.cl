@@ -34,7 +34,7 @@ bool hg_sample(
 	RNG_SEED_PARAM
 ) {
 
-	float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
+	float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
 	if (_g == 0.0f) {
 		sample->w = uniformSphere(xi);
 		sample->pdf = uniformSpherePdf();

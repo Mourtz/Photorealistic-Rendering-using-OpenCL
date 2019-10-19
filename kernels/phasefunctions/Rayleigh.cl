@@ -24,7 +24,7 @@ bool rayleigh_sample(
 	const float3 wi, PhaseSample* p_sample,
 	RNG_SEED_PARAM
 ) {
-	float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
+	float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*4.0f - 2.0f;
 	float invZ = sqrt(z*z + 1.0f);

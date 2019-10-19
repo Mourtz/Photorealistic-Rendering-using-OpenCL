@@ -45,9 +45,9 @@ void sampleDistance(
 		m_sample->exited = true;
 	} else {
 		const float* sigmaT = &medium->sigmaT;
-		float sigmaTc = sigmaT[(int)(round(get_random(RNG_SEED_VALUE)*3.0f))];
+		float sigmaTc = sigmaT[(int)(round(next1D(RNG_SEED_VALUE)*3.0f))];
 
-		float xi = 1.0f - get_random(RNG_SEED_VALUE);
+		float xi = 1.0f - next1D(RNG_SEED_VALUE);
 		float logXi = log(xi);
 
 		float t = inverseOpticalDepth(x, dx, sigmaTc, logXi);

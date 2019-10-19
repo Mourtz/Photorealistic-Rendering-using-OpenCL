@@ -24,7 +24,7 @@ float3 calcDirectLight(
 	Ray shadowRay;
 	shadowRay.origin = ray->origin;
 
-	const float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
+	const float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
 
 #ifdef __SPHERE__
 	if (light.t & SPHERE) {
@@ -161,7 +161,7 @@ float4 radiance(
 		hg_sample(ray->dir, gm_hg_g, &p_sample, RNG_SEED_VALUE);
 		ray->dir = p_sample.w;
 #else 
-		ray->dir = uniformSphere((float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE)));
+		ray->dir = uniformSphere((float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE)));
 #endif
 		// @ToDo clear this thing out, fix the light sampling code!!!!!!!
 		ray->normal = ray->dir;
@@ -263,7 +263,7 @@ float4 radiance(
 		else if (mat.t & COAT)
 		{
 			/* reflect */
-			if (get_random(RNG_SEED_VALUE) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
+			if (next1D(RNG_SEED_VALUE) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
 				ray->origin = ray->pos + ray->normal * EPS;
 				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
@@ -320,7 +320,7 @@ float4 radiance(
 					ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 					ray->backside = false;
 				} else {
-					float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
+					float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
 					ray->origin = m_sample.p;
 					#if 1
 						ray->dir = uniformSphere(xi);
@@ -357,7 +357,7 @@ float4 radiance(
 		else if (mat.t & SPECSUB)
 		{
 			if (!ray->backside) {
-				if(get_random(RNG_SEED_VALUE) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)){
+				if(next1D(RNG_SEED_VALUE) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)){
 					ray->origin = ray->pos + ray->normal * EPS;
 					ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
@@ -399,7 +399,7 @@ float4 radiance(
 						ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 						ray->backside = false;
 					} else {
-						float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
+						float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
 						ray->origin = m_sample.p;
 						#if 1
 							ray->dir = uniformSphere(xi);
@@ -443,7 +443,7 @@ float4 radiance(
 	//russian roulette
 	const float roulettePdf = fmax3(rlh->mask);
 	if (roulettePdf < 0.1f) {
-		if (get_random(RNG_SEED_VALUE) < roulettePdf){
+		if (next1D(RNG_SEED_VALUE) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {
 			rlh->media.in = rlh->bounce.total = 0;

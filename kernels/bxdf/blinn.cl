@@ -7,8 +7,8 @@ float DistributionBlinn(float3 normal, float3 wh, float alpha) {
 }
 
 float3 SampleBlinn(float3 n, float alpha, RNG_SEED_PARAM) {
-	float phi = TWO_PI * get_random(RNG_SEED_VALUE);
-	float cosTheta = pow(get_random(RNG_SEED_VALUE), 1.0f / (alpha + 1.0f));
+	float phi = TWO_PI * next1D(RNG_SEED_VALUE);
+	float cosTheta = pow(next1D(RNG_SEED_VALUE), 1.0f / (alpha + 1.0f));
 	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
 
 	float3 axis = fabs(n.x) > 0.001f ? (float3)(0.0f, 1.0f, 0.0f) : (float3)(1.0f, 0.0f, 0.0f);

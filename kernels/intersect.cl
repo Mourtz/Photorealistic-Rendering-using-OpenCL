@@ -112,7 +112,7 @@ bool sampleCaustics(Ray* ray,
 	float3 tdir = refract(ray->dir, ray->normal, nnt);
 
 	/* reflect */
-	if (dot(tdir, tdir) == 0.0f || get_random(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
+	if (dot(tdir, tdir) == 0.0f || next1D(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
 		return false;
 	}
 	/* refract */
@@ -126,7 +126,7 @@ bool sampleCaustics(Ray* ray,
 			if (!intersect_mesh(ray, mesh, scene, isOBJ)) return false;
 			tdir = refract(ray->dir, ray->normal, nnt);
 
-			if (dot(tdir, tdir) == 0.0f || get_random(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
+			if (dot(tdir, tdir) == 0.0f || next1D(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
 				return false;
 			}
 			else {

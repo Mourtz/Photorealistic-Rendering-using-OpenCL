@@ -2,7 +2,7 @@
 
 __constant sampler_t samplerA = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
 
-#define RNG_TYPE 2
+#define RNG_TYPE 0
 
 #if RNG_TYPE == 0
 #define RNG_SEED_TYPE uint
@@ -119,7 +119,7 @@ __kernel void render_kernel(
 	uint seed0 = i_coord.x * framenumber % 1000 + (rlh->bounce.total + 33) * random0;
 	uint seed1 = i_coord.y * framenumber % 1000 + (rlh->bounce.total + 100) * random1;
 #elif RNG_TYPE == 1
-
+	ulong state = 0;
 #elif RNG_TYPE == 2
 	const float2 f_coord = (float2)((float)(i_coord.x) / width, (float)(i_coord.y) / height);
 	double seed = dot(f_coord, (float2)(framenumber % 1000 + random0, framenumber % 333 + random1));

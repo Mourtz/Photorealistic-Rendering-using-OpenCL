@@ -108,18 +108,19 @@ float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float a
 /*---------------------------------- LAMBERTIAN ----------------------------------*/
 
 void LambertBSDF(
-	Ray* ray, SurfaceScatterEvent* res,
+	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
 	uint* seed0, uint* seed1
 ){ 
 	float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+
 	ray->dir = cosineHemisphere(&xi);
 
-	res->pdf = cosineHemispherePdf(ray->dir);
-	res->weight = mat->color;
+	event->pdf = cosineHemispherePdf(ray->dir);
+	event->weight = mat->color;
 
 	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&ray->tf, ray->dir);
+	ray->dir = toGlobal(&event->frame, ray->dir);
 }
 
 #define LambertBSDF_eval(ray, mat) mat->color*INV_PI*ray->dir.z
@@ -154,7 +155,7 @@ void LambertianFiberBCSDF(
     res->weight = mat->color;
 
 	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&ray->tf, ray->dir);
+	ray->dir = toGlobal(&res->frame, ray->dir);
 }
 
 #define LambertianFiberBCSDF_pdf(ray) lambertianCylinder(&ray->dir)
@@ -162,12 +163,11 @@ void LambertianFiberBCSDF(
 /*---------------------------------- DIELECTRIC ----------------------------------*/
 
 bool DielectricBSDF(
-	Ray* ray, SurfaceScatterEvent* res,
+	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
 	uint* seed0, uint* seed1
 ){
-	float3 wi = toLocal(&ray->tf, -ray->dir);
-	float3 wo;
+#define wi event->wi
 
 	const float ior = 1.5f;
 	const float eta = wi.z < 0.0f ? ior : 1.0f/ior;
@@ -176,40 +176,39 @@ bool DielectricBSDF(
     float F = dielectricReflectance(eta, fabs(wi.z), &cosThetaT);
 
 	if(get_random(seed0, seed1) < F){ 
-		wo = (float3)(-wi.x, -wi.y, wi.z);
-		res->pdf = F;
+		event->wo = (float3)(-wi.x, -wi.y, wi.z);
+		event->pdf = F;
 	} else { 
 		if(F == 1.0f)
 			return false;
 
-		wo = (float3)(-wi.x*eta, -wi.y*eta, -copysign(cosThetaT, wi.z));
-		res->pdf = 1.0f - F;
+		event->wo = (float3)(-wi.x*eta, -wi.y*eta, -copysign(cosThetaT, wi.z));
+		event->pdf = 1.0f - F;
 	}
 
 	const bool ABS1 = mat->t & ABS_REFR, ABS2 = mat->t & ABS_REFR2;
 	if(ABS1 | ABS2){
-		res->weight = ABS2 ? mat->color : 1.0f; 
-		res->weight = ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
+		event->weight = ABS2 ? mat->color : 1.0f; 
+		event->weight = ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
 	} else { 
-		res->weight = mat->color;
+		event->weight = mat->color;
 	}
 
-	ray->dir = toGlobal(&ray->tf, wo);
+	ray->dir = toGlobal(&event->frame, event->wo);
 	ray->origin = ray->pos + ray->dir * EPS;
 
 	return true;
+#undef wi
 }
 
 bool RoughDielectricBSDF(
 	const int dist,
-	Ray* ray, SurfaceScatterEvent* res,
+	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
 	uint* seed0, uint* seed1
 ){
-	const float3 wi = toLocal(&ray->tf, -ray->dir);
+#define wi event->wi
 	const float wiDotN = wi.z;
-
-	float3 wo;
 
 	const float ior = 1.5f;
 	const float eta = wiDotN < 0.0f ? ior : 1.0f/ior;
@@ -232,69 +231,71 @@ bool RoughDielectricBSDF(
 	bool reflect = get_random(seed0, seed1) < F;
 
 	if (reflect)
-		wo = 2.0f*wiDotM*m - wi;
+		event->wo = 2.0f*wiDotM*m - wi;
 	else
-		wo = (etaM*wiDotM - sgnE(wiDotM)*cosThetaT)*m - etaM*wi;
+		event->wo = (etaM*wiDotM - sgnE(wiDotM)*cosThetaT)*m - etaM*wi;
 
-	float woDotN = wo.z;
+	float woDotN = event->wo.z;
 
 	bool reflected = wiDotN*woDotN > 0.0f;
 	if (reflected != reflect)
 		return false;
 
-	float woDotM = dot(wo, m);
-	float G = Microfacet_G(dist, alpha, wi, wo, m);
+	float woDotM = dot(event->wo, m);
+	float G = Microfacet_G(dist, alpha, wi, event->wo, m);
 	float D = Microfacet_D(dist, alpha, m);
 	
 	const bool ABS1 = mat->t & ABS_REFR, ABS2 = mat->t & ABS_REFR2;
 
-	res->weight = fabs(wiDotM)*G*D/(fabs(wiDotN)*pm);
+	event->weight = fabs(wiDotM)*G*D/(fabs(wiDotN)*pm);
 	if(ABS1 | ABS2){
-		res->weight *= ABS2 ? mat->color : 1.0f; 
-		res->weight *= ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
+		event->weight *= ABS2 ? mat->color : 1.0f; 
+		event->weight *= ray->backside ? exp(-ray->t * ((ABS1) ? mat->color : 1.0f) * 10.0f) : 1.0f;
 	} else { 
-		res->weight *= mat->color;
+		event->weight *= mat->color;
 	}
 
 	if (reflect)
-        res->pdf = (F)*pm*0.25f/fabs(wiDotM);
+        event->pdf = (F)*pm*0.25f/fabs(wiDotM);
     else
-        res->pdf = (1.0f - F)*pm*fabs(woDotM)/pow(eta*wiDotM + woDotM, 2.0f);
+        event->pdf = (1.0f - F)*pm*fabs(woDotM)/pow(eta*wiDotM + woDotM, 2.0f);
 	
-	ray->dir = toGlobal(&ray->tf, wo);
+	ray->dir = toGlobal(&event->frame, event->wo);
 	ray->origin = ray->pos + ray->dir * EPS;
 
 	return true;
+#undef wi
 }
 
 /*---------------------------------- CONDUCTOR ----------------------------------*/
 
 bool Conductor(
-	Ray* ray, SurfaceScatterEvent* res,
+	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
 	uint* seed0, uint* seed1
 ){ 
-	float3 wi = toLocal(&ray->tf, -ray->dir);
+#define wi event->wi
 	
 	// Silver (Ag) 
 	float F = conductorReflectance(0.051585f, 3.9046f, wi.z);
 
-	res->pdf = 1.0f;
-	res->weight = F*mat->color;
+	event->pdf = 1.0f;
+	event->weight = F*mat->color;
 
 	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&ray->tf, (float3)(-wi.x, -wi.y, wi.z));
+	ray->dir = toGlobal(&event->frame, (float3)(-wi.x, -wi.y, wi.z));
 
 	return true;
+#undef wi
 }
 
 bool RoughConductor(
 	const int dist,
-	Ray* ray, SurfaceScatterEvent* res,
+	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
 	uint* seed0, uint* seed1
 ){ 
-	float3 wi = toLocal(&ray->tf, -ray->dir);
+#define wi event->wi
 	
 	if(wi.z <= 0.0f)
 		return false;
@@ -314,13 +315,14 @@ bool RoughConductor(
 	// Copper (Cu) 
 	float3 F = conductorReflectance3((float3)(0.200438f, 0.924033f, 1.10221f), (float3)(3.91295f, 2.45285f, 2.14219f), wiDotM);
 
-	res->pdf = pdf;
-	res->weight = mat->color*F*weight;
+	event->pdf = pdf;
+	event->weight = mat->color*F*weight;
 
 	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&ray->tf, wo);
+	ray->dir = toGlobal(&event->frame, wo);
 
 	return true;
+#undef wi
 }
 
 /*

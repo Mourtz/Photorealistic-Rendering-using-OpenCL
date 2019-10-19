@@ -38,6 +38,7 @@ typedef struct {
 	RLH data;
 } RTD;
 
+#FILE:integrators/base.cl
 #FILE:integrators/pathtracing.cl
 
 __kernel void render_kernel(

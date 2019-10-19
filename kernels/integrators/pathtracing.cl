@@ -118,6 +118,8 @@ float4 radiance(
 		}
 	}
 	
+	SurfaceScatterEvent surfaceEvent;
+
 	float alpha = 1.0f;
 	float3 emmision = (float3)(0.0f);
 #define acc (float4)(emmision, alpha)
@@ -180,7 +182,7 @@ float4 radiance(
 		}
 #endif
 
-		SurfaceScatterEvent surfaceEvent;
+		surfaceEvent = makeLocalScatterEvent(ray, scene);
 
 		/*-------------------- DIFFUSE --------------------*/
 #ifdef DIFF
@@ -199,9 +201,6 @@ float4 radiance(
 		/*-------------------- CONDUCTOR --------------------*/
 #ifdef COND
 		else if (mat.t & COND)
-#else
-		else if (false)
-#endif
 		{
 			if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1)){
 				rlh->bounce.total = 0;
@@ -213,12 +212,10 @@ float4 radiance(
 			++rlh->bounce.spec;
 			rlh->bounce.isSpecular = true;
 		}
+#endif
 		/*-------------------- ROUGH CONDUCTOR (GGX|BECKMANN|PHONG) --------------------*/
 #ifdef ROUGH_COND
 		else if (mat.t & ROUGH_COND)
-#else
-		else if (false)
-#endif
 		{
 			if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1)){
 				rlh->bounce.total = 0;
@@ -230,14 +227,10 @@ float4 radiance(
 			++rlh->bounce.spec;
 			rlh->bounce.isSpecular = true;
 		}
-
+#endif
 		/*-------------------- DIELECTRIC --------------------*/
 #ifdef DIEL
 		else if (mat.t & DIEL) 
-#else
-		else if (false) 
-#endif
-		
 		{
 			if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1)){
 				rlh->bounce.total = 0;
@@ -249,13 +242,10 @@ float4 radiance(
 			++rlh->bounce.spec;
 			rlh->bounce.isSpecular = true;
 		}
+#endif
 		/*---------------- ROUGH DIELECTRIC (GGX|BECKMANN|PHONG) ----------------*/
 #ifdef ROUGH_DIEL
 		else if (mat.t & ROUGH_DIEL) 
-#else
-		else if (false) 
-#endif
-		
 		{
 			if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1)){
 				rlh->bounce.total = 0;
@@ -267,13 +257,10 @@ float4 radiance(
 			++rlh->bounce.spec;
 			rlh->bounce.isSpecular = true;
 		}
-
+#endif
 		/*-------------------- COAT --------------------*/
 #ifdef COAT
 		else if (mat.t & COAT)
-#else
-		else if (false)
-#endif
 		{
 			/* reflect */
 			if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
@@ -293,12 +280,10 @@ float4 radiance(
 				rlh->bounce.isSpecular = false;
 			}
 		}
+#endif
 		/*-------------------- VOL --------------------*/
 #ifdef VOL
 		else if (mat.t & VOL) 
-#else
-		else if (false)
-#endif
 		{
 			// get the ray inside the medium if its not already
 			if (!ray->backside) {
@@ -362,6 +347,7 @@ float4 radiance(
 			rlh->bounce.isSpecular = ray->backside;
 #endif
 		}
+#endif
 		/*-------------------- TRANS --------------------
 		else if (mat.t & TRANS) {
 

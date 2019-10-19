@@ -32,7 +32,7 @@ float inverseOpticalDepth(float x, float dx, float sigmaT, float logXi){
 void sampleDistance(
 	const Ray* ray, MediumSample* m_sample,
 	const Medium* medium,
-	RNG_SEED_TYPE
+	RNG_SEED_PARAM
 ) {
 	float  x = _falloffScale * dot(ray->origin - _unitPoint, _falloffDirection);
 	float dx = _falloffScale * dot(ray->dir, _falloffDirection);
@@ -45,9 +45,9 @@ void sampleDistance(
 		m_sample->exited = true;
 	} else {
 		const float* sigmaT = &medium->sigmaT;
-		float sigmaTc = sigmaT[(int)(round(get_random(RNG_SEED_NAME)*3.0f))];
+		float sigmaTc = sigmaT[(int)(round(get_random(RNG_SEED_VALUE)*3.0f))];
 
-		float xi = 1.0f - get_random(RNG_SEED_NAME);
+		float xi = 1.0f - get_random(RNG_SEED_VALUE);
 		float logXi = log(xi);
 
 		float t = inverseOpticalDepth(x, dx, sigmaTc, logXi);

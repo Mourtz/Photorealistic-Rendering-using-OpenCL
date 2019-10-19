@@ -10,10 +10,10 @@ float iso_pdf() {
 
 bool iso_sample(
 	const float3 wi, PhaseSample* sample,
-	RNG_SEED_TYPE
+	RNG_SEED_PARAM
 ) {
 
-	float2 xi = (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME));
+	float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
 	sample->w = uniformSphere(xi);
 	sample->weight = 1.0f;
 	sample->pdf = INV_FOUR_PI;

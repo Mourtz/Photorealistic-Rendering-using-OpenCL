@@ -6,7 +6,7 @@
 void sampleDistance(
 	const Ray* ray, MediumSample* m_sample,
 	const Medium* medium,
-	RNG_SEED_TYPE
+	RNG_SEED_PARAM
 ) {
 	const float maxT = ray->t;
 
@@ -18,9 +18,9 @@ void sampleDistance(
 	}
 	else {
 		const float* sigmaT = &medium->sigmaT;
-		float sigmaTc = sigmaT[(int)(round(get_random(RNG_SEED_NAME)*3.0f))];
+		float sigmaTc = sigmaT[(int)(round(get_random(RNG_SEED_VALUE)*3.0f))];
 
-		float t = -native_log(1.0f - get_random(RNG_SEED_NAME)) / sigmaTc;
+		float t = -native_log(1.0f - get_random(RNG_SEED_VALUE)) / sigmaTc;
 		m_sample->t = fmin(t, maxT);
 		m_sample->continuedT = t;
 		m_sample->weight = native_exp(-m_sample->t*medium->sigmaT);

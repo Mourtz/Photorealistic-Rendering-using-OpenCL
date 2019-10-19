@@ -2,7 +2,7 @@
 #define __PRNG__
 
 #if RNG_TYPE == 0
-inline float get_random(RNG_SEED_TYPE) {
+inline float get_random(RNG_SEED_PARAM) {
 	/* hash the seeds */
 	*seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);
 	*seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
@@ -14,23 +14,23 @@ inline float get_random(RNG_SEED_TYPE) {
 	res.ui = (ires & 0x007fffff) | 0x40000000;
 	return (res.f - 2.0f) * 0.5f;
 }
-
-#define nextBoolean(c, RNG_SEED_NAME) (get_random(RNG_SEED_NAME) < c)
-#define hash_2ui_2f32(RNG_SEED_NAME) (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME))
-
 #elif RNG_TYPE == 1
-inline float get_random(RNG_SEED_TYPE) {
+inline float get_random(RNG_SEED_PARAM) {
 	ulong oldState = *state;
 	*state = oldState * 6364136223846793005UL + 1;
 	uint xorShifted = (uint)(((oldState >> 18u) ^ oldState) >> 27u);
 	uint rot = oldState >> 59u;
 	return normalizedUint((xorShifted >> rot) | (xorShifted << ((uint)(-(int)(rot)) & 31)));
 }
-
-#define nextBoolean(c, RNG_SEED_NAME) (get_random(RNG_SEED_NAME) < c)
-#define hash_2ui_2f32(RNG_SEED_NAME) (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME))
-
+#elif RNG_TYPE == 2
+inline float get_random(RNG_SEED_PARAM) {
+	float fl;
+	return fract(sin(*seed += 0.2f) * 43758.5453123f, &fl);
+}
 #endif
+
+#define nextBoolean(c, RNG_SEED_VALUE) (get_random(RNG_SEED_VALUE) < c)
+#define hash_2ui_2f32(RNG_SEED_VALUE) (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE))
 
 #if 0
 

@@ -9,7 +9,7 @@ SurfaceScatterEvent makeLocalScatterEvent(Ray* ray, const Scene* scene) {
 bool sample_BSDF(
 	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat,
-	RNG_SEED_TYPE
+	RNG_SEED_PARAM
 ){
 	/*-------------------- DIFFUSE --------------------*/
 #ifdef DIFF
@@ -18,13 +18,13 @@ bool sample_BSDF(
 	if (false)
 #endif
 	{
-		LambertBSDF(ray, event, mat, RNG_SEED_NAME);
+		LambertBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
 	/*-------------------- CONDUCTOR --------------------*/
 #ifdef COND
 	else if (mat.t & COND)
 	{
-		if (!Conductor(ray, &surfaceEvent, &mat, RNG_SEED_NAME)) {
+		if (!Conductor(ray, &surfaceEvent, &mat, RNG_SEED_VALUE)) {
 			return false;
 		}
 	}

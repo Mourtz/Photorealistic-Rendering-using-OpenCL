@@ -31,10 +31,10 @@ void hg_sample_fast(float3* dir, const float _g, float2* xi) {
 
 bool hg_sample(
 	const float3 wi, const float _g, PhaseSample* sample,
-	RNG_SEED_TYPE
+	RNG_SEED_PARAM
 ) {
 
-	float2 xi = (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME));
+	float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
 	if (_g == 0.0f) {
 		sample->w = uniformSphere(xi);
 		sample->pdf = uniformSpherePdf();

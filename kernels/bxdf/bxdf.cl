@@ -110,9 +110,9 @@ float3 importance_sample_beckmann(float2 random, const TangentFrame* tf, float a
 void LambertBSDF(
 	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
-	uint* seed0, uint* seed1
+	RNG_SEED_PARAM
 ){ 
-	float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+	float2 xi = (float2)(get_random(RNG_SEED_VALUE), get_random(RNG_SEED_VALUE));
 
 	ray->dir = cosineHemisphere(&xi);
 
@@ -140,13 +140,13 @@ float lambertianCylinder(const float3* wo){
 void LambertianFiberBCSDF(
 	Ray* ray, SurfaceScatterEvent* res,
 	const Material* mat, 
-	uint* seed0, uint* seed1
+	RNG_SEED_PARAM
 ){
-	float h = get_random(seed0, seed1)*2.0f - 1.0f;
+	float h = get_random(RNG_SEED_VALUE)*2.0f - 1.0f;
 	float nx = h;
     float nz = trigInverse(nx);
 
-	float2 xi = hash_2ui_2f32(seed0, seed1);
+	float2 xi = hash_2ui_2f32(RNG_SEED_VALUE);
 	float3 d = cosineHemisphere(&xi);
 
 	ray->dir = (float3)(d.z*nx + d.x*nz, d.y, d.z*nz - d.x*nx);
@@ -165,7 +165,7 @@ void LambertianFiberBCSDF(
 bool DielectricBSDF(
 	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
-	uint* seed0, uint* seed1
+	RNG_SEED_PARAM
 ){
 #define wi event->wi
 
@@ -175,7 +175,7 @@ bool DielectricBSDF(
 	float cosThetaT = 0.0f;
     float F = dielectricReflectance(eta, fabs(wi.z), &cosThetaT);
 
-	if(get_random(seed0, seed1) < F){ 
+	if(get_random(RNG_SEED_VALUE) < F){ 
 		event->wo = (float3)(-wi.x, -wi.y, wi.z);
 		event->pdf = F;
 	} else { 
@@ -205,7 +205,7 @@ bool RoughDielectricBSDF(
 	const int dist,
 	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
-	uint* seed0, uint* seed1
+	RNG_SEED_PARAM
 ){
 #define wi event->wi
 	const float wiDotN = wi.z;
@@ -217,7 +217,7 @@ bool RoughDielectricBSDF(
     float alpha = roughnessToAlpha(dist, mat->roughness);
     float sampleAlpha = roughnessToAlpha(dist, sampleRoughness);
 
-	float3 m = Microfacet_sample(dist, sampleAlpha, hash_2ui_2f32(seed0, seed1));
+	float3 m = Microfacet_sample(dist, sampleAlpha, hash_2ui_2f32(RNG_SEED_VALUE));
 	float pm = Microfacet_pdf(dist, sampleAlpha, m);
 
 	if (pm < 1e-10f)
@@ -228,7 +228,7 @@ bool RoughDielectricBSDF(
 	float F = dielectricReflectance(1.0f/ior, wiDotM, &cosThetaT);
 	float etaM = wiDotM < 0.0f ? ior : 1.0f/ior;
 
-	bool reflect = get_random(seed0, seed1) < F;
+	bool reflect = get_random(RNG_SEED_VALUE) < F;
 
 	if (reflect)
 		event->wo = 2.0f*wiDotM*m - wi;
@@ -272,7 +272,7 @@ bool RoughDielectricBSDF(
 bool Conductor(
 	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
-	uint* seed0, uint* seed1
+	RNG_SEED_PARAM
 ){ 
 #define wi event->wi
 	
@@ -293,7 +293,7 @@ bool RoughConductor(
 	const int dist,
 	Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat, 
-	uint* seed0, uint* seed1
+	RNG_SEED_PARAM
 ){ 
 #define wi event->wi
 	
@@ -302,7 +302,7 @@ bool RoughConductor(
 
 	float alpha = roughnessToAlpha(dist, mat->roughness);
 
-	float3 m = Microfacet_sample(dist, alpha, hash_2ui_2f32(seed0, seed1));
+	float3 m = Microfacet_sample(dist, alpha, hash_2ui_2f32(RNG_SEED_VALUE));
 	float wiDotM = dot(wi, m);
 	float3 wo = 2.0f*wiDotM*m - wi;
 	if (wiDotM <= 0.0f || wo.z <= 0.0f)

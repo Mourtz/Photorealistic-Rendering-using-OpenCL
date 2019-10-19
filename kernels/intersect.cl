@@ -103,7 +103,7 @@ bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool 
 /* sample caustics for light tracing */
 bool sampleCaustics(Ray* ray, 
 	const Mesh* mesh, const Scene* scene, 
-	const bool isOBJ, uint* seed0, uint* seed1
+	const bool isOBJ, RNG_SEED_PARAM
 ) {
 	const float nc = 1.0f;
 	const float nt = 1.5f;
@@ -112,7 +112,7 @@ bool sampleCaustics(Ray* ray,
 	float3 tdir = refract(ray->dir, ray->normal, nnt);
 
 	/* reflect */
-	if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
+	if (dot(tdir, tdir) == 0.0f || get_random(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
 		return false;
 	}
 	/* refract */
@@ -126,7 +126,7 @@ bool sampleCaustics(Ray* ray,
 			if (!intersect_mesh(ray, mesh, scene, isOBJ)) return false;
 			tdir = refract(ray->dir, ray->normal, nnt);
 
-			if (dot(tdir, tdir) == 0.0f || get_random(seed0, seed1) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
+			if (dot(tdir, tdir) == 0.0f || get_random(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
 				return false;
 			}
 			else {

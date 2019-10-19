@@ -14,7 +14,7 @@ float3 calcDirectLight(
 	const Scene* scene,
 	const uint* light_index,
 	float3* wi,
-	uint* seed0, uint* seed1,
+	RNG_SEED_TYPE,
 	const int c_mesh_id
 
 ){ 
@@ -24,7 +24,7 @@ float3 calcDirectLight(
 	Ray shadowRay;
 	shadowRay.origin = ray->origin;
 
-	const float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+	const float2 xi = (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME));
 
 #ifdef __SPHERE__
 	if (light.t & SPHERE) {
@@ -99,7 +99,7 @@ float4 radiance(
 	__read_only image2d_t env_map,
 	Ray* ray,
 	__global RLH* rlh,
-	uint* seed0, uint* seed1
+	RNG_SEED_TYPE
 ){
 	++rlh->bounce.total;
 
@@ -147,7 +147,7 @@ float4 radiance(
 	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
 
 	MediumSample gm_sample;
-	sampleDistance(ray, &gm_sample, &g_medium, seed0, seed1);
+	sampleDistance(ray, &gm_sample, &g_medium, RNG_SEED_NAME);
 	rlh->mask *= gm_sample.weight;
 	
 	if (++rlh->media.scatters < 1024 && !gm_sample.exited){
@@ -158,10 +158,10 @@ float4 radiance(
 #if 0
 		/* Henyey-Greenstein phase function */
 		PhaseSample p_sample;
-		hg_sample(ray->dir, gm_hg_g, &p_sample, seed0, seed1);
+		hg_sample(ray->dir, gm_hg_g, &p_sample, RNG_SEED_NAME);
 		ray->dir = p_sample.w;
 #else 
-		ray->dir = uniformSphere((float2)(get_random(seed0, seed1), get_random(seed0, seed1)));
+		ray->dir = uniformSphere((float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME)));
 #endif
 		// @ToDo clear this thing out, fix the light sampling code!!!!!!!
 		ray->normal = ray->dir;
@@ -191,7 +191,7 @@ float4 radiance(
 		if (false) 
 #endif
 		{
-			LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
+			LambertBSDF(ray, &surfaceEvent, &mat, RNG_SEED_NAME);
 	
 			rlh->mask *= surfaceEvent.weight;
 
@@ -202,7 +202,7 @@ float4 radiance(
 #ifdef COND
 		else if (mat.t & COND)
 		{
-			if (!Conductor(ray, &surfaceEvent, &mat, seed0, seed1)){
+			if (!Conductor(ray, &surfaceEvent, &mat, RNG_SEED_NAME)){
 				rlh->bounce.total = 0;
 				return acc;
 			}
@@ -217,7 +217,7 @@ float4 radiance(
 #ifdef ROUGH_COND
 		else if (mat.t & ROUGH_COND)
 		{
-			if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, seed0, seed1)){
+			if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, RNG_SEED_NAME)){
 				rlh->bounce.total = 0;
 				return acc;
 			}
@@ -232,7 +232,7 @@ float4 radiance(
 #ifdef DIEL
 		else if (mat.t & DIEL) 
 		{
-			if (!DielectricBSDF(ray, &surfaceEvent, &mat, seed0, seed1)){
+			if (!DielectricBSDF(ray, &surfaceEvent, &mat, RNG_SEED_NAME)){
 				rlh->bounce.total = 0;
 				return acc;
 			}
@@ -247,7 +247,7 @@ float4 radiance(
 #ifdef ROUGH_DIEL
 		else if (mat.t & ROUGH_DIEL) 
 		{
-			if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, seed0, seed1)){
+			if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, RNG_SEED_NAME)){
 				rlh->bounce.total = 0;
 				return acc;
 			}
@@ -263,7 +263,7 @@ float4 radiance(
 		else if (mat.t & COAT)
 		{
 			/* reflect */
-			if (get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
+			if (get_random(RNG_SEED_NAME) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
 				ray->origin = ray->pos + ray->normal * EPS;
 				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
@@ -272,7 +272,7 @@ float4 radiance(
 			}
 			/* diffuse */
 			else {
-				LambertBSDF(ray, &surfaceEvent, &mat, seed0, seed1);
+				LambertBSDF(ray, &surfaceEvent, &mat, RNG_SEED_NAME);
 
 				rlh->mask *= surfaceEvent.weight;
 
@@ -312,7 +312,7 @@ float4 radiance(
 				};
 
 				MediumSample m_sample;
-				sampleDistance(ray, &m_sample, &medium, seed0, seed1);
+				sampleDistance(ray, &m_sample, &medium, RNG_SEED_NAME);
 
 				rlh->mask *= m_sample.weight;
 
@@ -320,7 +320,7 @@ float4 radiance(
 					ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 					ray->backside = false;
 				} else {
-					float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+					float2 xi = (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME));
 					ray->origin = m_sample.p;
 					#if 1
 						ray->dir = uniformSphere(xi);
@@ -357,7 +357,7 @@ float4 radiance(
 		else if (mat.t & SPECSUB)
 		{
 			if (!ray->backside) {
-				if(get_random(seed0, seed1) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)){
+				if(get_random(RNG_SEED_NAME) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)){
 					ray->origin = ray->pos + ray->normal * EPS;
 					ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
 
@@ -391,7 +391,7 @@ float4 radiance(
 					};
 
 					MediumSample m_sample;
-					sampleDistance(ray, &m_sample, &medium, seed0, seed1);
+					sampleDistance(ray, &m_sample, &medium, RNG_SEED_NAME);
 
 					rlh->mask *= m_sample.weight;
 
@@ -399,7 +399,7 @@ float4 radiance(
 						ray->origin = ray->origin + ray->dir * (ray->t + EPS);
 						ray->backside = false;
 					} else {
-						float2 xi = (float2)(get_random(seed0, seed1), get_random(seed0, seed1));
+						float2 xi = (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME));
 						ray->origin = m_sample.p;
 						#if 1
 							ray->dir = uniformSphere(xi);
@@ -443,7 +443,7 @@ float4 radiance(
 	//russian roulette
 	const float roulettePdf = fmax3(rlh->mask);
 	if (roulettePdf < 0.1f) {
-		if (get_random(seed0, seed1) < roulettePdf){
+		if (get_random(RNG_SEED_NAME) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {
 			rlh->media.in = rlh->bounce.total = 0;
@@ -458,7 +458,7 @@ float4 radiance(
 
 				if (fast_distance(ray->origin, scene->meshes[index].pos) >= INF) continue;
 
-				float3 dLight = calcDirectLight(ray, scene, &index, &wi, seed0, seed1, rlh->mesh_id);
+				float3 dLight = calcDirectLight(ray, scene, &index, &wi, RNG_SEED_NAME, rlh->mesh_id);
 				// emmision += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 				emmision += dLight * rlh->mask * fmax(0.01f, dot(fast_normalize(wi), ray->normal));
 			}

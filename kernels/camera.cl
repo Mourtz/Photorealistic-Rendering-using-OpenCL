@@ -8,7 +8,7 @@ typedef struct {
 	float focalDistance;
 } Camera;
 
-Ray createCamRay(const int2 coord, const int width, const int height, __constant Camera* cam, uint* seed0, uint* seed1) {
+Ray createCamRay(const int2 coord, const int width, const int height, __constant Camera* cam, RNG_SEED_TYPE) {
 
 	/* create a local coordinate frame for the camera */
 	float3 rendercamview = cam->view; rendercamview = normalize(rendercamview);
@@ -34,8 +34,8 @@ Ray createCamRay(const int2 coord, const int width, const int height, __constant
 	/* if aperture is non-zero (aperture is zero for pinhole camera), pick a random point on the aperture/lens */
 	if (cam->apertureRadius > 0.00001f) {
 
-		float random1 = get_random(seed0, seed1);
-		float random2 = get_random(seed1, seed0);
+		float random1 = get_random(RNG_SEED_NAME);
+		float random2 = get_random(RNG_SEED_NAME);
 
 		float angle = 2 * PI * random1;
 		float distance = cam->apertureRadius * sqrt(random2);

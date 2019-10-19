@@ -1,7 +1,15 @@
 #ifndef __VALUE_NOISE__
 #define __VALUE_NOISE__
 
-#define value_hash hash_1f32_1f32
+float value_hash(float seed) {
+	float fl;
+#if 1
+	return fract(sin(seed) * 43758.5453123f, &fl);
+#else
+	float res = fract(seed * 43758.5453123f, &fl);
+	return fract(dot(res, res * (fl * 213.321f)), &fl);
+#endif
+}
 
 float value_noise(const float3 x){ 
 	const float3 step = (float3)(110.0f, 241.0f, 171.0f);
@@ -38,7 +46,5 @@ float value_fbm(
 	}
 	return v;
 }
-
-#undef value_hash
 
 #endif

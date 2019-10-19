@@ -1,18 +1,8 @@
 #ifndef __PRNG__
 #define __PRNG__
 
-inline float next1D(ulong* state){
-	ulong oldState = *state;
-	*state = oldState*6364136223846793005UL + 1;
-	uint xorShifted = (uint)(((oldState >> 18u) ^ oldState) >> 27u);
-	uint rot = oldState >> 59u;
-	return normalizedUint((xorShifted >> rot) | (xorShifted << ((uint)(-(int)(rot)) & 31)));
-}
-
-#define hash_2ui_2f32(state) (float2)(next1D(state), next1D(state))
-#define nextBoolean(c, state) (next1D(state) < c)
-
-inline float get_random(uint *seed0, uint *seed1) {
+#if RNG_TYPE == 0
+inline float get_random(RNG_SEED_TYPE) {
 	/* hash the seeds */
 	*seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);
 	*seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
@@ -25,9 +15,24 @@ inline float get_random(uint *seed0, uint *seed1) {
 	return (res.f - 2.0f) * 0.5f;
 }
 
-#define nextBoolean(c, seed0, seed1) (get_random(seed0, seed1) < c)
-// 2ui -> 2f32
-#define hash_2ui_2f32(seed0, seed1) (float2)(get_random(seed0, seed1), get_random(seed0, seed1))
+#define nextBoolean(c, RNG_SEED_NAME) (get_random(RNG_SEED_NAME) < c)
+#define hash_2ui_2f32(RNG_SEED_NAME) (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME))
+
+#elif RNG_TYPE == 1
+inline float get_random(RNG_SEED_TYPE) {
+	ulong oldState = *state;
+	*state = oldState * 6364136223846793005UL + 1;
+	uint xorShifted = (uint)(((oldState >> 18u) ^ oldState) >> 27u);
+	uint rot = oldState >> 59u;
+	return normalizedUint((xorShifted >> rot) | (xorShifted << ((uint)(-(int)(rot)) & 31)));
+}
+
+#define nextBoolean(c, RNG_SEED_NAME) (get_random(RNG_SEED_NAME) < c)
+#define hash_2ui_2f32(RNG_SEED_NAME) (float2)(get_random(RNG_SEED_NAME), get_random(RNG_SEED_NAME))
+
+#endif
+
+#if 0
 
 //---------------------------------- SIN HASH ----------------------------------
 
@@ -123,5 +128,6 @@ uint WangHash(uint x){
 
 	return x;
 }
+#endif
 
 #endif

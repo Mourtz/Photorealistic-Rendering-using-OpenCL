@@ -209,8 +209,6 @@ bool intersect_scene(
 	const Scene* scene
 ) {
 	ray->t = INF;
-	// ray->incomingRayDir = -ray->dir;
-
 	*mesh_id = -1;
 
 #ifdef __BVH__

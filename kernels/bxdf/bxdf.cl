@@ -119,11 +119,11 @@ void LambertBSDF(
 	event->weight = mat->color;
 }
 
-float3 LambertBSDF_eval(SurfaceScatterEvent* event, const Material* mat){
+float3 LambertBSDF_eval(const SurfaceScatterEvent* event, const Material* mat){
 	return mat->color * INV_PI * event->wo.z;
 }
 
-float LambertBSDF_pdf(SurfaceScatterEvent* event) {
+float LambertBSDF_pdf(const SurfaceScatterEvent* event) {
 	cosineHemispherePdf(event->wo);
 }
 

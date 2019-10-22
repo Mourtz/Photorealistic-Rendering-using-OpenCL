@@ -91,8 +91,9 @@ float4 radiance(
 		if (enableLightSampling) {
 			ray->origin = ray->pos + ray->normal * EPS;
 
-			float3 dLight = lightSample(&surfaceEvent, ray, scene, RNG_SEED_VALUE, rlh->mesh_id);
-			//dLight += bsdfSample(&surfaceEvent, ray, scene, RNG_SEED_VALUE, rlh->mesh_id);
+			float3 dLight = F3_ZERO;
+			dLight += lightSample(&surfaceEvent, ray, scene, RNG_SEED_VALUE, &mat);
+			dLight += bsdfSample(&surfaceEvent, ray, scene, RNG_SEED_VALUE, &mat);
 
 			// emmision += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
 			emmision += dLight * rlh->mask;
@@ -124,7 +125,6 @@ float4 radiance(
 
 			ray->origin = ray->pos + ray->normal * EPS;
 			ray->dir = toGlobal(&surfaceEvent.frame, surfaceEvent.wo);
-
 
 			++rlh->bounce.diff;
 			rlh->bounce.isSpecular = false;

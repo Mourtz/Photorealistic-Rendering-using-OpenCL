@@ -176,7 +176,7 @@ typedef struct {
 	float3 color;		// albedo/specular
 	float roughness;	// surface roughness
 	ushort t;			// mesh type
-	uchar tex;			// asigned texture/s
+	uchar lobe;			// asigned texture/s
 	bool b;				// backface culling
 } Material;
 
@@ -185,7 +185,11 @@ typedef struct {
 typedef struct {
 	Material mat;	// assigned material
 	float3 pos;		// position
-	float16 joker;	// generic data
+	union {			// generic data
+		float16 joker;	
+		float* value;
+		float radius;
+	};
 	uchar t;		// type
 } Mesh;
 
@@ -208,11 +212,21 @@ typedef struct {
 	float4 bbMax;
 } bvhNode;
 
+//------------- Light Sampler -------------
+typedef struct {
+	float3 d;
+	float dist;
+	float pdf;
+	//const Medium* medium;
+} LightSample;
+
+#if 0
 typedef struct {
 	float4 pos;
 	float4 rgb;
 	float4 data;
 } light_t;
+#endif
 
 typedef struct {
 	__constant Mesh* meshes;

@@ -112,19 +112,20 @@ void LambertBSDF(
 	const Material* mat, 
 	RNG_SEED_PARAM
 ){ 
-	float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
+	float2 xi = next2D(RNG_SEED_VALUE);
 
-	ray->dir = cosineHemisphere(&xi);
-
-	event->pdf = cosineHemispherePdf(ray->dir);
+	event->wo = cosineHemisphere(&xi);
+	event->pdf = cosineHemispherePdf(event->wo);
 	event->weight = mat->color;
-
-	ray->origin = ray->pos + ray->normal * EPS;
-	ray->dir = toGlobal(&event->frame, ray->dir);
 }
 
-#define LambertBSDF_eval(ray, mat) mat->color*INV_PI*ray->dir.z
-#define LambertBSDF_pdf(ray) cosineHemispherePdf(ray->dir)
+float3 LambertBSDF_eval(SurfaceScatterEvent* event, const Material* mat){
+	return mat->color * INV_PI * event->wo.z;
+}
+
+float LambertBSDF_pdf(SurfaceScatterEvent* event) {
+	cosineHemispherePdf(event->wo);
+}
 
 /*----------------- FIBER -----------------*/
 

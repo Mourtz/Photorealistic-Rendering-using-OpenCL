@@ -205,7 +205,7 @@ bool shadow(
 /* find the closest intersection in the scene */
 bool intersect_scene(
 	Ray* ray, 
-	__global int* mesh_id, 
+	int* mesh_id, 
 	const Scene* scene
 ) {
 	ray->t = INF;

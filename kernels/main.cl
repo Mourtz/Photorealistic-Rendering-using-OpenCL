@@ -48,8 +48,8 @@ typedef struct {
 #FILE:utils.cl
 #FILE:noise/value_noise.cl
 #FILE:camera.cl
-#FILE:bxdf/bxdf.cl
 #FILE:intersect.cl
+#FILE:bxdf/bxdf.cl
 #FILE:media.cl
 
 typedef struct {

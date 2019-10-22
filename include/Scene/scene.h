@@ -90,6 +90,10 @@ struct host_scene
 		if ((*_doc).HasMember("type") && (*_doc)["type"].IsInt())
 		{
 			_mat.t = 1 << (*_doc)["type"].GetInt();
+			if (_mat.t & DIFF) {
+				_mat.lobe = DiffuseReflectionLobe;
+			}
+
 			if (_mat.t & (DIEL | ROUGH_DIEL))
 			{
 				/* abosrptive? */

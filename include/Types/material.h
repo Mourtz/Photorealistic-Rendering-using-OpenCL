@@ -30,7 +30,6 @@ constexpr uint16_t ABS_REFR		= 1 << 8;
 // Absorptive 2
 constexpr uint16_t ABS_REFR2	= 1 << 9;
 
-/*
 //------------------ LOBES ------------------ 
 
 constexpr uint8_t NullLobe                  = 0;
@@ -52,7 +51,6 @@ constexpr uint8_t ReflectiveLobe            = (GlossyReflectionLobe   | DiffuseR
 
 constexpr uint8_t AllLobes                  = (TransmissiveLobe | ReflectiveLobe | AnisotropicLobe);
 constexpr uint8_t AllButSpecular            = (~(SpecularLobe | ForwardLobe));
-*/
 
 //------------------ TEXTURE TYPES ------------------ 
 
@@ -72,9 +70,9 @@ struct Material
 	ALIGN(16)vec4 color;
 	float roughness;
 	cl_ushort t;
-	cl_uchar tex;
+	cl_uchar lobe;
 	bool b;
 
-	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)), roughness(0.0f), t(DIFF), tex(TEX_NULL), b(true) {}
-	Material(vec4 _color, float _roughness, uint16_t _t, uint8_t _tex, bool _b) : color(_color), roughness(_roughness), t(_t), tex(_tex), b(_b) {}
+	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)), roughness(0.0f), t(DIFF), lobe(NullLobe), b(true) {}
+	Material(vec4 _color, float _roughness, uint16_t _t, uint8_t _tex, bool _b) : color(_color), roughness(_roughness), t(_t), lobe(NullLobe), b(_b) {}
 };

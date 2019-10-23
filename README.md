@@ -28,6 +28,7 @@ __Prtsc__ - Export
 ## Features
 - SAH BVH
 - Volumetric pathtracing (homogeneous, exponential medium)
+- Multiple Importance Sampling (MIS)
 - SDF Raymarching
 - Thin lens camera
 - Image-based lighting
@@ -56,7 +57,6 @@ __Prtsc__ - Export
 - Volumetric pathtracing (heterogeneous medium)
 - Volumetric pathtracing (SDF density map)
 - Photon Mapping
-- MIS
 - Bi-Directional PT
 - MLT
 - Sheen BRDF

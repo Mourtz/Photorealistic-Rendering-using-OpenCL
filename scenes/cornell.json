@@ -1,8 +1,8 @@
 {
   "settings": {
-    "MAX_BOUNCES": 128,
-    "MAX_DIFF_BOUNCES": 32,
-    "MAX_SPEC_BOUNCES": 64,
+    "MAX_BOUNCES": 32,
+    "MAX_DIFF_BOUNCES": 8,
+    "MAX_SPEC_BOUNCES": 32,
     "MAX_TRANS_BOUNCES": 64,
     "MAX_SCATTERING_EVENTS": 128,
 
@@ -13,7 +13,9 @@
     "obj": {
       "path": "suzanne.obj",
       "material": {
-        "color": [ 0.5, 0.8, 0.2 ]
+        "color": [ 1.0, 1.0, 0.4 ],
+        "type": 3,
+        "roughness":  0.1
       }
     },
     "spheres": [
@@ -21,7 +23,7 @@
         "pos": [ 0.0, 2.0, 0.0 ],
         "radius": 0.5,
         "material": {
-          "color": [ 15.0, 15.0, 15.0 ],
+          "color": [ 15.0, 15.0, 20.0 ],
           "type": 0
         }
       }

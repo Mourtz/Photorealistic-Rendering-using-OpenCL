@@ -269,8 +269,18 @@ bool intersect_scene(
 	}
 #endif
 
+#if defined DIEL && defined ROUGH_DIEL
+	const bool nTrans = scene->meshes[*mesh_id].mat.t & ~(DIEL | ROUGH_DIEL);
+#elif defined DIEL
+	const bool nTrans = scene->meshes[*mesh_id].mat.t & ~DIEL;
+#elif defined ROUGH_DIEL
+	const bool nTrans = scene->meshes[*mesh_id].mat.t & ~ROUGH_DIEL;
+#else
+	const bool nTrans = true;
+#endif
+
 	ray->backside = dot(ray->normal, ray->dir) > 0.0f;
-	ray->normal = ray->backside ? -ray->normal : ray->normal;
+	ray->normal = nTrans && ray->backside ? -ray->normal : ray->normal;
 
 	return ray->t < INF;
 }

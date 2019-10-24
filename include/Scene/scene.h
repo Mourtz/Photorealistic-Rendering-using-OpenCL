@@ -90,8 +90,24 @@ struct host_scene
 		if ((*_doc).HasMember("type") && (*_doc)["type"].IsInt())
 		{
 			_mat.t = 1 << (*_doc)["type"].GetInt();
-			if (_mat.t & DIFF) {
-				_mat.lobe = DiffuseReflectionLobe;
+
+			if (_mat.t & LIGHT) {
+				_mat.lobes = NullLobe;
+			}
+			else if (_mat.t & DIFF) {
+				_mat.lobes = DiffuseReflectionLobe;
+			} 
+			else if (_mat.t & COND) {
+				_mat.lobes = SpecularReflectionLobe;
+			}
+			else if (_mat.t & ROUGH_COND) {
+				_mat.lobes = GlossyReflectionLobe;
+			}
+			else if (_mat.t & DIEL) {
+				_mat.lobes = SpecularReflectionLobe | SpecularTransmissionLobe;
+			}
+			else if (_mat.t & ROUGH_DIEL) {
+				_mat.lobes = GlossyReflectionLobe | GlossyTransmissionLobe;
 			}
 
 			if (_mat.t & (DIEL | ROUGH_DIEL))
@@ -189,6 +205,26 @@ struct host_scene
 					{
 
 						obj_mat->t = 1 << document["scene"]["obj"]["material"]["type"].GetInt();
+
+						if (obj_mat->t & LIGHT) {
+							obj_mat->lobes = NullLobe;
+						}
+						else if (obj_mat->t & DIFF) {
+							obj_mat->lobes = DiffuseReflectionLobe;
+						}
+						else if (obj_mat->t & COND) {
+							obj_mat->lobes = SpecularReflectionLobe;
+						}
+						else if (obj_mat->t & ROUGH_COND) {
+							obj_mat->lobes = GlossyReflectionLobe;
+						}
+						else if (obj_mat->t & DIEL) {
+							obj_mat->lobes = SpecularReflectionLobe | SpecularTransmissionLobe;
+						}
+						else if (obj_mat->t & ROUGH_DIEL) {
+							obj_mat->lobes = GlossyReflectionLobe | GlossyTransmissionLobe;
+						}
+
 						if (obj_mat->t & (DIEL | ROUGH_DIEL))
 						{
 							if (document["scene"]["obj"]["material"].HasMember("absorptive") &&

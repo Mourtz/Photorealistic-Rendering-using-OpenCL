@@ -1,12 +1,6 @@
 #ifndef __INTEGRATOR__
 #define __INTEGRATOR__
 
-__constant bool enableLightSampling			= true;
-__constant bool enableVolumeLightSampling 	= false;
-__constant bool lowOrderScattering 			= false;
-
-
-
 float4 radiance(
 	const Scene* scene,
 	__read_only image2d_t env_map,
@@ -19,8 +13,8 @@ float4 radiance(
 	SurfaceScatterEvent surfaceEvent;
 
 	float alpha = 1.0f;
-	float3 emmision = (float3)(0.0f);
-#define acc (float4)(emmision, alpha)
+	float3 emission = (float3)(0.0f);
+#define acc (float4)(emission, alpha)
 
 	// if ray is not in a meadium
 	if(!rlh->media.in){
@@ -84,134 +78,20 @@ float4 radiance(
 		const Mesh mesh = scene->meshes[rlh->mesh_id];
 		const Material mat = (rlh->mesh_id + 1) ? mesh.mat : *scene->mat;
 
-		surfaceEvent = makeLocalScatterEvent(ray, scene);
-
-#if 1
-#ifdef LIGHT
-		if (enableLightSampling) {
-			ray->origin = ray->pos + ray->normal * EPS;
-
-			float3 dLight = F3_ZERO;
-			dLight += lightSample(&surfaceEvent, ray, scene, RNG_SEED_VALUE, &mat);
-			dLight += bsdfSample(&surfaceEvent, ray, scene, RNG_SEED_VALUE, &mat);
-
-			// emmision += dLight * rlh->mask * hg_eval(ray->dir, fast_normalize(vwi), gm_hg_g) * exp(-(fast_length(vwi)+gm_sample.t)*g_medium.sigmaT);
-			emmision += dLight * rlh->mask;
-		}
-#endif
-#endif
-
-#if 1
-#ifdef LIGHT
-		if (mat.t & LIGHT /*&& rlh->bounce.isSpecular*/) {
-			if (!enableLightSampling || rlh->bounce.isSpecular)
-				emmision += rlh->mask * mat.color;
+		if (mat.t & LIGHT) {
+			if (rlh->bounce.isSpecular)
+				emission += mat.color * rlh->mask;
 
 			rlh->bounce.total = 0;
 			return acc;
 		}
-#endif
-#endif
 
-		/*-------------------- DIFFUSE --------------------*/
-#ifdef DIFF
-		if (mat.t & DIFF) 
-#else
-		if (false) 
-#endif
-		{
-			LambertBSDF(ray, &surfaceEvent, &mat, RNG_SEED_VALUE);
-			rlh->mask *= surfaceEvent.weight;
+		surfaceEvent = makeLocalScatterEvent(ray, scene);
 
-			ray->origin = ray->pos + ray->normal * EPS;
-			ray->dir = toGlobal(&surfaceEvent.frame, surfaceEvent.wo);
-
-			++rlh->bounce.diff;
-			rlh->bounce.isSpecular = false;
+		if (handleSurface(&surfaceEvent, ray, scene, RNG_SEED_VALUE, &mat, rlh, &emission)) {
+			rlh->bounce.total = 0;
+			return acc;
 		}
-		/*-------------------- CONDUCTOR --------------------*/
-#ifdef COND
-		else if (mat.t & COND)
-		{
-			if (!Conductor(ray, &surfaceEvent, &mat, RNG_SEED_VALUE)){
-				rlh->bounce.total = 0;
-				return acc;
-			}
-
-			rlh->mask *= surfaceEvent.weight;
-
-			++rlh->bounce.spec;
-			rlh->bounce.isSpecular = true;
-		}
-#endif
-		/*-------------------- ROUGH CONDUCTOR (GGX|BECKMANN|PHONG) --------------------*/
-#ifdef ROUGH_COND
-		else if (mat.t & ROUGH_COND)
-		{
-			if (!RoughConductor(GGX, ray, &surfaceEvent, &mat, RNG_SEED_VALUE)){
-				rlh->bounce.total = 0;
-				return acc;
-			}
-
-			rlh->mask *= surfaceEvent.weight;
-
-			++rlh->bounce.spec;
-			rlh->bounce.isSpecular = true;
-		}
-#endif
-		/*-------------------- DIELECTRIC --------------------*/
-#ifdef DIEL
-		else if (mat.t & DIEL) 
-		{
-			if (!DielectricBSDF(ray, &surfaceEvent, &mat, RNG_SEED_VALUE)){
-				rlh->bounce.total = 0;
-				return acc;
-			}
-
-			rlh->mask *= surfaceEvent.weight;
-
-			++rlh->bounce.spec;
-			rlh->bounce.isSpecular = true;
-		}
-#endif
-		/*---------------- ROUGH DIELECTRIC (GGX|BECKMANN|PHONG) ----------------*/
-#ifdef ROUGH_DIEL
-		else if (mat.t & ROUGH_DIEL) 
-		{
-			if (!RoughDielectricBSDF(BECKMANN, ray, &surfaceEvent, &mat, RNG_SEED_VALUE)){
-				rlh->bounce.total = 0;
-				return acc;
-			}
-
-			rlh->mask *= surfaceEvent.weight;
-
-			++rlh->bounce.spec;
-			rlh->bounce.isSpecular = true;
-		}
-#endif
-		/*-------------------- COAT --------------------*/
-#ifdef COAT
-		else if (mat.t & COAT)
-		{
-			/* reflect */
-			if (next1D(RNG_SEED_VALUE) < schlick(ray->dir, ray->normal, 1.0f, 1.4f)) {
-				ray->origin = ray->pos + ray->normal * EPS;
-				ray->dir = fast_normalize(reflect(ray->dir, ray->normal));
-
-				++rlh->bounce.spec;
-				rlh->bounce.isSpecular = true;
-			}
-			/* diffuse */
-			else {
-				LambertBSDF(ray, &surfaceEvent, &mat, RNG_SEED_VALUE);
-
-				rlh->mask *= surfaceEvent.weight;
-
-				++rlh->bounce.diff;
-				rlh->bounce.isSpecular = false;
-			}
-		}
-#endif
 	}
 
 	/* terminate if necessary */
@@ -226,7 +106,7 @@ float4 radiance(
 
 	//russian roulette
 	const float roulettePdf = fmax3(rlh->mask);
-	if (roulettePdf < 0.1f) {
+	if (rlh->bounce.total > 4 && roulettePdf < 0.1f) {
 		if (next1D(RNG_SEED_VALUE) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {

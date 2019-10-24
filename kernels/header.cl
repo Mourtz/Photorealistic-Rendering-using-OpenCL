@@ -167,16 +167,26 @@ typedef struct {
 	float3 wi, wo;
 	float3 weight;
 	float pdf;
+	uchar requestedLobe;
+	uchar sampledLobe;
 	TangentFrame frame;
 } SurfaceScatterEvent;
 
 //------------- Material -------------
 
 typedef struct {
-	float3 color;		// albedo/specular
+	union {
+		float3 color;
+		float3 emission;
+		float3 albedo;
+	};
+	float3 ior;
+	float3 eta;
+	float3 k;
 	float roughness;	// surface roughness
 	ushort t;			// mesh type
-	uchar lobe;			// asigned texture/s
+	uchar lobes;		// asigned lobe/s
+	uchar dist;			// distribution
 	bool b;				// backface culling
 } Material;
 

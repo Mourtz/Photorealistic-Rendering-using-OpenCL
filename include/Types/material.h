@@ -32,47 +32,80 @@ constexpr uint16_t ABS_REFR2	= 1 << 9;
 
 //------------------ LOBES ------------------ 
 
-constexpr uint8_t NullLobe                  = 0;
-constexpr uint8_t GlossyReflectionLobe      = (1 << 0);
-constexpr uint8_t GlossyTransmissionLobe    = (1 << 1);
-constexpr uint8_t DiffuseReflectionLobe     = (1 << 2);
-constexpr uint8_t DiffuseTransmissionLobe   = (1 << 3);
-constexpr uint8_t SpecularReflectionLobe    = (1 << 4);
-constexpr uint8_t SpecularTransmissionLobe  = (1 << 5);
-constexpr uint8_t AnisotropicLobe           = (1 << 6);
-constexpr uint8_t ForwardLobe               = (1 << 7);
+constexpr cl_uchar NullLobe                  = 0;
+constexpr cl_uchar GlossyReflectionLobe      = (1 << 0);
+constexpr cl_uchar GlossyTransmissionLobe    = (1 << 1);
+constexpr cl_uchar DiffuseReflectionLobe     = (1 << 2);
+constexpr cl_uchar DiffuseTransmissionLobe   = (1 << 3);
+constexpr cl_uchar SpecularReflectionLobe    = (1 << 4);
+constexpr cl_uchar SpecularTransmissionLobe  = (1 << 5);
+constexpr cl_uchar AnisotropicLobe           = (1 << 6);
+constexpr cl_uchar ForwardLobe               = (1 << 7);
 
-constexpr uint8_t GlossyLobe                = (  GlossyReflectionLobe |   GlossyTransmissionLobe);
-constexpr uint8_t DiffuseLobe               = ( DiffuseReflectionLobe |  DiffuseTransmissionLobe);
-constexpr uint8_t SpecularLobe              = (SpecularReflectionLobe | SpecularTransmissionLobe);
+constexpr cl_uchar GlossyLobe                = (  GlossyReflectionLobe |   GlossyTransmissionLobe);
+constexpr cl_uchar DiffuseLobe               = ( DiffuseReflectionLobe |  DiffuseTransmissionLobe);
+constexpr cl_uchar SpecularLobe              = (SpecularReflectionLobe | SpecularTransmissionLobe);
 
-constexpr uint8_t TransmissiveLobe          = (GlossyTransmissionLobe | DiffuseTransmissionLobe | SpecularTransmissionLobe);
-constexpr uint8_t ReflectiveLobe            = (GlossyReflectionLobe   | DiffuseReflectionLobe   | SpecularReflectionLobe);
+constexpr cl_uchar TransmissiveLobe          = (GlossyTransmissionLobe | DiffuseTransmissionLobe | SpecularTransmissionLobe);
+constexpr cl_uchar ReflectiveLobe            = (GlossyReflectionLobe   | DiffuseReflectionLobe   | SpecularReflectionLobe);
 
-constexpr uint8_t AllLobes                  = (TransmissiveLobe | ReflectiveLobe | AnisotropicLobe);
-constexpr uint8_t AllButSpecular            = (~(SpecularLobe | ForwardLobe));
+constexpr cl_uchar AllLobes                  = (TransmissiveLobe | ReflectiveLobe | AnisotropicLobe);
+constexpr cl_uchar AllButSpecular            = (~(SpecularLobe | ForwardLobe));
 
 //------------------ TEXTURE TYPES ------------------ 
 
 // total texture types
-constexpr uint8_t TOTAL_TEX_TYPES = 4;
+constexpr cl_uchar TOTAL_TEX_TYPES = 4;
 
-constexpr uint8_t TEX_NULL	= 0;
-constexpr uint8_t TEX_1		= 1 << 0;
-constexpr uint8_t TEX_2		= 1 << 1;
-constexpr uint8_t TEX_3		= 1 << 2;
-constexpr uint8_t TEX_4		= 1 << 3;
+constexpr cl_uchar TEX_NULL	= 0;
+constexpr cl_uchar TEX_1		= 1 << 0;
+constexpr cl_uchar TEX_2		= 1 << 1;
+constexpr cl_uchar TEX_3		= 1 << 2;
+constexpr cl_uchar TEX_4		= 1 << 3;
+
+#define BECKMANN	1 << 0
+#define PHONG		1 << 1
+#define GGX			1 << 2
+#define BLINN		1 << 3
+
+#define IOR_AIR		1.0f
+#define IOR_GLASS	1.5f
+
+// Copper (Cu) 
+#define Cu_eta	vec4(0.200438f, 0.924033f, 1.10221f)
+#define Cu_k	vec4(3.91295f, 2.45285f, 2.14219f)
 
 //--------------------------------------------------- 
 
 struct Material
 {
 	ALIGN(16)vec4 color;
+	ALIGN(16)vec4 ior;
+	ALIGN(16)vec4 eta;
+	ALIGN(16)vec4 k;
 	float roughness;
 	cl_ushort t;
-	cl_uchar lobe;
+	cl_uchar lobes;
+	cl_uchar dist;
 	bool b;
 
-	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)), roughness(0.0f), t(DIFF), lobe(NullLobe), b(true) {}
-	Material(vec4 _color, float _roughness, uint16_t _t, uint8_t _tex, bool _b) : color(_color), roughness(_roughness), t(_t), lobe(NullLobe), b(_b) {}
+	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)),
+		ior(IOR_GLASS),
+		eta(Cu_eta),
+		k(Cu_k),
+		roughness(0.0f),
+		t(DIFF), 
+		lobes(DiffuseLobe),
+		dist(GGX), 
+		b(true) {}
+
+	Material(vec4 _color, float _roughness, uint16_t _t, cl_uchar _tex, bool _b) : color(_color),
+		ior(IOR_GLASS),
+		eta(Cu_eta),
+		k(Cu_k),
+		roughness(_roughness),
+		t(_t), 
+		lobes(NullLobe),
+		dist(GGX), 
+		b(_b) {}
 };

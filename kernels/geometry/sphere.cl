@@ -14,13 +14,11 @@ bool intersect_sphere(Ray* ray, const Mesh* sphere) {
 		float t = -B - det;
 		if (t < ray->t && t > EPS) {
 			ray->t = t;
-			//ray->backside = false;
 			return true;
 		}
 		t = -B + det;
 		if (t < ray->t && t > EPS) {
 			ray->t = t;
-			//ray->backside = true;
 			return true;
 		}
     }

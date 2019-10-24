@@ -1,9 +1,20 @@
 #ifndef __T_BASE__
 #define __T_BASE__
 
+__constant bool enableVolumeLightSampling = false;
+__constant bool lowOrderScattering = false;
+#define CONSISTENCY_CHECKS 0
+
 SurfaceScatterEvent makeLocalScatterEvent(Ray* ray, const Scene* scene) {
 	TangentFrame frame = createTangentFrame(&ray->normal);
-	return (SurfaceScatterEvent){ toLocal(&frame, -ray->dir) , (float3)(0.0), (float3)(1.0), 1.0, frame };
+	return (SurfaceScatterEvent){ toLocal(&frame, -ray->dir) , (float3)(0.0), (float3)(1.0), 1.0, NullLobe, NullLobe, frame };
+}
+
+SurfaceScatterEvent makeForwardEvent(const SurfaceScatterEvent* event){
+	SurfaceScatterEvent copy = *event;
+	copy.wo = -copy.wi;
+	copy.requestedLobe = ForwardLobe;
+	return copy;
 }
 
 /*--------------------------- LIGHT ---------------------------*/
@@ -17,40 +28,39 @@ inline float powerHeuristic(float pdf0, float pdf1)
 
 float3 bsdfSample(
 	SurfaceScatterEvent* event,
-	const Ray* ray,
+	Ray* ray,
 	const Scene* scene,
 	RNG_SEED_PARAM,
-	const Material* mat
+	const Material* mat,
+	bool* terminate
 ) {
-	if (mat->t & DIFF) {
-		LambertBSDF(ray, event, mat, RNG_SEED_VALUE);
+	if (!BSDF2(event, ray, scene, mat, RNG_SEED_VALUE, false)) {
+		*terminate = true;
+		return (float3)(0.0f);
 	}
-	
+
 	float3 wo = toGlobal(&event->frame, event->wo);
 
-	Ray shadowRay;
-	shadowRay.origin = ray->origin;
-	shadowRay.dir = wo;
-
-#if 1
+#if CONSISTENCY_CHECKS
 	bool geometricBackside = (dot(wo, ray->normal) < 0.0f);
 	bool shadingBackside = (event->wo.z < 0.0f) ^ ray->backside;
 
 	if (geometricBackside == shadingBackside)
 #endif
 	{
+		ray->origin = ray->pos;
+		ray->dir = wo;
+
 		int mesh_id;
+		if (intersect_scene(ray, &mesh_id, scene)) {
+			const Mesh light = scene->meshes[mesh_id];
 
-		if (intersect_scene(&shadowRay, &mesh_id, scene)) {
-			if (!shadowRay.backside) {
-				const Mesh mesh = scene->meshes[mesh_id];
-				const Material mat = mesh.mat;
+			if (light.mat.t & LIGHT) {
+				*terminate = false;
 
-				if (mat.t & LIGHT) {
-					float3 contribution = mat.color * event->weight;
-					contribution *= powerHeuristic(event->pdf, sphere_directPdf(&mesh, &ray->origin));
-					return contribution;
-				}
+				float3 contribution = light.mat.color * event->weight;
+				contribution *= powerHeuristic(event->pdf, sphere_directPdf(&light, &ray->pos));
+				return contribution;
 			}
 		}
 	}
@@ -74,37 +84,35 @@ float3 lightSample(
 
 #ifdef __SPHERE__
 	if (light.t & SPHERE) {
-		if (!sphere_sampleDirect(&light, &ray->origin, &rec, RNG_SEED_VALUE))
+		if (!sphere_sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
 			return (float3)(0.0f);
 	}
 #endif
 
-	Ray shadowRay;
-	shadowRay.origin = ray->origin;
-	shadowRay.dir = rec.d;
-	shadowRay.t = rec.dist;
 
 	event->wo = toLocal(&event->frame, rec.d);
 
-#if 1
+#if CONSISTENCY_CHECKS
 	bool geometricBackside = (dot(rec.d, ray->normal) < 0.0f);
 	bool shadingBackside = (event->wo.z < 0.0f) ^ ray->backside;
 
 	if (geometricBackside == shadingBackside)
 #endif
 	{
-		if (mat->t & DIFF) {
-			float3 fr = LambertBSDF_eval(event, mat);
+		float3 fr = BSDF_eval2(event, mat, false);
 
-			if (dot(fr, fr) == 0.0)
-				return (float3)(0.0f);
+		if (dot(fr, fr) == 0.0)
+			return (float3)(0.0f);
 
-			if (shadow(&shadowRay, scene)) {
-				float3 contribution = (light.mat.color * fr) / rec.pdf;
-				contribution *= powerHeuristic(rec.pdf, LambertBSDF_pdf(event));
-				return contribution;
-			}
+		Ray shadowRay;
+		shadowRay.origin = ray->pos;
+		shadowRay.dir = rec.d;
+		shadowRay.t = rec.dist;
 
+		if (shadow(&shadowRay, scene)) {
+			float3 contribution = light.mat.color * fr / rec.pdf;
+			contribution *= powerHeuristic(rec.pdf, BSDF_pdf(event, mat));
+			return contribution;
 		}
 	}
 
@@ -113,5 +121,42 @@ float3 lightSample(
 }
 
 #endif
+
+bool handleSurface(
+	SurfaceScatterEvent* event,
+	Ray* ray,
+	const Scene* scene,
+	RNG_SEED_PARAM,
+	const Material* mat,
+	__global RLH* rlh,
+	float3* emmision
+) {
+	bool terminate = false;
+
+	if (mat->lobes & ~(SpecularLobe|ForwardLobe)) {
+#ifdef LIGHT
+		float3 directLight = lightSample(event, ray, scene, RNG_SEED_VALUE, mat);
+		directLight += bsdfSample(event, ray, scene, RNG_SEED_VALUE, mat, &terminate);
+		*emmision += directLight * rlh->mask;
+#endif
+	}
+	else {
+		if (!BSDF2(event, ray, scene, mat, RNG_SEED_VALUE, false)) {
+			return true;
+		}
+
+		ray->origin = ray->pos;
+		ray->dir = toGlobal(&event->frame, event->wo);
+	}
+
+	rlh->bounce.isSpecular = event->sampledLobe & SpecularLobe;
+
+	rlh->mask *= event->weight;
+	rlh->bounce.diff += (event->sampledLobe & DiffuseReflectionLobe) != 0;
+	rlh->bounce.spec += (event->sampledLobe & SpecularReflectionLobe) != 0;
+	rlh->bounce.trans += (event->sampledLobe & TransmissiveLobe) != 0;
+
+	return terminate;
+}
 
 #endif

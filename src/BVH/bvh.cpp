@@ -22,10 +22,10 @@ struct sortFacesCmp {
 	};
 };
 
-const cl_int BVH_MAXFACES(2);
-const cl_int BVH_SAHFACESLIMIT(100000);
-const bool BVH_SKIPAHEAD(true);
-const cl_float BVH_SKIPAHEAD_CMP(0.7);
+constexpr cl_int BVH_MAXFACES(1);
+constexpr cl_int BVH_SAHFACESLIMIT(100000);
+constexpr bool BVH_SKIPAHEAD(true);
+constexpr cl_float BVH_SKIPAHEAD_CMP(0.7);
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -529,7 +529,6 @@ cl_uint BVH::setMaxFaces(const int value) {
 }
 
 void BVH::skipAheadOfNodes() {
-	cl_float cmp = BVH_SKIPAHEAD_CMP;
 	cl_uint skippedLeft = 0;
 
 	for (cl_uint i = 0; i < mNodes.size(); i++) {
@@ -543,7 +542,7 @@ void BVH::skipAheadOfNodes() {
 			cl_float saNode = MathHelp::getSurfaceArea(node->bbMin, node->bbMax);
 			cl_float saLeft = MathHelp::getSurfaceArea(left->bbMin, left->bbMax);
 
-			if (saLeft / saNode >= cmp) {
+			if (saLeft / saNode >= BVH_SKIPAHEAD_CMP) {
 				node->skipNextLeft = true;
 				skippedLeft++;
 			}

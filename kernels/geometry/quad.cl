@@ -54,6 +54,14 @@ bool quad_sampleDirect(const Mesh* plane, const float3* p, LightSample* sample, 
 }
 
 
+float quad_directPdf(const Ray* ray, const Mesh* plane, const float3* p) {
+	float cosTheta = fabs(dot(_normal, ray->dir));
+	float t = dot(_normal, _base - *p) / dot(_normal, ray->dir);
+
+	return t * t / (cosTheta * _area);
+}
+
+
 #undef _base
 #undef _edge0
 #undef _edge1

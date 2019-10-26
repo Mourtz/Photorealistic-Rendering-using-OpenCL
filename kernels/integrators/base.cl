@@ -58,9 +58,22 @@ float3 bsdfSample(
 			if (light.mat.t & LIGHT) {
 				//*terminate = true;
 
-				float3 contribution = light.mat.color * event->weight;
-				contribution *= powerHeuristic(event->pdf, sphere_directPdf(&light, &ray->pos));
-				return contribution;
+				float dPdf = -1e3;
+#ifdef __SPHERE__
+				if (light.t & SPHERE)
+#else
+				if (false)
+#endif
+				{
+					dPdf = sphere_directPdf(&light, &ray->pos);
+				}
+#ifdef __QUAD__
+				else if (light.t & QUAD) {
+					dPdf = quad_directPdf(ray, &light, &ray->pos);
+				}
+#endif
+
+				return light.mat.color * event->weight * powerHeuristic(event->pdf, dPdf);
 			}
 		}
 	}
@@ -75,20 +88,31 @@ float3 lightSample(
 	RNG_SEED_PARAM,
 	const Material* mat
 ) {
-	const Mesh light = scene->meshes[LIGHT_INDICES[0]];
 
+#if 0
+	const Mesh light = scene->meshes[LIGHT_INDICES[0]];
+#else
 	// pick a random light source
-	//const Mesh light = scene->meshes[LIGHT_INDICES[(int)(next1D(RNG_SEED_VALUE) * (float)(LIGHT_COUNT+1))]];
+	const Mesh light = scene->meshes[LIGHT_INDICES[(int)(next1D(RNG_SEED_VALUE) * (float)(LIGHT_COUNT+1))]];
+#endif
 
 	LightSample rec;
 
 #ifdef __SPHERE__
-	if (light.t & SPHERE) {
+	if (light.t & SPHERE)
+#else
+	if (false)
+#endif
+	{
 		if (!sphere_sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
 			return (float3)(0.0f);
 	}
+#ifdef __QUAD__
+	else if (light.t & QUAD) {
+		if (!quad_sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
+			return (float3)(0.0f);
+	}
 #endif
-
 
 	event->wo = toLocal(&event->frame, rec.d);
 

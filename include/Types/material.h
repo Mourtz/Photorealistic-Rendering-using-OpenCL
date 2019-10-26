@@ -87,7 +87,6 @@ struct Material
 	cl_ushort t;
 	cl_uchar lobes;
 	cl_uchar dist;
-	bool b;
 
 	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)),
 		ior(IOR_GLASS),
@@ -96,8 +95,7 @@ struct Material
 		roughness(0.0f),
 		t(DIFF), 
 		lobes(DiffuseLobe),
-		dist(GGX), 
-		b(true) {}
+		dist(BECKMANN) {}
 
 	Material(vec4 _color, float _roughness, uint16_t _t, cl_uchar _tex, bool _b) : color(_color),
 		ior(IOR_GLASS),
@@ -106,6 +104,5 @@ struct Material
 		roughness(_roughness),
 		t(_t), 
 		lobes(NullLobe),
-		dist(GGX), 
-		b(_b) {}
+		dist(BECKMANN) {}
 };

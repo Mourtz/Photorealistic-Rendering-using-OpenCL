@@ -86,6 +86,11 @@ struct host_scene
 		{
 			_mat.roughness = (*_doc)["roughness"].GetFloat();
 		}
+		// obj's material distribution
+		if ((*_doc).HasMember("dist") && (*_doc)["dist"].IsInt())
+		{
+			_mat.dist = 1 << (*_doc)["dist"].GetInt();
+		}
 		/* type */
 		if ((*_doc).HasMember("type") && (*_doc)["type"].IsInt())
 		{
@@ -197,6 +202,13 @@ struct host_scene
 					{
 
 						obj_mat->roughness = document["scene"]["obj"]["material"]["roughness"].GetFloat();
+					}
+
+					// obj's material distribution
+					if (document["scene"]["obj"]["material"].HasMember("dist") &&
+						document["scene"]["obj"]["material"]["dist"].IsInt())
+					{
+						obj_mat->dist = 1 << document["scene"]["obj"]["material"]["dist"].GetInt();
 					}
 
 					// obj's material type
@@ -420,22 +432,26 @@ struct host_scene
 						quads[i]["vertices"].IsArray())
 					{
 
-						for (int p = 0; p < 12; p++)
+						GenericArray<false, Value::ValueType> vertices = quads[i]["vertices"].GetArray();
+
+						for (int p = 0; p < vertices.Size(); p++)
 						{
-							cpu_meshes[arr_pos].joker.s[p] = quads[i]["vertices"][p].GetFloat();
+							cpu_meshes[arr_pos].joker.s[p] = vertices[p].GetFloat();
 						}
-					}
 
-					// quad's normal side
-					if (quads[i].HasMember("flip_normal") &&
-						quads[i]["flip_normal"].IsBool())
-					{
+						// calculate quad's normal
+						vec4 normal = cross(
+							vec3(cpu_meshes[arr_pos].joker.s[3], cpu_meshes[arr_pos].joker.s[4], cpu_meshes[arr_pos].joker.s[5]),
+							vec3(cpu_meshes[arr_pos].joker.s[6], cpu_meshes[arr_pos].joker.s[7], cpu_meshes[arr_pos].joker.s[8])
+						);
 
-						cpu_meshes[arr_pos].joker.s[12] = quads[i]["flip_normal"].GetBool() ? -1.0f : 1.0f;
-					}
-					else
-					{
-						cpu_meshes[arr_pos].joker.s[12] = 1.0f;
+						cpu_meshes[arr_pos].joker.s[12] = normal.lengthsq3();
+
+						normal.normalize();
+						cpu_meshes[arr_pos].joker.s[9] = normal.x;
+						cpu_meshes[arr_pos].joker.s[10] = normal.y;
+						cpu_meshes[arr_pos].joker.s[11] = normal.z;
+
 					}
 
 					// quad's material

@@ -1,79 +1,63 @@
 #ifndef __QUAD__
 #define __QUAD__
 
+#define _base  plane->joker.s012
+#define _edge0 plane->joker.s345
+#define _edge1 plane->joker.s678
+#define _normal plane->joker.s9ab
+#define _area plane->joker.sC
+
 /* Quad intesection */
 bool intersect_quad(const Mesh* plane, Ray* ray) {
-
-	const float3 v0 = plane->joker.s012;
-	const float3 v1 = plane->joker.s345;
-	const float3 v2 = plane->joker.s678;
-	const float3 v3 = plane->joker.s9ab;
-
-	float3 v = v2 - v0;
-	float3 u = v1 - v0;
-	const float3 n = fast_normalize(cross(v, u)) * plane->joker.sC;
-
-	float3 w0 = ray->origin - v0;
-	float a = -dot(n, w0);
-	float b = dot(n, ray->dir);
+	float nDotW = dot(_normal, ray->dir);
 	
 	// parallel or backside
-	if (b < 0.0001f) return false;
+	if (nDotW < EPS5) return false;
 
-	// get intersect point of ray with quad plane
-	const float rt = a / b;
-	if (rt < EPS || rt >= ray->t)
+	float3 anchor = _base - (_edge0 + _edge1) * 0.5f;
+
+	float rt = dot(_normal, anchor - ray->origin) / nDotW;
+	if (rt < EPS3 || rt > ray->t)
 		return false;
 
-	const float3 x = ray->origin + rt * ray->dir; // intersect point of ray and plane
+	// ray-quad intersection point
+	float3 q = ray->origin + rt * ray->dir;
 
-	// is x inside first Triangle?
-	float uu = dot(u, u);
-	float uv = dot(u, v);
-	float vv = dot(v, v);
-	float3 w = x - v0;
-	float wu = dot(w, u);
-	float wv = dot(w, v);
-	float D = 1.0f / (uv * uv - uu * vv);
+	float3 v = q - anchor;
+	float l0 = dot(v, _edge0) / dot(_edge0, _edge0);
+	float l1 = dot(v, _edge1) / dot(_edge1, _edge1);
 
-	// get and test parametric coords
-	float s = (uv * wv - vv * wu) * D;
-	if (s >= 0.0f && s <= 1.0f)
-	{
-		float t = (uv * wu - uu * wv) * D;
-		if (t >= 0.0f && (s + t) <= 1.0f)
-		{
-			ray->backside = false;
-			ray->normal = -n;
-			ray->pos = x;
-			ray->t = rt;
-			return true;
-		}
-	}
+	if (l0 < 0.0f || l0 > 1.0f || l1 < 0.0f || l1 > 1.0f)
+		return false;
 
-	// is x inside second Triangle?
-	u = v3 - v0;
-	uu = dot(u, u);
-	uv = dot(u, v);
-	wu = dot(w, u);
-	D = 1.0f / (uv * uv - uu * vv);
-
-	// get and test parametric coords
-	s = (uv * wv - vv * wu) * D;
-	if (s >= 0.0f && s <= 1.0f)
-	{
-		float t = (uv * wu - uu * wv) * D;
-		if (t >= 0.0f && (s + t) <= 1.0f)
-		{
-			ray->backside = false;
-			ray->normal = -n;
-			ray->pos = x;
-			ray->t = rt;
-			return true;
-		}
-	}
-
-	return false;
+	ray->backside = false;
+	ray->normal = _normal;
+	ray->pos = q;
+	ray->t = rt;
+	return true;
 }
+
+bool quad_sampleDirect(const Mesh* plane, const float3* p, LightSample* sample, RNG_SEED_PARAM) {
+	if (dot(_normal, *p - _base) <= 0.0f)
+		return false;
+
+	float2 xi = next2D(RNG_SEED_VALUE);
+	float3 q = _base + xi.x * _edge0 + xi.y * _edge1;
+	sample->d = q - *p;
+	float rSq = dot(sample->d, sample->d);
+	sample->dist = native_sqrt(rSq);
+	sample->d /= sample->dist;
+	float cosTheta = -dot(_normal, sample->d);
+	sample->pdf = rSq / (cosTheta * _area);
+
+	return true;
+}
+
+
+#undef _base
+#undef _edge0
+#undef _edge1
+#undef _normal
+#undef _area
 
 #endif

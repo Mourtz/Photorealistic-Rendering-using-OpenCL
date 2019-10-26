@@ -80,7 +80,7 @@ float4 radiance(
 
 		if (mat.t & LIGHT) {
 			if (rlh->bounce.isSpecular)
-				emission += mat.color * rlh->mask;
+				emission += mat.emission * rlh->mask;
 
 			rlh->bounce.total = 0;
 			return acc;

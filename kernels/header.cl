@@ -187,7 +187,6 @@ typedef struct {
 	ushort t;			// mesh type
 	uchar lobes;		// asigned lobe/s
 	uchar dist;			// distribution
-	bool b;				// backface culling
 } Material;
 
 //------------- MESH -------------

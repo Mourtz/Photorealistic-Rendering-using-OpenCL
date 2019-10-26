@@ -12,12 +12,12 @@ bool intersect_sphere(Ray* ray, const Mesh* sphere) {
 	if (detSq >= 0.0f) {
 		float det = native_sqrt(detSq);
 		float t = -B - det;
-		if (t < ray->t && t > EPS) {
+		if (t < ray->t && t > EPS3) {
 			ray->t = t;
 			return true;
 		}
 		t = -B + det;
-		if (t < ray->t && t > EPS) {
+		if (t < ray->t && t > EPS3) {
 			ray->t = t;
 			return true;
 		}

@@ -56,7 +56,7 @@ float3 bsdfSample(
 			const Mesh light = scene->meshes[mesh_id];
 
 			if (light.mat.t & LIGHT) {
-				*terminate = false;
+				//*terminate = true;
 
 				float3 contribution = light.mat.color * event->weight;
 				contribution *= powerHeuristic(event->pdf, sphere_directPdf(&light, &ray->pos));

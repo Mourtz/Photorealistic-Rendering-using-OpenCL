@@ -167,17 +167,26 @@ typedef struct {
 	float3 wi, wo;
 	float3 weight;
 	float pdf;
+	uchar requestedLobe;
+	uchar sampledLobe;
 	TangentFrame frame;
 } SurfaceScatterEvent;
 
 //------------- Material -------------
 
 typedef struct {
-	float3 color;		// albedo/specular
+	union {
+		float3 color;
+		float3 emission;
+		float3 albedo;
+	};
+	float3 ior;
+	float3 eta;
+	float3 k;
 	float roughness;	// surface roughness
 	ushort t;			// mesh type
-	uchar tex;			// asigned texture/s
-	bool b;				// backface culling
+	uchar lobes;		// asigned lobe/s
+	uchar dist;			// distribution
 } Material;
 
 //------------- MESH -------------
@@ -185,7 +194,11 @@ typedef struct {
 typedef struct {
 	Material mat;	// assigned material
 	float3 pos;		// position
-	float16 joker;	// generic data
+	union {			// generic data
+		float16 joker;	
+		float* value;
+		float radius;
+	};
 	uchar t;		// type
 } Mesh;
 
@@ -208,11 +221,21 @@ typedef struct {
 	float4 bbMax;
 } bvhNode;
 
+//------------- Light Sampler -------------
+typedef struct {
+	float3 d;
+	float dist;
+	float pdf;
+	//const Medium* medium;
+} LightSample;
+
+#if 0
 typedef struct {
 	float4 pos;
 	float4 rgb;
 	float4 data;
 } light_t;
+#endif
 
 typedef struct {
 	__constant Mesh* meshes;

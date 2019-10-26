@@ -45,6 +45,18 @@ inline float normalizedUint(uint i){
 /* equirectangular mapping */
 #define envMapEquirect(dir) (float2)((atan2(dir.z, dir.x) * INV_TWO_PI) + 0.5f, acos(dir.y) * INV_PI)
 
+#define DiracAcceptanceThreshold 1e-3f
+
+inline bool checkReflectionConstraint(const float3* wi, const float3* wo){
+	return fabs(wi->z * wo->z - wi->x * wo->x - wi->y * wo->y - 1.0f) < DiracAcceptanceThreshold;
+}
+
+inline bool checkRefractionConstraint(const float3* wi, const float3* wo, float eta, float cosThetaT)
+{
+	float dotP = -wi->x * wo->x * eta - wi->y * wo->y * eta - copysign(cosThetaT, wi->z) * wo->z;
+	return fabs(dotP - 1.0f) < DiracAcceptanceThreshold;
+}
+
 inline float invertPhi(float3 w, float mu){
     float result = (w.x == 0.0f && w.y == 0.0f) ? mu*INV_TWO_PI : atan2(w.y, w.x)*INV_TWO_PI;
 	result += (result < 0.0f);
@@ -129,18 +141,20 @@ inline bool invertUniformSphericalCap(float3 w, float cosThetaMax, float2* xi, f
 
 //--------------------------------------------------------------------
 
-inline float3 cosineHemisphere(const float2* xi){ 
-    float phi = xi->x*TWO_PI;
-    float r = native_sqrt(xi->y);
+inline float3 cosineHemisphere(const float2 xi){ 
+    float phi = xi.x*TWO_PI;
+    float r = native_sqrt(xi.y);
     return (float3)(
 		native_cos(phi)*r,
 		native_sin(phi)*r,
-		native_sqrt(fmax(1.0f - xi->y, 0.0f))
+		native_sqrt(fmax(1.0f - xi.y, 0.0f))
     );
 }
 
-#define cosineHemispherePdf(p) fabs(p.z)*INV_PI
-#define invertCosineHemisphere(w, mu) (float2)(invertPhi(w, mu), fmax(1.0f - w.z*w.z, 0.0f))
+inline float cosineHemispherePdf(float3 p) { return  fabs(p.z) * INV_PI; }
+inline float2 invertCosineHemisphere(float3 w, float mu) {
+	return (float2)(invertPhi(w, mu), fmax(1.0f - w.z * w.z, 0.0f));
+}
 
 //--------------------------------------------------------------------
 

@@ -36,14 +36,17 @@ void traverseShadows(const Scene* scene, Ray* ray) {
 		const bvhNode node = scene->bvh[index];
 		const int currentIndex = index;
 
-		// @see traverse() for an explanation.
 		index = (node.bbMin.w <= -1.0f) ? (int)node.bbMax.w : currentIndex + 1;
 
 		float tNear = 0.0f;
-		float tFar = INFINITY;
+		float tFar = INF;
 
-		if (!intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) ||
-			tFar <= EPS) {
+		bool isNodeHit = (
+			intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) &&
+			tFar > EPS3
+		);
+
+		if (!isNodeHit) {
 			continue;
 		}
 
@@ -80,8 +83,12 @@ void traverse(const Scene* scene, Ray* ray) {
 		float tNear = 0.0f;
 		float tFar = INF;
 
-		if (!intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) ||
-			tFar <= EPS || ray->t <= tNear) {
+		bool isNodeHit = (
+			intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) &&
+			tFar > EPS3 && ray->t > tNear
+		);
+
+		if (!isNodeHit) {
 			continue;
 		}
 

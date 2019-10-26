@@ -6,17 +6,17 @@
 #include <align.h>
 #include <Types/material.h>
 
-constexpr uint8_t TOTAL_GEOM_TYPES	= 4;
-constexpr uint8_t SPHERE			= 1 << 0;
-constexpr uint8_t BOX				= 1 << 1;
-constexpr uint8_t SDF				= 1 << 2;
-constexpr uint8_t QUAD				= 1 << 3;
+constexpr cl_uchar TOTAL_GEOM_TYPES	= 4;
+constexpr cl_uchar SPHERE			= 1 << 0;
+constexpr cl_uchar BOX				= 1 << 1;
+constexpr cl_uchar SDF				= 1 << 2;
+constexpr cl_uchar QUAD				= 1 << 3;
 
-constexpr uint8_t TOTAL_SDF_TYPES	= 4;
-constexpr uint8_t SDF_SPHERE		= 1 << 4;
-constexpr uint8_t SDF_BOX			= 1 << 5;
-constexpr uint8_t SDF_ROUND_BOX		= 1 << 6;
-constexpr uint8_t SDF_PLANE			= 1 << 7;
+constexpr cl_uchar TOTAL_SDF_TYPES	= 4;
+constexpr cl_uchar SDF_SPHERE		= 1 << 4;
+constexpr cl_uchar SDF_BOX			= 1 << 5;
+constexpr cl_uchar SDF_ROUND_BOX	= 1 << 6;
+constexpr cl_uchar SDF_PLANE		= 1 << 7;
 
 struct Mesh {
 	Material mat;

@@ -12,12 +12,12 @@ bool intersect_sphere(Ray* ray, const Mesh* sphere) {
 	if (detSq >= 0.0f) {
 		float det = native_sqrt(detSq);
 		float t = -B - det;
-		if (t < ray->t && t > EPS3) {
+		if (t < ray->t && t > EPS) {
 			ray->t = t;
 			return true;
 		}
 		t = -B + det;
-		if (t < ray->t && t > EPS3) {
+		if (t < ray->t && t > EPS) {
 			ray->t = t;
 			return true;
 		}
@@ -32,9 +32,9 @@ bool intersect_sphere(Ray* ray, const Mesh* sphere) {
 	det = native_sqrt(det);
 
 	*dist = b - det;
-	if (*dist > EPS && *dist <= ray->t) return true;
+	if (*dist > EPS && *dist < ray->t) return true;
 	*dist = b + det;
-	if (*dist > EPS && *dist <= ray->t) return true;
+	if (*dist > EPS && *dist < ray->t) return true;
 #endif
 
 	return false;

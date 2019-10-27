@@ -176,7 +176,7 @@ bool handleSurface(
 	rlh->bounce.isSpecular = event->sampledLobe & SpecularLobe;
 
 	rlh->mask *= event->weight;
-	rlh->bounce.diff += (event->sampledLobe & DiffuseReflectionLobe) != 0;
+	rlh->bounce.diff += (event->sampledLobe & (DiffuseReflectionLobe| GlossyReflectionLobe)) != 0;
 	rlh->bounce.spec += (event->sampledLobe & SpecularReflectionLobe) != 0;
 	rlh->bounce.trans += (event->sampledLobe & TransmissiveLobe) != 0;
 

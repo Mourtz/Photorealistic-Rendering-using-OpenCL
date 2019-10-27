@@ -1,13 +1,7 @@
 #ifndef __HEADER__
 #define __HEADER__
 
-/* Epsilons */
-#define EPS2	1e-2f
-#define EPS3	1e-3f
-#define EPS4	1e-4f
-#define EPS5	1e-5f
-#define EPS		EPS5
-/* Infinity */
+#define EPS		1e-5f
 #define INF		2e1f
 
 #define PI				 3.1415926535897932384626433832795f

@@ -12,6 +12,9 @@ bool CoatBSDF(
 	const Material* mat,
 	RNG_SEED_PARAM
 ){
+	if (event->wi.z <= 0.0f)
+		return false;
+
 	const float eta = 1.0f / _ior;
 
 	float cosThetaTi;
@@ -53,6 +56,9 @@ bool CoatBSDF(
 }
 
 float3 CoatBSDF_eval(const SurfaceScatterEvent* event, const Material* mat) {
+	if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
+		return (float3)(0.0f);
+
 	const float eta = 1.0f / _ior;
 
 	float cosThetaTi;
@@ -80,6 +86,9 @@ float3 CoatBSDF_eval(const SurfaceScatterEvent* event, const Material* mat) {
 }
 
 float CoatBSDF_pdf(const SurfaceScatterEvent* event, const Material* mat) {
+	if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
+		return 0.0f;
+	
 	const float eta = 1.0f / _ior;
 
 	float cosThetaTi;

@@ -6,6 +6,9 @@ bool RoughConductorBSDF(
 	const Material* mat,
 	RNG_SEED_PARAM
 ) {
+	if (event->wi.z <= 0.0f)
+		return false;
+	
 	float alpha = roughnessToAlpha(mat->dist, mat->roughness);
 
 	float3 m = Microfacet_sample(mat->dist, alpha, next2D(RNG_SEED_VALUE));
@@ -31,6 +34,9 @@ bool RoughConductorBSDF(
 }
 
 float3 RoughConductorBSDF_eval(const SurfaceScatterEvent* event, const Material* mat){
+	if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
+		return (float3)(0.0f);
+
 	float alpha = roughnessToAlpha(mat->dist, mat->roughness);
 
 	float3 hr = normalize(event->wi + event->wo);
@@ -46,6 +52,9 @@ float3 RoughConductorBSDF_eval(const SurfaceScatterEvent* event, const Material*
 }
 
 float RoughConductorBSDF_pdf(const SurfaceScatterEvent* event, const Material* mat){
+	if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
+		return 0.0f; 
+	
 	float sampleAlpha = roughnessToAlpha(mat->dist, mat->roughness);
 
 	float3 hr = normalize(event->wi + event->wo);

@@ -191,11 +191,6 @@ bool BSDF2(
 	RNG_SEED_PARAM,
 	bool adjoint
 ) {
-	if ((mat->lobes & TransmissiveLobe) != 0) {
-		if (event->wi.z <= 0.0f)
-			return false;
-	}
-
 	if (!BSDF(event, ray, scene, mat, RNG_SEED_VALUE))
 		return false;
 
@@ -280,11 +275,6 @@ float3 BSDF_eval2(
 	const Material* mat,
 	bool adjoint
 ) {
-	if ((mat->lobes & TransmissiveLobe) != 0) {
-		if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
-			return (float3)(0.0f);
-	}
-
 	float3 f = BSDF_eval(event, mat);
 
 	if (adjoint) {
@@ -323,11 +313,6 @@ float BSDF_pdf(
 	const SurfaceScatterEvent* event,
 	const Material* mat
 ) {
-	if ((mat->lobes & TransmissiveLobe) != 0) {
-		if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
-			return 0.0f;
-	}
-
 #ifdef DIFF
 	if (mat->t & DIFF)
 #else

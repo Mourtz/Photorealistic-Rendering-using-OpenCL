@@ -12,12 +12,12 @@ bool intersect_quad(const Mesh* plane, Ray* ray) {
 	float nDotW = dot(_normal, ray->dir);
 	
 	// parallel or backside
-	if (nDotW < EPS5) return false;
+	if (nDotW < 1e-5) return false;
 
 	float3 anchor = _base - (_edge0 + _edge1) * 0.5f;
 
 	float rt = dot(_normal, anchor - ray->origin) / nDotW;
-	if (rt < EPS3 || rt > ray->t)
+	if (rt <= EPS || rt >= ray->t)
 		return false;
 
 	// ray-quad intersection point

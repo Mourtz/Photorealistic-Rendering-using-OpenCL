@@ -17,7 +17,7 @@ float3 flatTriAndRayIntersect(
 
 	*t = dot(edge2, qVec) * invDet;
 
-	if (*t >= ray->t || *t < EPS) {
+	if (*t >= ray->t || *t <= EPS) {
 		*t = INF;
 		return (float3)(0.0f);
 	}
@@ -32,7 +32,7 @@ float3 flatTriAndRayIntersect(
 
 	*t += f;
 
-	return fast_normalize(cross(edge1, edge2));
+	return normalize(cross(edge1, edge2));
 }
 
 float3 checkFaceIntersection(

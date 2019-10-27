@@ -6,9 +6,6 @@ bool LambertBSDF(
 	const Material* mat,
 	RNG_SEED_PARAM
 ) {
-	if (event->wi.z <= 0.0f)
-		return false;
-
 	event->wo = cosineHemisphere(next2D(RNG_SEED_VALUE));
 	event->pdf = cosineHemispherePdf(event->wo);
 	event->weight = mat->albedo;

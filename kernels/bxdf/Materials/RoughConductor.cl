@@ -1,4 +1,4 @@
-#if defined(ROUGH_COND) && !defined(__ROUGH_CONDUCTOR__)
+#if (defined(ROUGH_COND) || defined(COAT)) && !defined(__ROUGH_CONDUCTOR__)
 #define __ROUGH_CONDUCTOR__
 
 bool RoughConductorBSDF(

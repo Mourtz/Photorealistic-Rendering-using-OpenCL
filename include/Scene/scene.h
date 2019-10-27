@@ -105,7 +105,7 @@ struct host_scene
 			else if (_mat.t & COND) {
 				_mat.lobes = SpecularReflectionLobe;
 			}
-			else if (_mat.t & ROUGH_COND) {
+			else if (_mat.t & (ROUGH_COND | COAT)) {
 				_mat.lobes = GlossyReflectionLobe;
 			}
 			else if (_mat.t & DIEL) {
@@ -227,7 +227,7 @@ struct host_scene
 						else if (obj_mat->t & COND) {
 							obj_mat->lobes = SpecularReflectionLobe;
 						}
-						else if (obj_mat->t & ROUGH_COND) {
+						else if (obj_mat->t & (ROUGH_COND | COAT)) {
 							obj_mat->lobes = GlossyReflectionLobe;
 						}
 						else if (obj_mat->t & DIEL) {

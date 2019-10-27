@@ -67,7 +67,7 @@ float conductorReflectanceApprox(float eta, float k, float cosThetaI){
     return (Rs + Rp)*0.5f;
 }
 
-float dielectricReflectance(float eta, float cosThetaI, float *cosThetaT){
+inline float dielectricReflectance(float eta, float cosThetaI, float *cosThetaT){
     if (cosThetaI < 0.0f) {
         eta = 1.0f/eta;
         cosThetaI = -cosThetaI;
@@ -129,6 +129,10 @@ void LambertianFiberBCSDF(
 #FILE:bxdf/materials/Conductor.cl
 #FILE:bxdf/materials/RoughConductor.cl
 
+/*---------- COAT ----------*/
+#FILE:bxdf/materials/Coat.cl
+
+
 //------------------------------------------------------------------
 
 bool BSDF(
@@ -170,6 +174,11 @@ bool BSDF(
 		return RoughDielectricBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
 #endif
+#ifdef COAT
+	else if (mat->t & COAT) {
+		return CoatBSDF(ray, event, mat, RNG_SEED_VALUE);
+	}
+#endif
 
 	return false;
 }
@@ -182,6 +191,11 @@ bool BSDF2(
 	RNG_SEED_PARAM,
 	bool adjoint
 ) {
+	if ((mat->lobes & TransmissiveLobe) != 0) {
+		if (event->wi.z <= 0.0f)
+			return false;
+	}
+
 	if (!BSDF(event, ray, scene, mat, RNG_SEED_VALUE))
 		return false;
 
@@ -190,6 +204,7 @@ bool BSDF2(
 			(dot(toGlobal(&event->frame, event->wo), event->frame.normal) * event->wi.z) /
 			(dot(toGlobal(&event->frame, event->wi), event->frame.normal) * event->wo.z)); // TODO: Optimize
 	}
+#if defined(DIEL) || defined(ROUGH_DIEL)
 	else {
 		float eta = 1.0f;
 #ifdef DIEL
@@ -205,8 +220,10 @@ bool BSDF2(
 			eta = RoughDielectricBSDF_eta(event, mat);
 		}
 #endif
+
 		event->weight *= pow(eta, 2.0f);
 	}
+#endif
 
 	return true;
 }
@@ -249,6 +266,11 @@ float3 BSDF_eval(
 		return RoughDielectricBSDF_eval(event, mat);
 	}
 #endif
+#ifdef COAT
+	else if (mat->t & COAT) {
+		return CoatBSDF_eval(event, mat);
+	}
+#endif
 
 	return (float3)(0.0f);
 }
@@ -258,6 +280,11 @@ float3 BSDF_eval2(
 	const Material* mat,
 	bool adjoint
 ) {
+	if ((mat->lobes & TransmissiveLobe) != 0) {
+		if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
+			return (float3)(0.0f);
+	}
+
 	float3 f = BSDF_eval(event, mat);
 
 	if (adjoint) {
@@ -265,6 +292,7 @@ float3 BSDF_eval2(
 			(dot(toGlobal(&event->frame, event->wo), event->frame.normal) * event->wi.z) /
 			(dot(toGlobal(&event->frame, event->wi), event->frame.normal) * event->wo.z)); // TODO: Optimize
 	}
+#if defined(DIEL) || defined(ROUGH_DIEL)
 	else {
 		float eta = 1.0f;
 #ifdef DIEL
@@ -280,8 +308,10 @@ float3 BSDF_eval2(
 			eta = RoughDielectricBSDF_eta(event, mat);
 		}
 #endif
+
 		f *= pow(eta, 2.0f);
 	}
+#endif
 
 	return f;
 }
@@ -293,6 +323,10 @@ float BSDF_pdf(
 	const SurfaceScatterEvent* event,
 	const Material* mat
 ) {
+	if ((mat->lobes & TransmissiveLobe) != 0) {
+		if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
+			return 0.0f;
+	}
 
 #ifdef DIFF
 	if (mat->t & DIFF)
@@ -325,8 +359,13 @@ float BSDF_pdf(
 		return RoughDielectricBSDF_pdf(event, mat);
 	}
 #endif
+#ifdef COAT
+	else if (mat->t & COAT) {
+		return CoatBSDF_pdf(event, mat);
+	}
+#endif
 
-	return -1.0f;
+	return 0.0f;
 }
 
 /*

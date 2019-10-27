@@ -105,7 +105,7 @@ float4 radiance(
 	}
 
 	//russian roulette
-	const float roulettePdf = fmax3(rlh->mask);
+	const float roulettePdf = dot(rlh->mask, 1.0f);
 	if (rlh->bounce.total > 4 && roulettePdf < 0.1f) {
 		if (next1D(RNG_SEED_VALUE) < roulettePdf){
 			rlh->mask /= roulettePdf;

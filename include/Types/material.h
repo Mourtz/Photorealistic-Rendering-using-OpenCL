@@ -78,13 +78,20 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 
 // @ToDo implement SPDs
 
+// wavelengths
+// 0.74 µm, 0.56 µm, 0.38 µm
+
 // Copper (Cu) 
-#define Cu_eta	vec4(0.200438f, 0.924033f, 1.10221f)
-#define Cu_k	vec4(3.91295f, 2.45285f, 2.14219f)
+#define Cu_eta	vec4(0.29019f, 0.61122f, 1.2290f)
+#define Cu_k	vec4(3.5080f, 2.7107f, 2.1706f)
 
 // Gold (Au) 
-#define Au_eta	vec4(0.4391f, 1.4173f, 1.7933f)
-#define Au_k	vec4(3.6965f, 2.3158f, 2.1932f)
+#define Au_eta	vec4(0.17229f, 0.36901f, 1.5478f)
+#define Au_k	vec4(4.2223f, 2.4628f, 1.8063f)
+
+// Platinum (Pt) 
+#define Pt_eta	vec4(2.6656f, 2.1114f, 1.6782f)
+#define Pt_k	vec4(4.7023f, 3.7726f, 2.7284f)
 
 //--------------------------------------------------- 
 

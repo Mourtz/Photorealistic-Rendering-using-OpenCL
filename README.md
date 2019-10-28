@@ -1,3 +1,5 @@
+![header](header.png)
+
 # WIP
 - [X] flatten raytracing loop to reduce divergence between threads
 - [ ] write a new kernel for ray traversal in participating media

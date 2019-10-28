@@ -1,10 +1,9 @@
 ![header](header.png)
 # Photorealistic-Rendering-using-OpenCL
 My BSc thesis on Photorealistic rendering using OpenCL
-
-## @ToFix
-:exclamation: **Haven't found out yet how to sample the light sources inside a medium** :exclamation:
 ___
+Latest branch: [bleeding-edge](https://github.com/Mourtz/Photorealistic-Rendering-using-OpenCL/tree/bleeding-edge)
+
 ## Controls
 __Escape__ - Exit\
 __Space__ - Reset\

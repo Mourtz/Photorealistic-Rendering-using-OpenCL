@@ -70,10 +70,21 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 
 #define IOR_AIR		1.0f
 #define IOR_GLASS	1.5f
+#define IOR_CRYSTAL	2.0f
+#define IOR_GOLD	0.47f
+
+// handy site to extract data 
+// https://refractiveindex.info/
+
+// @ToDo implement SPDs
 
 // Copper (Cu) 
 #define Cu_eta	vec4(0.200438f, 0.924033f, 1.10221f)
 #define Cu_k	vec4(3.91295f, 2.45285f, 2.14219f)
+
+// Gold (Au) 
+#define Au_eta	vec4(0.4391f, 1.4173f, 1.7933f)
+#define Au_k	vec4(3.6965f, 2.3158f, 2.1932f)
 
 //--------------------------------------------------- 
 
@@ -90,8 +101,8 @@ struct Material
 
 	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)),
 		ior(IOR_GLASS),
-		eta(Cu_eta),
-		k(Cu_k),
+		eta(Au_eta),
+		k(Au_k),
 		roughness(0.0f),
 		t(DIFF), 
 		lobes(DiffuseLobe),
@@ -99,8 +110,8 @@ struct Material
 
 	Material(vec4 _color, float _roughness, uint16_t _t, cl_uchar _tex, bool _b) : color(_color),
 		ior(IOR_GLASS),
-		eta(Cu_eta),
-		k(Cu_k),
+		eta(Au_eta),
+		k(Au_k),
 		roughness(_roughness),
 		t(_t), 
 		lobes(NullLobe),

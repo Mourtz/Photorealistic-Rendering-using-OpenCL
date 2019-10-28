@@ -32,7 +32,7 @@ float3 refract(const float3 dir, const float3 nl, const float eta) {
 
 // From "PHYSICALLY BASED LIGHTING CALCULATIONS FOR COMPUTER GRAPHICS" by Peter Shirley
 // http://www.cs.virginia.edu/~jdl/bib/globillum/shirley_thesis.pdf
-float conductorReflectance(float eta, float k, float cosThetaI){
+inline float conductorReflectance(float eta, float k, float cosThetaI){
 	float cosThetaISq = cosThetaI * cosThetaI;
 	float sinThetaISq = fmax(1.0f - cosThetaISq, 0.0f);
 	float sinThetaIQu = sinThetaISq * sinThetaISq;
@@ -49,15 +49,7 @@ float conductorReflectance(float eta, float k, float cosThetaI){
 	return 0.5f*(Rs + Rs * Rp);
 }
 
-float3 conductorReflectance3(float3 eta, float3 k, float cosThetaI){
-    return (float3)(
-        conductorReflectance(eta.x, k.x, cosThetaI),
-        conductorReflectance(eta.y, k.y, cosThetaI),
-        conductorReflectance(eta.z, k.z, cosThetaI)
-    );
-}
-
-float conductorReflectanceApprox(float eta, float k, float cosThetaI){
+inline float conductorReflectanceApprox(float eta, float k, float cosThetaI){
     float cosThetaISq = cosThetaI*cosThetaI;
     float ekSq = eta*eta* + k*k;
     float cosThetaEta2 = cosThetaI*2.0f*eta;
@@ -65,6 +57,14 @@ float conductorReflectanceApprox(float eta, float k, float cosThetaI){
     float Rp = (ekSq*cosThetaISq - cosThetaEta2 + 1.0f)/(ekSq*cosThetaISq + cosThetaEta2 + 1.0f);
     float Rs = (ekSq - cosThetaEta2 + cosThetaISq)/(ekSq + cosThetaEta2 + cosThetaISq);
     return (Rs + Rp)*0.5f;
+}
+
+inline float3 conductorReflectance3(float3 eta, float3 k, float cosThetaI) {
+	return (float3)(
+		conductorReflectance(eta.x, k.x, cosThetaI),
+		conductorReflectance(eta.y, k.y, cosThetaI),
+		conductorReflectance(eta.z, k.z, cosThetaI)
+	);
 }
 
 inline float dielectricReflectance(float eta, float cosThetaI, float *cosThetaT){
@@ -83,6 +83,16 @@ inline float dielectricReflectance(float eta, float cosThetaI, float *cosThetaT)
     float Rp = (eta*(*cosThetaT) - cosThetaI)/(eta*(*cosThetaT) + cosThetaI);
 
     return (Rs*Rs + Rp*Rp)*0.5f;
+}
+
+inline float3 dielectricReflectance3(float3 eta, float cosThetaI, 
+	float* cosThetaT_r, float* cosThetaT_g, float* cosThetaT_b
+) {
+	return (float3)(
+		dielectricReflectance(eta.x, cosThetaI, cosThetaT_r),
+		dielectricReflectance(eta.y, cosThetaI, cosThetaT_g),
+		dielectricReflectance(eta.z, cosThetaI, cosThetaT_b)
+	);
 }
 
 /*-------------- LAMBERTIAN ---------------*/

@@ -76,8 +76,9 @@ float4 radiance(
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	{
 		const Mesh mesh = scene->meshes[rlh->mesh_id];
-		const Material mat = (rlh->mesh_id + 1) ? mesh.mat : *scene->mat;
+		Material mat = (rlh->mesh_id + 1) ? mesh.mat : *scene->mat;
 
+#ifdef LIGHT
 		if (mat.t & LIGHT) {
 			if (rlh->bounce.isSpecular)
 				emission += mat.emission * rlh->mask;
@@ -85,6 +86,7 @@ float4 radiance(
 			rlh->bounce.total = 0;
 			return acc;
 		}
+#endif
 
 		surfaceEvent = makeLocalScatterEvent(ray, scene);
 

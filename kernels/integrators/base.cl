@@ -151,20 +151,39 @@ bool handleSurface(
 	Ray* ray,
 	const Scene* scene,
 	RNG_SEED_PARAM,
-	const Material* mat,
+	Material* mat,
 	__global RLH* rlh,
 	float3* emmision
 ) {
 	bool terminate = false;
 
-	if (mat->lobes & ~(SpecularLobe|ForwardLobe)) {
-#ifdef LIGHT
-		float3 directLight = lightSample(event, ray, scene, RNG_SEED_VALUE, mat);
-		directLight += bsdfSample(event, ray, scene, RNG_SEED_VALUE, mat, &terminate);
-		*emmision += directLight * rlh->mask;
+	
+#if 0	// Dispersion Test
+#if defined(DIEL) && defined(ROUGH_DIEL)
+	if (mat->t & (DIEL | ROUGH_DIEL))
+#elif defined(DIEL)
+	if (mat->t & DIEL)
+#elif defined(ROUGH_DIEL)
+	if (mat->t & ROUGH_DIEL)
+#else
+	if (false)
 #endif
+	{
+		return false;
+		float _min = fmin3(mat->eta_t);
+		float _max = fmax3(mat->eta_t);
+		mat->eta_t.x = dot(rlh->mask, mat->eta_t) / dot(rlh->mask, 1.0f);
 	}
-	else {
+#endif // End of Dispersion Test
+
+#ifdef LIGHT
+	if (mat->lobes & ~(SpecularLobe|ForwardLobe)) {
+		*emmision += (bsdfSample(event, ray, scene, RNG_SEED_VALUE, mat, &terminate)+
+			lightSample(event, ray, scene, RNG_SEED_VALUE, mat)) * rlh->mask;
+	}
+	else
+#endif
+	{
 		if (!BSDF2(event, ray, scene, mat, RNG_SEED_VALUE, false)) {
 			return true;
 		}

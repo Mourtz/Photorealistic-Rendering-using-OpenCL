@@ -13,17 +13,17 @@
     "obj": {
       "path": "suzanne.obj",
       "material": {
-        "color": [ 0.2, 1.0, 1.0 ],
-        "type": 4,
-        "roughness": 0.8
+        "color": [ 1.0, 1.0, 1.0 ],
+        "type": 11,
+        "roughness": 0.05
       }
     },
     "spheres": [
       {
-        "pos": [ 0.0, 2.0, 0.0 ],
+        "pos": [ 0.0, 3.0, 0.0 ],
         "radius": 0.5,
         "material": {
-          "color": [ 20.0, 20.0, 20.0 ],
+          "color": [ 30.0, 30.0, 30.0 ],
           "type": 0
         }
       }

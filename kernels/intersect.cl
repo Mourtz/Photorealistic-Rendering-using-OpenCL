@@ -98,46 +98,6 @@ bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool 
 	return true;
 }
 
-#ifdef VOLUME_CAUSTICS
-
-/* sample caustics for light tracing */
-bool sampleCaustics(Ray* ray, 
-	const Mesh* mesh, const Scene* scene, 
-	const bool isOBJ, RNG_SEED_PARAM
-) {
-	const float nc = 1.0f;
-	const float nt = 1.5f;
-	const float nnt = ray->backside ? nt / nc : nc / nt;
-	
-	float3 tdir = refract(ray->dir, ray->normal, nnt);
-
-	/* reflect */
-	if (dot(tdir, tdir) == 0.0f || next1D(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
-		return false;
-	}
-	/* refract */
-	else {
-		ray->origin = ray->pos - ray->normal * EPS;
-		ray->dir = fast_normalize(tdir);
-		if (ray->backside) {
-			return true;
-		}
-		else {
-			if (!intersect_mesh(ray, mesh, scene, isOBJ)) return false;
-			tdir = refract(ray->dir, ray->normal, nnt);
-
-			if (dot(tdir, tdir) == 0.0f || next1D(RNG_SEED_VALUE) < fresnel(ray->dir, ray->normal, nc, nt, tdir)) {
-				return false;
-			}
-			else {
-				return !ray->backside;
-			}
-		}
-	}
-}
-
-#endif
-
 /* shadow casting */
 bool shadow(
 	const Ray* ray,

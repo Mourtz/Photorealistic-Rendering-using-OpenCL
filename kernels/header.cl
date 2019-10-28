@@ -174,8 +174,10 @@ typedef struct {
 		float3 emission;
 		float3 albedo;
 	};
-	float3 ior;
-	float3 eta;
+	union {
+		float3 eta;
+		float3 eta_t;
+	};
 	float3 k;
 	float roughness;	// surface roughness
 	ushort t;			// mesh type

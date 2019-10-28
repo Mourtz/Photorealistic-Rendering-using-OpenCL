@@ -117,6 +117,8 @@ struct host_scene
 
 			if (_mat.t & (DIEL | ROUGH_DIEL))
 			{
+				_mat.eta = BK7_eta;
+
 				/* abosrptive? */
 				if ((*_doc).HasMember("absorptive") && (*_doc)["absorptive"].IsNumber())
 				{
@@ -239,6 +241,8 @@ struct host_scene
 
 						if (obj_mat->t & (DIEL | ROUGH_DIEL))
 						{
+							obj_mat->eta = BK7_eta;
+
 							if (document["scene"]["obj"]["material"].HasMember("absorptive") &&
 								document["scene"]["obj"]["material"]["absorptive"].IsNumber())
 							{

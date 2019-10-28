@@ -8,7 +8,7 @@ bool RoughDielectricBSDF(
 ) {
 	const float wiDotN = event->wi.z;
 
-	const float eta = event->wi.z < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+	const float eta = event->wi.z < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 
 	float sampleRoughness = (1.2f - 0.2f * native_sqrt(fabs(wiDotN))) * mat->roughness;
 	float alpha = roughnessToAlpha(mat->dist, mat->roughness);
@@ -22,8 +22,8 @@ bool RoughDielectricBSDF(
 
 	float wiDotM = dot(event->wi, m);
 	float cosThetaT = 0.0f;
-	float F = dielectricReflectance(1.0f / mat->ior.x, wiDotM, &cosThetaT);
-	float etaM = wiDotM < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+	float F = dielectricReflectance(1.0f / mat->eta_t.x, wiDotM, &cosThetaT);
+	float etaM = wiDotM < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 
 	bool reflect = next1D(RNG_SEED_VALUE) < F;
 
@@ -72,7 +72,7 @@ float3 RoughDielectricBSDF_eval(const SurfaceScatterEvent* event, const Material
 
 	float alpha = roughnessToAlpha(mat->dist, mat->roughness);
 
-	const float eta = wiDotN < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+	const float eta = wiDotN < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 	float3 m;
 	if (reflect)
 		m = sgnE(wiDotN) * normalize(event->wi + event->wo);
@@ -83,7 +83,7 @@ float3 RoughDielectricBSDF_eval(const SurfaceScatterEvent* event, const Material
 	float woDotM = dot(event->wo, m);
 
 	float cosThetaT = 0.0f;
-	float F = dielectricReflectance(1.0f / mat->ior.x, wiDotM, &cosThetaT);
+	float F = dielectricReflectance(1.0f / mat->eta_t.x, wiDotM, &cosThetaT);
 	float G = Microfacet_G(mat->dist, alpha, event->wi, event->wo, m);
 	float D = Microfacet_D(mat->dist, alpha, m);
 
@@ -107,7 +107,7 @@ float RoughDielectricBSDF_pdf(const SurfaceScatterEvent* event, const Material* 
 	float sampleRoughness = (1.2f - 0.2f * native_sqrt(fabs(wiDotN))) * mat->roughness;
 	float sampleAlpha = roughnessToAlpha(mat->dist, sampleRoughness);
 
-	float eta = wiDotN < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+	float eta = wiDotN < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 	float3 m;
 	if (reflect)
 		m = sgnE(wiDotN) * normalize(event->wi + event->wo);
@@ -117,7 +117,7 @@ float RoughDielectricBSDF_pdf(const SurfaceScatterEvent* event, const Material* 
 	float wiDotM = dot(event->wi, m);
 	float woDotM = dot(event->wo, m);
 	float cosThetaT = 0.0f;
-	float F = dielectricReflectance(1.0f / mat->ior.x, wiDotM, &cosThetaT);
+	float F = dielectricReflectance(1.0f / mat->eta_t.x, wiDotM, &cosThetaT);
 	float pm = Microfacet_pdf(mat->dist, sampleAlpha, m);
 
 	float pdf;
@@ -133,7 +133,7 @@ inline float RoughDielectricBSDF_eta(const SurfaceScatterEvent* event, const Mat
 	if (event->wi.z * event->wo.z >= 0.0f)
 		return 1.0f;
 	else
-		return event->wi.z < 0.0f ? mat->ior.x : 1.0f/mat->ior.x;
+		return event->wi.z < 0.0f ? mat->eta_t.x : 1.0f/mat->eta_t.x;
 }
 
 #endif

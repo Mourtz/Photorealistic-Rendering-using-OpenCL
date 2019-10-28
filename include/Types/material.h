@@ -68,11 +68,6 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 #define GGX			1 << 2
 #define BLINN		1 << 3
 
-#define IOR_AIR		1.0f
-#define IOR_GLASS	1.5f
-#define IOR_CRYSTAL	2.0f
-#define IOR_GOLD	0.47f
-
 // handy site to extract data 
 // https://refractiveindex.info/
 
@@ -80,6 +75,8 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 
 // wavelengths
 // 0.74 µm, 0.56 µm, 0.38 µm
+
+#define BK7_eta	vec4(1.5121f, 1.5180f, 1.5337f)
 
 // Copper (Cu) 
 #define Cu_eta	vec4(0.29019f, 0.61122f, 1.2290f)
@@ -98,7 +95,6 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 struct Material
 {
 	ALIGN(16)vec4 color;
-	ALIGN(16)vec4 ior;
 	ALIGN(16)vec4 eta;
 	ALIGN(16)vec4 k;
 	float roughness;
@@ -107,7 +103,6 @@ struct Material
 	cl_uchar dist;
 
 	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)),
-		ior(IOR_GLASS),
 		eta(Au_eta),
 		k(Au_k),
 		roughness(0.0f),
@@ -116,7 +111,6 @@ struct Material
 		dist(BECKMANN) {}
 
 	Material(vec4 _color, float _roughness, uint16_t _t, cl_uchar _tex, bool _b) : color(_color),
-		ior(IOR_GLASS),
 		eta(Au_eta),
 		k(Au_k),
 		roughness(_roughness),

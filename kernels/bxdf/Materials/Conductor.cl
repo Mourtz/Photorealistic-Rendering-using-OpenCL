@@ -6,8 +6,7 @@ bool ConductorBSDF(
 	const Material* mat,
 	RNG_SEED_PARAM
 ) {
-	// Silver (Ag) 
-	const float F = conductorReflectance(0.051585f, 3.9046f, event->wi.z);
+	float3 F = conductorReflectance3(mat->eta, mat->k, event->wi.z);
 
 	event->wo = (float3)(-event->wi.x, -event->wi.y, event->wi.z);
 	event->pdf = 1.0f;
@@ -17,8 +16,7 @@ bool ConductorBSDF(
 }
 
 float3 ConductorBSDF_eval(const SurfaceScatterEvent* event, const Material* mat) {
-	// Silver (Ag) 
-	const float F = conductorReflectance(0.051585f, 3.9046f, event->wi.z);
+	float3 F = conductorReflectance3(mat->eta, mat->k, event->wi.z);
 
 	if (checkReflectionConstraint(&event->wi, &event->wo))
 		return mat->color * F;

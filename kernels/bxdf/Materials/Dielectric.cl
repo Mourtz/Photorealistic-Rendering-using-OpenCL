@@ -6,7 +6,7 @@ bool DielectricBSDF(
 	const Material* mat,
 	RNG_SEED_PARAM
 ) {
-	const float eta = event->wi.z < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+	const float eta = event->wi.z < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 
 	float cosThetaT = 0.0f;
 	float F = dielectricReflectance(eta, fabs(event->wi.z), &cosThetaT);
@@ -40,7 +40,7 @@ bool DielectricBSDF(
 }
 
 float3 DielectricBSDF_eval(const SurfaceScatterEvent* event, const Material* mat){
-	const float eta = event->wi.z < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+	const float eta = event->wi.z < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 
 	float cosThetaT = 0.0f;
 	float F = dielectricReflectance(eta, fabs(event->wi.z), &cosThetaT);
@@ -60,7 +60,7 @@ float3 DielectricBSDF_eval(const SurfaceScatterEvent* event, const Material* mat
 }
 
 float DielectricBSDF_pdf(const SurfaceScatterEvent* event, const Material* mat){
-	const float eta = event->wi.z < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+	const float eta = event->wi.z < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 
 	float cosThetaT = 0.0f;
 	float F = dielectricReflectance(eta, fabs(event->wi.z), &cosThetaT);
@@ -83,7 +83,7 @@ inline float DielectricBSDF_eta(const SurfaceScatterEvent* event, const Material
 	if (event->wi.z * event->wo.z >= 0.0f)
 		return 1.0f;
 	else
-		return event->wi.z < 0.0f ? mat->ior.x : 1.0f / mat->ior.x;
+		return event->wi.z < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 }
 
 #endif

@@ -61,6 +61,7 @@ __Prtsc__ - Export
 - Sheen BRDF
 - Blinn Phong Microfacet BRDF
 - Oren-Nayar BRDF
+- Denoiser
 - LBVH using spatial Morton codes
 
 ## How To Build

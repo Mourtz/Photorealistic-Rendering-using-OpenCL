@@ -198,18 +198,6 @@ typedef struct {
 	uchar t;		// type
 } Mesh;
 
-//------------- Ray -------------
-
-typedef struct {
-	float3 origin;			// origin
-	float3 dir;				// direction
-	float3 normal;			// normal
-	float3 pos;				// position
-	float t;				// dist from origin
-	bool backside;			// inside?
-	// int hitFace;			// hitface id
-} Ray;
-
 //------------- BVH -------------
 
 typedef struct {

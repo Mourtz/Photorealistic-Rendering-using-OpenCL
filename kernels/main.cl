@@ -21,6 +21,29 @@ __constant sampler_t samplerA = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
 #define RNG_SEED_VALUE_P &RNG_SEED_VALUE
 #endif
 
+//------------- Ray -------------
+
+typedef struct {
+	float3 origin;			// origin
+	float3 dir;				// direction
+	float time;
+	float dist;
+} TempRay;
+
+typedef struct {
+	float3 origin;			// origin
+	float3 dir;				// direction
+	float3 normal;			// normal
+	float3 pos;				// position
+	float t;				// dist from origin
+	bool backside;			// inside?
+	float time;
+	// int hitFace;			// hitface id
+} Ray;
+
+#define tempToRay(tray) (Ray){ tray.origin, tray.dir, (float3)(0.0f), (float3)(0.0f), tray.dist, false, tray.time }
+#define rayToTemp(ray) (TempRay){ ray.origin, ray.dir, ray.t, ray.time }
+
 typedef struct {
 	// throughput
 	float3 mask;
@@ -53,7 +76,7 @@ typedef struct {
 #FILE:media.cl
 
 typedef struct {
-	Ray ray;
+	TempRay ray;
 	RLH data;
 } RTD;
 
@@ -125,14 +148,15 @@ __kernel void render_kernel(
 	double seed = dot(f_coord, (float2)(framenumber % 1000 + random0, framenumber % 333 + random1));
 #endif
 
-	Ray ray = firstBounce ? createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P) : r_flat[work_item_id].ray;
+	Ray ray = firstBounce ? createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P) :
+		tempToRay(r_flat[work_item_id].ray);
 
 	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
 
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
 	rlh->acc += radiance(&scene, env_map, &ray, rlh, RNG_SEED_VALUE_P);
 
-	r_flat[work_item_id].ray = ray;
+	r_flat[work_item_id].ray = rayToTemp(ray);
 
 	/* update the output GLTexture */
 	write_imagef(output_tex, i_coord, rlh->acc / (float)(framenumber));

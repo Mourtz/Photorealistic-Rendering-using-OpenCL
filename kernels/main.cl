@@ -148,7 +148,7 @@ __kernel void render_kernel(
 		rlh->bounce.diff = 0;
 		rlh->bounce.spec = 0;
 		rlh->bounce.trans = 0;
-		rlh->bounce.wasSpecular = false;
+		rlh->bounce.wasSpecular = true;
 		rlh->media.scatters = 0;
 		rlh->media.in = false;
 

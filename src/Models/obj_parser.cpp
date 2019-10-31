@@ -53,10 +53,10 @@ void ObjParser::load(std::string filepath, std::string filename) {
 
 	double timerStart = glfwGetTime();
 
-	while (fileIn.good()) {
-		string line;
-		getline(fileIn, line);
-		trim(line);
+	string line;
+	while (getline(fileIn, line)) {
+
+		//trim(line);
 
 		// Ignore comment lines
 		if (line[0] == '#') {

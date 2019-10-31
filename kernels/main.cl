@@ -35,13 +35,16 @@ typedef struct {
 	float3 dir;				// direction
 	float3 normal;			// normal
 	float3 pos;				// position
-	float t;				// dist from origin
+	union {
+		float t;				// dist from origin
+		float dist;
+	};
 	bool backside;			// inside?
 	float time;
 	// int hitFace;			// hitface id
 } Ray;
 
-#define tempToRay(tray) (Ray){ tray.origin, tray.dir, (float3)(0.0f), (float3)(0.0f), tray.dist, false, tray.time }
+#define tempToRay(tray) (Ray){ tray.origin, tray.dir, (float3)(0.0f), (float3)(0.0f), {tray.dist}, false, tray.time }
 #define rayToTemp(ray) (TempRay){ ray.origin, ray.dir, ray.t, ray.time }
 
 typedef struct {
@@ -55,7 +58,7 @@ typedef struct {
 		uint total;
 		// explicit light controls
 		ushort diff, spec, trans;
-		bool isSpecular;
+		bool wasSpecular;
 	} bounce;
 
 	// participating medium
@@ -131,7 +134,7 @@ __kernel void render_kernel(
 	rlh->bounce.diff *= !firstBounce;
 	rlh->bounce.spec *= !firstBounce;
 	rlh->bounce.trans *= !firstBounce;
-	rlh->bounce.isSpecular |= firstBounce;
+	rlh->bounce.wasSpecular |= firstBounce;
 	rlh->media.scatters *= !firstBounce;
 	rlh->media.in &= !firstBounce;
 
@@ -139,17 +142,19 @@ __kernel void render_kernel(
 
 #if RNG_TYPE == 0
 	/* seeds for random number generator */
-	uint seed0 = i_coord.x * framenumber % 1000 + (rlh->bounce.total + 33) * random0;
-	uint seed1 = i_coord.y * framenumber % 1000 + (rlh->bounce.total + 100) * random1;
+	uint seed0 = i_coord.x * framenumber % 1000 + (random0 * 100);
+	uint seed1 = i_coord.y * framenumber % 1000 + (random1 * 100);
 #elif RNG_TYPE == 1
-	ulong state = 0;
+	ulong state = 0xBA5EBA11;
 #elif RNG_TYPE == 2
 	const float2 f_coord = (float2)((float)(i_coord.x) / width, (float)(i_coord.y) / height);
-	double seed = dot(f_coord, (float2)(framenumber % 1000 + random0, framenumber % 333 + random1));
+	double seed = dot(f_coord, (float2)(framenumber % 1000 + random0*100, framenumber % 333 + random1*33));
 #endif
 
 	Ray ray = firstBounce ? createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P) :
 		tempToRay(r_flat[work_item_id].ray);
+
+	ray.time = firstBounce ? next1D(RNG_SEED_VALUE_P) : ray.time;
 
 	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
 

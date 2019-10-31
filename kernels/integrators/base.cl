@@ -192,7 +192,7 @@ bool handleSurface(
 		ray->dir = toGlobal(&event->frame, event->wo);
 	}
 
-	rlh->bounce.isSpecular = event->sampledLobe & SpecularLobe;
+	rlh->bounce.wasSpecular = event->sampledLobe & SpecularLobe;
 
 	rlh->mask *= event->weight;
 	rlh->bounce.diff += (event->sampledLobe & (DiffuseReflectionLobe| GlossyReflectionLobe)) != 0;

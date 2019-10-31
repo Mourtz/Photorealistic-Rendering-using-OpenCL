@@ -59,7 +59,7 @@ float4 radiance(
 	if (++rlh->media.scatters < 1024 && !gm_sample.exited){
 		ray->origin = gm_sample.p;
 
-		rlh->bounce.isSpecular = !(enableVolumeLightSampling && (lowOrderScattering || rlh->media.scatters > 1));
+		rlh->bounce.wasSpecular = !(enableVolumeLightSampling && (lowOrderScattering || rlh->media.scatters > 1));
 
 #if 0
 		/* Henyey-Greenstein phase function */
@@ -80,7 +80,7 @@ float4 radiance(
 
 #ifdef LIGHT
 		if (mat.t & LIGHT) {
-			if (rlh->bounce.isSpecular)
+			if (rlh->bounce.wasSpecular)
 				emission += mat.emission * rlh->mask;
 
 			rlh->bounce.total = 0;
@@ -96,24 +96,23 @@ float4 radiance(
 		}
 	}
 
-	/* terminate if necessary */
-	if (rlh->bounce.total >= MAX_BOUNCES ||
-		rlh->bounce.diff >= MAX_DIFF_BOUNCES || 
-		rlh->bounce.spec >= MAX_SPEC_BOUNCES ||
-		rlh->bounce.trans >= MAX_TRANS_BOUNCES
-	) { 
-		rlh->bounce.total = 0;
-		return acc;
-	}
-
 	//russian roulette
-	const float roulettePdf = fmax3(rlh->mask);
-	if (rlh->bounce.total > 4 && roulettePdf < 0.1f) {
+	const float roulettePdf = avg3(rlh->mask);
+	if (rlh->bounce.total > 3 && roulettePdf < 0.1f) {
 		if (next1D(RNG_SEED_VALUE) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {
 			rlh->media.in = rlh->bounce.total = 0;
 		}
+	}
+
+	/* terminate if necessary */
+	if (rlh->bounce.total >= MAX_BOUNCES ||
+		rlh->bounce.diff >= MAX_DIFF_BOUNCES ||
+		rlh->bounce.spec >= MAX_SPEC_BOUNCES ||
+		rlh->bounce.trans >= MAX_TRANS_BOUNCES
+		) {
+		rlh->bounce.total = 0;
 	}
 
 	return acc;

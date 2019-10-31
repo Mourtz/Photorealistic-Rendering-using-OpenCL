@@ -127,19 +127,6 @@ __kernel void render_kernel(
 	/* xy-coordinate of the pixel */
 	const int2 i_coord = (int2)(work_item_id % width, work_item_id / width);
 
-	__global RLH* rlh = &r_flat[work_item_id].data;
-
-	const bool firstBounce = (rlh->bounce.total == 0);
-	rlh->bounce.total *= !firstBounce;
-	rlh->bounce.diff *= !firstBounce;
-	rlh->bounce.spec *= !firstBounce;
-	rlh->bounce.trans *= !firstBounce;
-	rlh->bounce.wasSpecular |= firstBounce;
-	rlh->media.scatters *= !firstBounce;
-	rlh->media.in &= !firstBounce;
-
-	rlh->mask = !firstBounce * rlh->mask + firstBounce;
-
 #if RNG_TYPE == 0
 	/* seeds for random number generator */
 	uint seed0 = i_coord.x * framenumber % 1000 + (random0 * 100);
@@ -148,13 +135,28 @@ __kernel void render_kernel(
 	ulong state = 0xBA5EBA11;
 #elif RNG_TYPE == 2
 	const float2 f_coord = (float2)((float)(i_coord.x) / width, (float)(i_coord.y) / height);
-	double seed = dot(f_coord, (float2)(framenumber % 1000 + random0*100, framenumber % 333 + random1*33));
+	double seed = dot(f_coord, (float2)(framenumber % 1000 + random0 * 100, framenumber % 333 + random1 * 33));
 #endif
 
-	Ray ray = firstBounce ? createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P) :
-		tempToRay(r_flat[work_item_id].ray);
+	__global RLH* rlh = &r_flat[work_item_id].data;
 
-	ray.time = firstBounce ? next1D(RNG_SEED_VALUE_P) : ray.time;
+	Ray ray = tempToRay(r_flat[work_item_id].ray);
+
+	// firstBounce
+	if (rlh->bounce.total == 0) {
+		rlh->bounce.total = 0;
+		rlh->bounce.diff = 0;
+		rlh->bounce.spec = 0;
+		rlh->bounce.trans = 0;
+		rlh->bounce.wasSpecular = false;
+		rlh->media.scatters = 0;
+		rlh->media.in = false;
+
+		rlh->mask = (float3)(1.0f);
+
+		// @ToDo generate cam ray on CPU
+		ray = createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P);
+	}
 
 	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
 

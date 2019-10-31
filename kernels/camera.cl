@@ -54,6 +54,7 @@ Ray createCamRay(const int2 coord, const int width, const int height, __constant
 	ray.backside = false;
 	ray.origin = aperturePoint;
 	ray.dir = apertureToImagePlane;
+	ray.time = next1D(RNG_SEED_VALUE);
 
 	return ray;
 }

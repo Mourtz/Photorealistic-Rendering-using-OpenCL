@@ -102,7 +102,8 @@ float4 radiance(
 		if (next1D(RNG_SEED_VALUE) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {
-			rlh->media.in = rlh->bounce.total = 0;
+			rlh->bounce.total = 0;
+			return acc;
 		}
 	}
 
@@ -111,7 +112,7 @@ float4 radiance(
 		rlh->bounce.diff >= MAX_DIFF_BOUNCES ||
 		rlh->bounce.spec >= MAX_SPEC_BOUNCES ||
 		rlh->bounce.trans >= MAX_TRANS_BOUNCES
-		) {
+	) {
 		rlh->bounce.total = 0;
 	}
 

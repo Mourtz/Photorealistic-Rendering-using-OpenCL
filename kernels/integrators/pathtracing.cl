@@ -8,79 +8,75 @@ float4 radiance(
 	__global RLH* rlh,
 	RNG_SEED_PARAM
 ){
-	++rlh->bounce.total;
-
-	SurfaceScatterEvent surfaceEvent;
+#ifdef GLOBAL_MEDIUM
+	const Medium _medium = (Medium){
+		(float3)(GLOBAL_FOG_DENSITY),
+		(float3)(GLOBAL_FOG_SIGMA_A),
+		(float3)(GLOBAL_FOG_SIGMA_S),
+		(float3)(GLOBAL_FOG_SIGMA_T),
+		GLOBAL_FOG_ABS_ONLY
+	};
+	const Medium* medium = &_medium;
+#else
+	const Medium* medium = NULL;
+#endif
 
 	float alpha = 1.0f;
 	float3 emission = (float3)(0.0f);
 #define acc (float4)(emission, alpha)
 
-	// if ray is not in a meadium
-	if(!rlh->media.in){
-		int mesh_id;
-		// intersection check
-		if (!intersect_scene(ray, &mesh_id, scene)) {
-			rlh->bounce.total = 0;
+	int mesh_id;
+	bool didHit = intersect_scene(ray, &mesh_id, scene);
+	//rlh->mesh_id = mesh_id;
 
-			#ifdef ALPHA_TESTING
-				return (float4)(0.0f);
-			#else
-				return (float4)(rlh->mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
-			#endif
-		}
-		rlh->mesh_id = mesh_id;
-	}
+	const Mesh mesh = scene->meshes[mesh_id];
+	Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
 
 /*------------------- GLOBAL MEDIUM -------------------*/
 #ifdef GLOBAL_MEDIUM
-	const float gm_hg_g = 0.5f;
+	MediumSample mediumSample;
+	mediumSample.continuedWeight = rlh->mask;
 
-	// global medium
-	// const Medium g_medium = {
-		// (float3)(GLOBAL_FOG_DENSITY),
-		// (float3)(GLOBAL_FOG_SIGMA_A),
-		// (float3)(GLOBAL_FOG_SIGMA_S),
-		// (float3)(GLOBAL_FOG_SIGMA_T),
-		// GLOBAL_FOG_ABS_ONLY
-	// };
+	HomogeneousMedium_sampleDistance(&mediumSample, medium, ray, RNG_SEED_VALUE);
 
-	Medium g_medium;
-	g_medium.density = GLOBAL_FOG_DENSITY;
-	g_medium.sigmaA = GLOBAL_FOG_SIGMA_A;
-	g_medium.sigmaS = GLOBAL_FOG_SIGMA_S;
-	g_medium.sigmaT = GLOBAL_FOG_SIGMA_T;
-	g_medium.absorptionOnly = GLOBAL_FOG_ABS_ONLY;
-
-	MediumSample gm_sample;
-	sampleDistance(ray, &gm_sample, &g_medium, RNG_SEED_VALUE);
-	rlh->mask *= gm_sample.weight;
+	rlh->mask *= mediumSample.weight;
 	
-	if (++rlh->media.scatters < 1024 && !gm_sample.exited){
-		ray->origin = gm_sample.p;
+	// scatter
+	if (!mediumSample.exited && rlh->bounce.scatters < MAX_SCATTERING_EVENTS){
+		++rlh->bounce.scatters;
+		
+		PhaseSample phaseSample;
 
-		rlh->bounce.wasSpecular = !(enableVolumeLightSampling && (lowOrderScattering || rlh->media.scatters > 1));
+		rlh->bounce.wasSpecular = !(enableVolumeLightSampling && (lowOrderScattering || rlh->bounce.scatters > 1));
 
-#if 0
-		/* Henyey-Greenstein phase function */
-		PhaseSample p_sample;
-		hg_sample(ray->dir, gm_hg_g, &p_sample, RNG_SEED_VALUE);
-		ray->dir = p_sample.w;
-#else 
-		ray->dir = uniformSphere((float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE)));
-#endif
-		// @ToDo clear this thing out, fix the light sampling code!!!!!!!
-		ray->normal = ray->dir;
+		if (!rlh->bounce.wasSpecular) {
+			emission += (
+				volumeLightSample(&mediumSample, medium, ray, scene, RNG_SEED_VALUE, &mat) +
+				volumePhaseSample(&mediumSample, &phaseSample, medium, ray, scene, RNG_SEED_VALUE, &mat)
+			) * rlh->mask;
+		}
+
+		ray->origin = mediumSample.p;
+		ray->dir = phaseSample.w;
+
+		rlh->mask *= phaseSample.weight;
 	} else 
 #endif
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	{
-		const Mesh mesh = scene->meshes[rlh->mesh_id];
-		Material mat = (rlh->mesh_id + 1) ? mesh.mat : *scene->mat;
+		if (!didHit) {
+			rlh->bounce.total = 0;
+
+#ifdef ALPHA_TESTING
+			return (float4)(0.0f);
+#else
+			return (float4)(rlh->mask * read_imagef(env_map, samplerA, envMapEquirect(ray->dir)).xyz, 1.0f);
+#endif
+		}
 
 #ifdef LIGHT
 		if (mat.t & LIGHT) {
-			if (rlh->bounce.wasSpecular)
+			if (!enableLightSampling || rlh->bounce.wasSpecular)
 				emission += mat.emission * rlh->mask;
 
 			rlh->bounce.total = 0;
@@ -88,17 +84,20 @@ float4 radiance(
 		}
 #endif
 
-		surfaceEvent = makeLocalScatterEvent(ray, scene);
+		SurfaceScatterEvent surfaceEvent = makeLocalScatterEvent(ray, scene);
 
-		if (handleSurface(&surfaceEvent, ray, scene, RNG_SEED_VALUE, &mat, rlh, &emission)) {
+		if (handleSurface(&surfaceEvent, ray, medium, scene, RNG_SEED_VALUE, &mat, rlh, &emission)) {
 			rlh->bounce.total = 0;
 			return acc;
 		}
+
+		rlh->bounce.scatters = 0;
+		++rlh->bounce.total;
 	}
 
 	//russian roulette
-	const float roulettePdf = avg3(rlh->mask);
-	if (rlh->bounce.total > 3 && roulettePdf < 0.1f) {
+	const float roulettePdf = fmax3(rlh->mask);
+	if (rlh->bounce.total > 2 && roulettePdf < 0.1f) {
 		if (next1D(RNG_SEED_VALUE) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {

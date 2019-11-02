@@ -8,9 +8,10 @@ typedef struct {
 } PhaseSample;
 
 typedef struct {
+	int phase;
 	float3 p;
 	float continuedT;
-	/*float3 continuedWeight;*/
+	float3 continuedWeight;
 	float t;
 	float3 weight;
 	float pdf;
@@ -57,7 +58,7 @@ void sampleEquiAngular(
 
 //----------------------------------------------------
 
-#FILE:phasefunctions/HenyeyGreenstein.cl
+#FILE:phasefunctions/Isotropic.cl
 #FILE:media/homogeneous.cl
 
 #endif

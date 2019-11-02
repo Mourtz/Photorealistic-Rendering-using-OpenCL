@@ -1,9 +1,12 @@
 #ifndef __T_BASE__
 #define __T_BASE__
 
-__constant bool enableVolumeLightSampling = false;
-__constant bool lowOrderScattering = false;
+__constant bool enableLightSampling = true;
+__constant bool enableVolumeLightSampling = true;
+__constant bool lowOrderScattering = true;
+
 #define CONSISTENCY_CHECKS 0
+#define PICK_RANDOM_LIGHT 0
 
 SurfaceScatterEvent makeLocalScatterEvent(Ray* ray, const Scene* scene) {
 	TangentFrame frame = createTangentFrame(&ray->normal);
@@ -17,18 +20,18 @@ SurfaceScatterEvent makeForwardEvent(const SurfaceScatterEvent* event){
 	return copy;
 }
 
+inline float powerHeuristic(float pdf0, float pdf1){
+	return (pdf0 * pdf0) / (pdf0 * pdf0 + pdf1 * pdf1);
+}
+
 /*--------------------------- LIGHT ---------------------------*/
 
 #ifdef LIGHT
 
-inline float powerHeuristic(float pdf0, float pdf1)
-{
-	return (pdf0 * pdf0) / (pdf0 * pdf0 + pdf1 * pdf1);
-}
-
 float3 bsdfSample(
 	SurfaceScatterEvent* event,
 	Ray* ray,
+	const Medium* medium,
 	const Scene* scene,
 	RNG_SEED_PARAM,
 	const Material* mat,
@@ -57,23 +60,15 @@ float3 bsdfSample(
 
 			if (light.mat.t & LIGHT) {
 				//*terminate = true;
+				float3 contribution = light.mat.color * event->weight *
+					powerHeuristic(event->pdf, directPdf(&light, &ray->dir, &ray->pos));
 
-				float dPdf = -1e3;
-#ifdef __SPHERE__
-				if (light.t & SPHERE)
-#else
-				if (false)
-#endif
-				{
-					dPdf = sphere_directPdf(&light, &ray->pos);
-				}
-#ifdef __QUAD__
-				else if (light.t & QUAD) {
-					dPdf = quad_directPdf(ray, &light, &ray->pos);
-				}
+#ifdef GLOBAL_MEDIUM
+				if (medium != NULL)
+					contribution *= native_exp(-medium->sigmaT * ray->t);
 #endif
 
-				return light.mat.color * event->weight * powerHeuristic(event->pdf, dPdf);
+				return contribution;
 			}
 		}
 	}
@@ -84,35 +79,23 @@ float3 bsdfSample(
 float3 lightSample(
 	SurfaceScatterEvent* event,
 	const Ray* ray,
+	const Medium* medium,
 	const Scene* scene,
 	RNG_SEED_PARAM,
 	const Material* mat
 ) {
 
-#if 0
-	const Mesh light = scene->meshes[LIGHT_INDICES[0]];
-#else
+#if PICK_RANDOM_LIGHT
 	// pick a random light source
-	const Mesh light = scene->meshes[LIGHT_INDICES[(int)(next1D(RNG_SEED_VALUE) * (float)(LIGHT_COUNT+1))]];
+	const Mesh light = scene->meshes[LIGHT_INDICES[(int)(next1D(RNG_SEED_VALUE) * (float)(LIGHT_COUNT + 1))]];
+#else
+	const Mesh light = scene->meshes[LIGHT_INDICES[0]];
 #endif
 
 	LightSample rec;
 
-#ifdef __SPHERE__
-	if (light.t & SPHERE)
-#else
-	if (false)
-#endif
-	{
-		if (!sphere_sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
-			return (float3)(0.0f);
-	}
-#ifdef __QUAD__
-	else if (light.t & QUAD) {
-		if (!quad_sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
-			return (float3)(0.0f);
-	}
-#endif
+	if (!sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
+		return (float3)(0.0f);
 
 	event->wo = toLocal(&event->frame, rec.d);
 
@@ -134,9 +117,15 @@ float3 lightSample(
 		shadowRay.t = rec.dist;
 
 		if (shadow(&shadowRay, scene)) {
-			float3 contribution = light.mat.color * fr / rec.pdf;
+			float3 contribution = light.mat.color * fr;
+
+#ifdef GLOBAL_MEDIUM
+			if (medium != NULL)
+				contribution *= native_exp(-medium->sigmaT * shadowRay.t);
+#endif
+
 			contribution *= powerHeuristic(rec.pdf, BSDF_pdf(event, mat));
-			return contribution;
+			return contribution/rec.pdf;
 		}
 	}
 
@@ -149,6 +138,7 @@ float3 lightSample(
 bool handleSurface(
 	SurfaceScatterEvent* event,
 	Ray* ray,
+	const Medium* medium,
 	const Scene* scene,
 	RNG_SEED_PARAM,
 	Material* mat,
@@ -157,7 +147,6 @@ bool handleSurface(
 ) {
 	bool terminate = false;
 
-	
 #if 0	// Dispersion Test
 #if defined(DIEL) && defined(ROUGH_DIEL)
 	if (mat->t & (DIEL | ROUGH_DIEL))
@@ -177,9 +166,9 @@ bool handleSurface(
 #endif // End of Dispersion Test
 
 #ifdef LIGHT
-	if (mat->lobes & ~(SpecularLobe|ForwardLobe)) {
-		*emmision += (bsdfSample(event, ray, scene, RNG_SEED_VALUE, mat, &terminate)+
-			lightSample(event, ray, scene, RNG_SEED_VALUE, mat)) * rlh->mask;
+	if (enableLightSampling && mat->lobes & ~(SpecularLobe|ForwardLobe)) {
+		*emmision += (bsdfSample(event, ray, medium, scene, RNG_SEED_VALUE, mat, &terminate)+
+			lightSample(event, ray, medium, scene, RNG_SEED_VALUE, mat)) * rlh->mask;
 	}
 	else
 #endif
@@ -200,6 +189,74 @@ bool handleSurface(
 	rlh->bounce.trans += (event->sampledLobe & TransmissiveLobe) != 0;
 
 	return terminate;
+}
+
+float3 volumeLightSample(
+	MediumSample* mediumSample,
+	const Medium* medium,
+	const Ray* ray,
+	const Scene* scene,
+	RNG_SEED_PARAM,
+	const Material* mat
+){
+#if PICK_RANDOM_LIGHT
+	// pick a random light source
+	const Mesh light = scene->meshes[LIGHT_INDICES[(int)(next1D(RNG_SEED_VALUE) * (float)(LIGHT_COUNT + 1))]];
+#else
+	const Mesh light = scene->meshes[LIGHT_INDICES[0]];
+#endif
+
+	LightSample rec;
+
+	if(!sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
+		return (float3)(0.0f);
+
+	float3 f = iso_eval(ray->dir, rec.d);
+	if (dot(f, f) == 0.0f)
+		return (float3)(0.0f);
+
+	Ray sRay;
+	sRay.origin = mediumSample->p;
+	sRay.dir = rec.d;
+	sRay.t = rec.dist;
+
+	if (shadow(&sRay, scene)) {
+		float3 contribution = native_exp(-medium->sigmaT * sRay.t) * light.mat.color * f *
+			powerHeuristic(rec.pdf, iso_pdf(ray->dir, rec.d));
+		return contribution / rec.pdf;
+	}
+
+	return (float3)(0.0f);
+}
+
+float3 volumePhaseSample(
+	MediumSample* mediumSample,
+	PhaseSample* phaseSample,
+	const Medium* medium,
+	const Ray* ray,
+	const Scene* scene,
+	RNG_SEED_PARAM,
+	const Material* mat
+){
+	if (!iso_sample(ray->dir, phaseSample, RNG_SEED_VALUE)) {
+		return (float3)(0.0f);
+	}
+
+	Ray sRay;
+	sRay.origin = mediumSample->p;
+	sRay.dir = phaseSample->w;
+
+	int mesh_id;
+	if (intersect_scene(&sRay, &mesh_id, scene)) {
+		const Mesh light = scene->meshes[mesh_id];
+
+		if (light.mat.t & LIGHT) {
+			return native_exp(-medium->sigmaT * sRay.t) * light.mat.color * phaseSample->weight *
+				powerHeuristic(phaseSample->pdf, directPdf(&light, &sRay.dir, &mediumSample->p));
+		}
+	}
+
+	return (float3)(0.0f);
 }
 
 #endif

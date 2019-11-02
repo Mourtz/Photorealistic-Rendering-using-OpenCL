@@ -1,29 +1,39 @@
 {
   "global_medium": {
-    "density": 0.3,
-    "sigmaA": 0.4,
+    "density": 0.07,
+    "sigmaA": 0.0,
     "sigmaS": 1.0
   },
   "settings": {
-    "MAX_BOUNCES": 128,
-    "MAX_DIFF_BOUNCES": 32,
-    "MAX_SPEC_BOUNCES": 64,
-    "MAX_TRANS_BOUNCES": 64,
-    "MAX_SCATTERING_EVENTS": 128,
+    "MAX_BOUNCES": 12,
+    "MAX_DIFF_BOUNCES": 4,
+    "MAX_SPEC_BOUNCES": 16,
+    "MAX_TRANS_BOUNCES": 32,
+    "MAX_SCATTERING_EVENTS": 1024,
 
-    "LIGHT_BOUNCES":  2,
+    "LIGHT_BOUNCES": 2,
 
     "MARCHING_STEPS": 128,
     "SHADOW_MARCHING_STEPS": 64
   },
   "scene": {
     "obj": {
-      "path": "suzanne2.obj",
+      "path": "buddha.obj",
       "material": {
-        "color": [ 0.8, 0.5, 0.9 ],
+        "color": [ 1.0, 1.0, 1.0 ],
         "type": 1
       }
     },
+    "spheres": [
+      {
+        "pos": [ 0.0, 1.5, -1.0 ],
+        "radius": 0.2,
+        "material": {
+          "color": [ 34.0, 34.0, 34.0 ],
+          "type": 0
+        }
+      }
+    ],
     "quads": [
       {
         "vertices": [

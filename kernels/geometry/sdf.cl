@@ -1,4 +1,4 @@
-#ifndef __SDF__
+#if defined(SDF) && !defined(__SDF__)
 #define __SDF__
 
 /*----------------------------------- PRIMITIVES -----------------------------------*/

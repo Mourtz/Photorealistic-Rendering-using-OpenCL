@@ -57,23 +57,18 @@ typedef struct {
 		// total bounces
 		uint total;
 		// explicit light controls
-		ushort diff, spec, trans;
+		ushort diff, spec, trans, scatters;
 		bool wasSpecular;
 	} bounce;
 
-	// participating medium
-	struct {
-		bool in;
-		ushort scatters;
-	} media;
-
-	int mesh_id;
+	//int mesh_id;
 } RLH;
 
 #FILE:header.cl
 #FILE:utils.cl
 #FILE:noise/value_noise.cl
 #FILE:camera.cl
+#FILE:geometry/geometry.cl
 #FILE:intersect.cl
 #FILE:bxdf/bxdf.cl
 #FILE:media.cl
@@ -149,8 +144,6 @@ __kernel void render_kernel(
 		rlh->bounce.spec = 0;
 		rlh->bounce.trans = 0;
 		rlh->bounce.wasSpecular = true;
-		rlh->media.scatters = 0;
-		rlh->media.in = false;
 
 		rlh->mask = (float3)(1.0f);
 

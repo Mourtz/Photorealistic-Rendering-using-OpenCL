@@ -8,9 +8,10 @@ typedef struct {
 } PhaseSample;
 
 typedef struct {
+	int phase;
 	float3 p;
 	float continuedT;
-	/*float3 continuedWeight;*/
+	float3 continuedWeight;
 	float t;
 	float3 weight;
 	float pdf;

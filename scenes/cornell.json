@@ -11,11 +11,11 @@
   },
   "scene": {
     "obj": {
-      "path": "suzanne.obj",
+      "path": "teapot.obj",
       "material": {
         "color": [ 1.0, 1.0, 1.0 ],
-        "type": 11,
-        "roughness": 0.05
+        "type": 4,
+        "roughness": 0.1
       }
     },
     "spheres": [
@@ -23,7 +23,7 @@
         "pos": [ 0.0, 3.0, 0.0 ],
         "radius": 0.5,
         "material": {
-          "color": [ 30.0, 30.0, 30.0 ],
+          "color": [ 20.0, 20.0, 20.0 ],
           "type": 0
         }
       }

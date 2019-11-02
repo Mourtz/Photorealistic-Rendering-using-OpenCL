@@ -1,14 +1,6 @@
 #ifndef __INTERSECT__
 #define __INTERSECT__
 
-#INC_SDF#
-#INC_BOX#
-#INC_SPHERE#
-#INC_QUAD#
-#FILE:geometry/aabb.cl
-#FILE:geometry/triangle.cl
-#FILE:geometry/bvh.cl
-
 /* Find the closest distance to a specific object */
 bool get_dist(float* dist, const Ray* sray, const Mesh* mesh, const Scene* scene, const bool isOBJ){
 	Ray temp_ray = *sray;

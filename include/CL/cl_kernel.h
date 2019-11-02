@@ -177,56 +177,14 @@ inline std::string parse(std::string filepath, host_scene *scene)
 
         //--------------------------------- MESH TYPES ---------------------------------
 
-        temp = line.find("#INC_SPHERE#");
-        if (temp != string::npos)
-        {
-            if (scene->H_SPHERE)
-            {
-                std::cout << "Appending (../kernels/geometry/sphere.cl)\n";
-                source += parse("../kernels/geometry/sphere.cl", scene);
-            }
-            continue;
-        }
-
-        temp = line.find("#INC_SDF#");
-        if (temp != string::npos)
-        {
-            if (scene->H_SDF)
-            {
-                std::cout << "Appending (../kernels/geometry/sdf.cl)\n";
-                source += parse("../kernels/geometry/sdf.cl", scene);
-            }
-            continue;
-        }
-
-        temp = line.find("#INC_BOX#");
-        if (temp != string::npos)
-        {
-            if (scene->H_BOX)
-            {
-                std::cout << "Appending (../kernels/geometry/box.cl)\n";
-                source += parse("../kernels/geometry/box.cl", scene);
-            }
-            continue;
-        }
-
-        temp = line.find("#INC_QUAD#");
-        if (temp != string::npos)
-        {
-            if (scene->H_QUAD)
-            {
-                std::cout << "Appending (../kernels/geometry/quad.cl)\n";
-                source += parse("../kernels/geometry/quad.cl", scene);
-            }
-            continue;
-        }
-
         temp_name = "#SPHERE#";
         temp = line.find(temp_name);
         if (temp != string::npos)
         {
-            line.replace(temp, temp_name.length(), std::to_string(SPHERE));
-            source += line + "\n";
+			if (scene->H_SPHERE) {
+				line.replace(temp, temp_name.length(), std::to_string(SPHERE));
+				source += line + "\n";
+			}
             continue;
         }
 
@@ -234,8 +192,10 @@ inline std::string parse(std::string filepath, host_scene *scene)
         temp = line.find(temp_name);
         if (temp != string::npos)
         {
-            line.replace(temp, temp_name.length(), std::to_string(BOX));
-            source += line + "\n";
+			if (scene->H_BOX) {
+				line.replace(temp, temp_name.length(), std::to_string(BOX));
+				source += line + "\n";
+			}
             continue;
         }
 
@@ -243,8 +203,10 @@ inline std::string parse(std::string filepath, host_scene *scene)
         temp = line.find(temp_name);
         if (temp != string::npos)
         {
-            line.replace(temp, temp_name.length(), std::to_string(SDF));
-            source += line + "\n";
+			if (scene->H_SDF) {
+				line.replace(temp, temp_name.length(), std::to_string(SDF));
+				source += line + "\n";
+			}
             continue;
         }
 
@@ -252,8 +214,10 @@ inline std::string parse(std::string filepath, host_scene *scene)
         temp = line.find(temp_name);
         if (temp != string::npos)
         {
-            line.replace(temp, temp_name.length(), std::to_string(QUAD));
-            source += line + "\n";
+			if (scene->H_QUAD) {
+				line.replace(temp, temp_name.length(), std::to_string(QUAD));
+				source += line + "\n";
+			}
             continue;
         }
 

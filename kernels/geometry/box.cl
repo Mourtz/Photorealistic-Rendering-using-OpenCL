@@ -1,4 +1,4 @@
-#ifndef __BOX__
+#if defined(BOX) && !defined(__BOX__)
 #define __BOX__
 
 /* box intesection */

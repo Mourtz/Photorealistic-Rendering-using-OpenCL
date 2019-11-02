@@ -1,4 +1,4 @@
-#ifndef __SPHERE__
+#if defined(SPHERE) && !defined(__SPHERE__)
 #define __SPHERE__
 
 /* sphere intesection */

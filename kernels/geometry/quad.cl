@@ -1,4 +1,4 @@
-#ifndef __QUAD__
+#if defined(QUAD) && !defined(__QUAD__)
 #define __QUAD__
 
 #define _base  plane->joker.s012
@@ -54,9 +54,9 @@ bool quad_sampleDirect(const Mesh* plane, const float3* p, LightSample* sample, 
 }
 
 
-float quad_directPdf(const Ray* ray, const Mesh* plane, const float3* p) {
-	float cosTheta = fabs(dot(_normal, ray->dir));
-	float t = dot(_normal, _base - *p) / dot(_normal, ray->dir);
+float quad_directPdf(const float3* dir, const Mesh* plane, const float3* p) {
+	float cosTheta = fabs(dot(_normal, *dir));
+	float t = dot(_normal, _base - *p) / dot(_normal, *dir);
 
 	return t * t / (cosTheta * _area);
 }

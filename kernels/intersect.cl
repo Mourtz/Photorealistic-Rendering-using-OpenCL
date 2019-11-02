@@ -92,7 +92,7 @@ bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool 
 
 /* shadow casting */
 bool shadow(
-	const Ray* ray,
+	Ray* ray,
 	const Scene* scene
 ){ 
 	const float maxDist = ray->t;

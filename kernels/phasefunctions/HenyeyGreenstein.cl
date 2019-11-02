@@ -1,7 +1,7 @@
 #ifndef __HG__
 #define __HG__
 
-#define _g 0.7f
+#define _g 1.0f
 
 //--------------------- HenyeyGreensteinPhaseFunction -----------------------
 

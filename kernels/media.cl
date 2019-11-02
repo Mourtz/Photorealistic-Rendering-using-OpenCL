@@ -58,7 +58,7 @@ void sampleEquiAngular(
 
 //----------------------------------------------------
 
-#FILE:phasefunctions/HenyeyGreenstein.cl
+#FILE:phasefunctions/Isotropic.cl
 #FILE:media/homogeneous.cl
 
 #endif

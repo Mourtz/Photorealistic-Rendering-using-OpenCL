@@ -8,7 +8,7 @@
 #FILE:geometry/triangle.cl
 #FILE:geometry/bvh.cl
 
-bool geom_sampleDirect(
+bool sampleDirect(
 	const Mesh* mesh, 
 	const float3* p, 
 	LightSample* lightSample, 
@@ -31,7 +31,7 @@ bool geom_sampleDirect(
 	return false;
 }
 
-float geom_directPdf(const float3* dir, const Mesh* mesh, const float3* p) {
+float directPdf(const Mesh* mesh, const float3* dir, const float3* p) {
 	float dPdf = 0.0f;
 
 #ifdef __SPHERE__

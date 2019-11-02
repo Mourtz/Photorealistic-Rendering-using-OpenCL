@@ -143,6 +143,7 @@ __kernel void render_kernel(
 		rlh->bounce.diff = 0;
 		rlh->bounce.spec = 0;
 		rlh->bounce.trans = 0;
+		rlh->bounce.scatters = 0;
 		rlh->bounce.wasSpecular = true;
 
 		rlh->mask = (float3)(1.0f);

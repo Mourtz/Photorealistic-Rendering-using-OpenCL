@@ -91,6 +91,7 @@ float4 radiance(
 			return acc;
 		}
 
+		rlh->bounce.scatters = 0;
 		++rlh->bounce.total;
 	}
 

@@ -3,7 +3,7 @@
 
 typedef struct {
 	float3 w;
-	float weight;
+	float3 weight;
 	float pdf;
 } PhaseSample;
 

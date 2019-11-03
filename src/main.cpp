@@ -34,7 +34,7 @@
 constexpr char *models_directory = "../resources/models/";
 constexpr char *kernel_filepath = "../kernels/main.cl";
 
-constexpr std::size_t RayI_size = 16 * 6;
+constexpr std::size_t RayI_size = 16 * 7;
 
 //----------------------------------------------
 

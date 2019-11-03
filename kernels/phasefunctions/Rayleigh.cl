@@ -1,30 +1,23 @@
 #ifndef __RAYLEIGH__
 #define __RAYLEIGH__
 
-#ifndef ortho
-
-#define ortho(v) fabs(v.x) > fabs(v.y) ? F3_UP : F3_RIGHT
-
-void calc_binormals(const float3 normal, float3* tangent, float3* binormal) {
-	*binormal = fast_normalize(cross(normal, ortho(normal)));
-	*tangent = cross(normal, *binormal);
-}
-
-#endif
-
-float rayleigh(float cosTheta) {
+inline float rayleigh(float cosTheta) {
 	return (3.0f / (16.0f*PI))*(1.0f + cosTheta * cosTheta);
 }
 
-float3 rayleigh_eval(const float3 wi, const float3 wo) {
+float3 phase_eval(const float3 wi, const float3 wo) {
 	return (float3)(rayleigh(dot(wi,wo)));
 }
 
-bool rayleigh_sample(
-	const float3 wi, PhaseSample* p_sample,
+float phase_pdf(const float3 wi, const float3 wo) {
+	return rayleigh(dot(wi, wo));
+}
+
+bool phase_sample(
+	const float3 wi, PhaseSample* phaseSample,
 	RNG_SEED_PARAM
 ) {
-	float2 xi = (float2)(next1D(RNG_SEED_VALUE), next1D(RNG_SEED_VALUE));
+	float2 xi = next2D(RNG_SEED_VALUE);
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*4.0f - 2.0f;
 	float invZ = sqrt(z*z + 1.0f);
@@ -33,15 +26,15 @@ bool rayleigh_sample(
 	float cosTheta = u - 1.0f / u;
 	float sinTheta = sqrt(fmax(1.0f - cosTheta * cosTheta, 0.0f));
 
-	float3 u, v;
-	calc_binormals(wi, &u, &v);
-	p_sample->w =
-		u * cos(phi)*sinTheta +
-		v * sin(phi)*sinTheta +
-		wi * cosTheta;
+	TangentFrame tf = createTangentFrame(&wi);
+	phaseSample->w = toGlobal(&tf, (float3)(
+		native_cos(phi) * sinTheta,
+		native_sin(phi) * sinTheta,
+		cosTheta
+	));
 
-	p_sample->weight = 1.0f;
-	p_sample->pdf = rayleigh(cosTheta);
+	phaseSample->weight = (float3)(1.0f);
+	phaseSample->pdf = rayleigh(cosTheta);
 	return true;
 }
 

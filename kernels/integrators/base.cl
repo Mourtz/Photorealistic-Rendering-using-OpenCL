@@ -211,7 +211,7 @@ float3 volumeLightSample(
 	if(!sampleDirect(&light, &ray->pos, &rec, RNG_SEED_VALUE))
 		return (float3)(0.0f);
 
-	float3 f = iso_eval(ray->dir, rec.d);
+	float3 f = phase_eval(ray->dir, rec.d);
 	if (dot(f, f) == 0.0f)
 		return (float3)(0.0f);
 
@@ -222,7 +222,7 @@ float3 volumeLightSample(
 
 	if (shadow(&sRay, scene)) {
 		float3 contribution = native_exp(-medium->sigmaT * sRay.t) * light.mat.color * f *
-			powerHeuristic(rec.pdf, iso_pdf(ray->dir, rec.d));
+			powerHeuristic(rec.pdf, phase_pdf(ray->dir, rec.d));
 		return contribution / rec.pdf;
 	}
 
@@ -238,7 +238,7 @@ float3 volumePhaseSample(
 	RNG_SEED_PARAM,
 	const Material* mat
 ){
-	if (!iso_sample(ray->dir, phaseSample, RNG_SEED_VALUE)) {
+	if (!phase_sample(ray->dir, phaseSample, RNG_SEED_VALUE)) {
 		return (float3)(0.0f);
 	}
 

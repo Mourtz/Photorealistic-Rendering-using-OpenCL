@@ -61,6 +61,7 @@ typedef struct {
 		bool wasSpecular;
 	} bounce;
 
+	bool reset;
 	//int mesh_id;
 } RLH;
 
@@ -138,13 +139,14 @@ __kernel void render_kernel(
 	Ray ray = tempToRay(r_flat[work_item_id].ray);
 
 	// firstBounce
-	if (rlh->bounce.total == 0) {
+	if (rlh->reset || framenumber == 1) {
 		rlh->bounce.total = 0;
 		rlh->bounce.diff = 0;
 		rlh->bounce.spec = 0;
 		rlh->bounce.trans = 0;
 		rlh->bounce.scatters = 0;
 		rlh->bounce.wasSpecular = true;
+		rlh->reset = false;
 
 		rlh->mask = (float3)(1.0f);
 

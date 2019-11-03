@@ -27,7 +27,6 @@ float4 radiance(
 
 	int mesh_id;
 	bool didHit = intersect_scene(ray, &mesh_id, scene);
-	//rlh->mesh_id = mesh_id;
 
 	const Mesh mesh = scene->meshes[mesh_id];
 	Material mat = (mesh_id + 1) ? mesh.mat : *scene->mat;
@@ -65,7 +64,7 @@ float4 radiance(
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	{
 		if (!didHit) {
-			rlh->bounce.total = 0;
+			rlh->reset = true;
 
 #ifdef ALPHA_TESTING
 			return (float4)(0.0f);
@@ -79,7 +78,7 @@ float4 radiance(
 			if (!enableLightSampling || rlh->bounce.wasSpecular)
 				emission += mat.emission * rlh->mask;
 
-			rlh->bounce.total = 0;
+			rlh->reset = true;
 			return acc;
 		}
 #endif
@@ -87,7 +86,7 @@ float4 radiance(
 		SurfaceScatterEvent surfaceEvent = makeLocalScatterEvent(ray, scene);
 
 		if (handleSurface(&surfaceEvent, ray, medium, scene, RNG_SEED_VALUE, &mat, rlh, &emission)) {
-			rlh->bounce.total = 0;
+			rlh->reset = true;
 			return acc;
 		}
 
@@ -101,7 +100,7 @@ float4 radiance(
 		if (next1D(RNG_SEED_VALUE) < roulettePdf){
 			rlh->mask /= roulettePdf;
 		} else {
-			rlh->bounce.total = 0;
+			rlh->reset = true;
 			return acc;
 		}
 	}
@@ -112,7 +111,7 @@ float4 radiance(
 		rlh->bounce.spec >= MAX_SPEC_BOUNCES ||
 		rlh->bounce.trans >= MAX_TRANS_BOUNCES
 	) {
-		rlh->bounce.total = 0;
+		rlh->reset = true;
 	}
 
 	return acc;

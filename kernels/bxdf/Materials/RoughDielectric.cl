@@ -10,7 +10,7 @@ bool RoughDielectricBSDF(
 
 	const float eta = event->wi.z < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;
 
-	float sampleRoughness = (1.2f - 0.2f * sqrt(fabs(wiDotN))) * mat->roughness;
+	float sampleRoughness = (1.2f - 0.2f * native_sqrt(fabs(wiDotN))) * mat->roughness;
 	float alpha = roughnessToAlpha(mat->dist, mat->roughness);
 	float sampleAlpha = roughnessToAlpha(mat->dist, sampleRoughness);
 
@@ -104,7 +104,7 @@ float RoughDielectricBSDF_pdf(const SurfaceScatterEvent* event, const Material* 
 
 	bool reflect = wiDotN * woDotN >= 0.0f;
 
-	float sampleRoughness = (1.2f - 0.2f * sqrt(fabs(wiDotN))) * mat->roughness;
+	float sampleRoughness = (1.2f - 0.2f * native_sqrt(fabs(wiDotN))) * mat->roughness;
 	float sampleAlpha = roughnessToAlpha(mat->dist, sampleRoughness);
 
 	float eta = wiDotN < 0.0f ? mat->eta_t.x : 1.0f / mat->eta_t.x;

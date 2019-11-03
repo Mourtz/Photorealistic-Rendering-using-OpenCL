@@ -65,7 +65,7 @@ float3 bsdfSample(
 
 #ifdef GLOBAL_MEDIUM
 				if (medium != NULL)
-					contribution *= exp(-medium->sigmaT * ray->t);
+					contribution *= native_exp(-medium->sigmaT * ray->t);
 #endif
 
 				return contribution;
@@ -121,7 +121,7 @@ float3 lightSample(
 
 #ifdef GLOBAL_MEDIUM
 			if (medium != NULL)
-				contribution *= exp(-medium->sigmaT * shadowRay.t);
+				contribution *= native_exp(-medium->sigmaT * shadowRay.t);
 #endif
 
 			contribution *= powerHeuristic(rec.pdf, BSDF_pdf(event, mat));
@@ -221,7 +221,7 @@ float3 volumeLightSample(
 	sRay.t = rec.dist;
 
 	if (shadow(&sRay, scene)) {
-		float3 contribution = exp(-medium->sigmaT * sRay.t) * light.mat.color * f *
+		float3 contribution = native_exp(-medium->sigmaT * sRay.t) * light.mat.color * f *
 			powerHeuristic(rec.pdf, phase_pdf(ray->dir, rec.d));
 		return contribution / rec.pdf;
 	}
@@ -251,7 +251,7 @@ float3 volumePhaseSample(
 		const Mesh light = scene->meshes[mesh_id];
 
 		if (light.mat.t & LIGHT) {
-			return exp(-medium->sigmaT * sRay.t) * light.mat.color * phaseSample->weight *
+			return native_exp(-medium->sigmaT * sRay.t) * light.mat.color * phaseSample->weight *
 				powerHeuristic(phaseSample->pdf, directPdf(&light, &sRay.dir, &mediumSample->p));
 		}
 	}

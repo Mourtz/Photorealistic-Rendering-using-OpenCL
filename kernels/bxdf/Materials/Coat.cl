@@ -5,7 +5,7 @@
 #define _thickness			1.0f
 #define _sigmaA				0.0f
 #define _scaledSigmaA		_thickness*_sigmaA
-#define _avgTransmittance	exp(-2.0f*_scaledSigmaA)
+#define _avgTransmittance	native_exp(-2.0f*_scaledSigmaA)
 
 bool CoatBSDF(
 	const Ray* ray, SurfaceScatterEvent* event,
@@ -45,7 +45,7 @@ bool CoatBSDF(
 		event->wo = (float3)(event->wo.x * _ior, event->wo.y * _ior, cosThetaTo);
 		event->weight *= (1.0f - Fi) * (1.0f - Fo);
 		if (_scaledSigmaA > 0.0f)
-			event->weight *= exp(_scaledSigmaA * (-1.0f / cosThetaSubstrate - 1.0f / cosThetaTi));
+			event->weight *= native_exp(_scaledSigmaA * (-1.0f / cosThetaSubstrate - 1.0f / cosThetaTi));
 
 		event->weight /= 1.0f - specularProbability;
 		event->pdf *= 1.0f - specularProbability;
@@ -77,7 +77,7 @@ float3 CoatBSDF_eval(const SurfaceScatterEvent* event, const Material* mat) {
 		float3 substrateF = RoughConductorBSDF_eval(&nE, mat);
 
 		if (_scaledSigmaA > 0.0f)
-			substrateF *= exp(_scaledSigmaA * (-1.0f / cosThetaTo - 1.0f / cosThetaTi));
+			substrateF *= native_exp(_scaledSigmaA * (-1.0f / cosThetaTo - 1.0f / cosThetaTi));
 
 		float laplacian = eta * eta * event->wo.z / cosThetaTo;
 

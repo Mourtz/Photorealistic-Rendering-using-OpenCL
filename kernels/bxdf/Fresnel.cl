@@ -9,13 +9,13 @@ inline float conductorReflectance(float eta, float k, float cosThetaI) {
 	float sinThetaIQu = sinThetaISq * sinThetaISq;
 
 	float innerTerm = eta * eta - k * k - sinThetaISq;
-	float aSqPlusBSq = sqrt(fmax(innerTerm * innerTerm + 4.0f * eta * eta * k * k, 0.0f));
-	float a = sqrt(fmax((aSqPlusBSq + innerTerm) * 0.5f, 0.0f));
+	float aSqPlusBSq = native_sqrt(fmax(innerTerm * innerTerm + 4.0f * eta * eta * k * k, 0.0f));
+	float a = native_sqrt(fmax((aSqPlusBSq + innerTerm) * 0.5f, 0.0f));
 
-	float Rs =	((aSqPlusBSq + cosThetaISq) - (2.0f * a * cosThetaI)) /
-				((aSqPlusBSq + cosThetaISq) + (2.0f * a * cosThetaI));
-	float Rp =	((cosThetaISq * aSqPlusBSq + sinThetaIQu) - (2.0f * a * cosThetaI * sinThetaISq)) /
-				((cosThetaISq * aSqPlusBSq + sinThetaIQu) + (2.0f * a * cosThetaI * sinThetaISq));
+	float Rs = ((aSqPlusBSq + cosThetaISq) - (2.0f * a * cosThetaI)) /
+		((aSqPlusBSq + cosThetaISq) + (2.0f * a * cosThetaI));
+	float Rp = ((cosThetaISq * aSqPlusBSq + sinThetaIQu) - (2.0f * a * cosThetaI * sinThetaISq)) /
+		((cosThetaISq * aSqPlusBSq + sinThetaIQu) + (2.0f * a * cosThetaI * sinThetaISq));
 
 	return 0.5f * (Rs + Rs * Rp);
 }
@@ -48,7 +48,7 @@ inline float dielectricReflectance(float eta, float cosThetaI, float* cosThetaT)
 		*cosThetaT = 0.0f;
 		return 1.0f;
 	}
-	*cosThetaT = sqrt(fmax(1.0f - sinThetaTSq, 0.0f));
+	*cosThetaT = native_sqrt(fmax(1.0f - sinThetaTSq, 0.0f));
 
 	float Rs = (eta * ( cosThetaI) - (*cosThetaT)) / (eta * ( cosThetaI) + (*cosThetaT));
 	float Rp = (eta * (*cosThetaT) - ( cosThetaI)) / (eta * (*cosThetaT) + ( cosThetaI));

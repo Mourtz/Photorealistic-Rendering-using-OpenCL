@@ -15,7 +15,7 @@ float lambertianCylinder(const float3* wo){
     if (phi < 0.0f)
         phi += TWO_PI;
 
-    return cosThetaO*fabs(((PI - phi)*native_cos(phi) + native_sin(phi))*INV_FOUR_PI);
+    return cosThetaO*fabs(((PI - phi)*cos(phi) + sin(phi))*INV_FOUR_PI);
 }
 
 void LambertianFiberBCSDF(

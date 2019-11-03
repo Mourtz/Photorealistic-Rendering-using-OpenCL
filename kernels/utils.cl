@@ -85,18 +85,18 @@ inline float3 polar_to_cartesian(
 		cosTheta);
 }
 
-#define trigInverse(x) fmin(native_sqrt(fmax(1.0f - x*x, 0.0f)), 1.0f)
+#define trigInverse(x) fmin(sqrt(fmax(1.0f - x*x, 0.0f)), 1.0f)
 
 //--------------------------------------------------------------------
 
 inline float3 uniformSphere(const float2 xi){
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*2.0f - 1.0f;
-	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
+	float r = sqrt(fmax(1.0f - z * z, 0.0f));
 
 	return (float3)(
-		native_cos(phi)*r,
-		native_sin(phi)*r,
+		cos(phi)*r,
+		sin(phi)*r,
 		z
 	);
 }
@@ -108,8 +108,8 @@ inline float3 uniformSphere(const float2 xi){
 
 inline float3 uniformHemisphere(const float2* xi){
     float phi  = TWO_PI*xi->x;
-    float r = native_sqrt(fmax(1.0f - xi->y*xi->y, 0.0f));
-    return (float3)(native_cos(phi)*r, native_sin(phi)*r, xi->y);
+    float r = sqrt(fmax(1.0f - xi->y*xi->y, 0.0f));
+    return (float3)(cos(phi)*r, sin(phi)*r, xi->y);
 }
 
 #define uniformHemispherePdf() INV_TWO_PI
@@ -120,10 +120,10 @@ inline float3 uniformHemisphere(const float2* xi){
 inline float3 uniformSphericalCap(const float2 xi, const float cosThetaMax){
 	float phi = xi.x*TWO_PI;
 	float z = xi.y*(1.0f - cosThetaMax) + cosThetaMax;
-	float r = native_sqrt(fmax(1.0f - z * z, 0.0f));
+	float r = sqrt(fmax(1.0f - z * z, 0.0f));
 	return (float3)(
-		native_cos(phi)*r,
-		native_sin(phi)*r,
+		cos(phi)*r,
+		sin(phi)*r,
 		z
 	);
 }
@@ -143,11 +143,11 @@ inline bool invertUniformSphericalCap(float3 w, float cosThetaMax, float2* xi, f
 
 inline float3 cosineHemisphere(const float2 xi){ 
     float phi = xi.x*TWO_PI;
-    float r = native_sqrt(xi.y);
+    float r = sqrt(xi.y);
     return (float3)(
-		native_cos(phi)*r,
-		native_sin(phi)*r,
-		native_sqrt(fmax(1.0f - xi.y, 0.0f))
+		cos(phi)*r,
+		sin(phi)*r,
+		sqrt(fmax(1.0f - xi.y, 0.0f))
     );
 }
 
@@ -161,8 +161,8 @@ inline float2 invertCosineHemisphere(float3 w, float mu) {
 inline float3 phongHemisphere(const float2* xi, float n){
     float phi = xi->x*TWO_PI;
     float cosTheta = pow(xi->y, 1.0f/(n + 1.0f));
-    float r = native_sqrt(fmax(1.0f - cosTheta*cosTheta, 0.0f));
-    return (float3)(native_cos(phi)*r, native_sin(phi)*r, cosTheta);
+    float r = sqrt(fmax(1.0f - cosTheta*cosTheta, 0.0f));
+    return (float3)(cos(phi)*r, sin(phi)*r, cosTheta);
 }
 
 #define phongHemispherePdf(v, n) INV_TWO_PI*(n + 1.0f)*pow(v->z, n)

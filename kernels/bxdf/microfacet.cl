@@ -27,7 +27,7 @@ float Microfacet_D(int dist, float alpha, const float3 m)
         float cosThetaSq = m.z * m.z;
         float tanThetaSq = fmax(1.0f - cosThetaSq, 0.0f) / cosThetaSq;
         float cosThetaQu = cosThetaSq * cosThetaSq;
-        return INV_PI * native_exp(-tanThetaSq / alphaSq) / (alphaSq * cosThetaQu);
+        return INV_PI * exp(-tanThetaSq / alphaSq) / (alphaSq * cosThetaQu);
     }
     else if (dist & PHONG) {
         return (alpha + 2.0f) * INV_TWO_PI * pow(m.z, alpha);
@@ -50,7 +50,7 @@ float Microfacet_G1(int dist, float alpha, const float3 v, const float3 m)
 
     if (dist & BECKMANN) {
         float cosThetaSq = v.z * v.z;
-        float tanTheta = fabs(native_sqrt(fmax(1.0f - cosThetaSq, 0.0f)) / v.z);
+        float tanTheta = fabs(sqrt(fmax(1.0f - cosThetaSq, 0.0f)) / v.z);
         float a = 1.0f / (alpha * tanTheta);
         if (a < 1.6f)
             return (3.535f * a + 2.181f * a * a) / (1.0f + 2.276f * a + 2.577f * a * a);
@@ -59,8 +59,8 @@ float Microfacet_G1(int dist, float alpha, const float3 v, const float3 m)
     }
     else if (dist & PHONG) {
         float cosThetaSq = v.z * v.z;
-        float tanTheta = fabs(native_sqrt(fmax(1.0f - cosThetaSq, 0.0f)) / v.z);
-        float a = native_sqrt(0.5f * alpha + 1.0f) / tanTheta;
+        float tanTheta = fabs(sqrt(fmax(1.0f - cosThetaSq, 0.0f)) / v.z);
+        float a = sqrt(0.5f * alpha + 1.0f) / tanTheta;
         if (a < 1.6f)
             return (3.535f * a + 2.181f * a * a) / (1.0f + 2.276f * a + 2.577f * a * a);
         else
@@ -70,7 +70,7 @@ float Microfacet_G1(int dist, float alpha, const float3 v, const float3 m)
         float alphaSq = alpha * alpha;
         float cosThetaSq = v.z * v.z;
         float tanThetaSq = fmax(1.0f - cosThetaSq, 0.0f) / cosThetaSq;
-        return 2.0f / (1.0f + native_sqrt(1.0f + alphaSq * tanThetaSq));
+        return 2.0f / (1.0f + sqrt(1.0f + alphaSq * tanThetaSq));
     }
 
     return 0.0f;
@@ -92,19 +92,19 @@ float3 Microfacet_sample(int dist, float alpha, float2 xi)
     float cosTheta = 0.0f;
 
     if (dist & BECKMANN) {
-        float tanThetaSq = -alpha * alpha * native_log(1.0f - xi.x);
-        cosTheta = 1.0f / native_sqrt(1.0f + tanThetaSq);
+        float tanThetaSq = -alpha * alpha * log(1.0f - xi.x);
+        cosTheta = 1.0f / sqrt(1.0f + tanThetaSq);
     }
     else if (dist & PHONG) {
         cosTheta = pow(xi.x, 1.0f / (alpha + 2.0f));
     }
     else if (dist & GGX) {
         float tanThetaSq = alpha * alpha * xi.x / (1.0f - xi.x);
-        cosTheta = 1.0f / native_sqrt(1.0f + tanThetaSq);
+        cosTheta = 1.0f / sqrt(1.0f + tanThetaSq);
     }
 
-    float r = native_sqrt(fmax(1.0f - cosTheta * cosTheta, 0.0f));
-    return (float3)(native_cos(phi) * r, native_sin(phi) * r, cosTheta);
+    float r = sqrt(fmax(1.0f - cosTheta * cosTheta, 0.0f));
+    return (float3)(cos(phi) * r, sin(phi) * r, cosTheta);
 }
 
 #endif

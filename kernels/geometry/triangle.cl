@@ -13,7 +13,7 @@ float3 flatTriAndRayIntersect(
 	const float3 tVec = closeOrigin - a;
 	const float3 pVec = cross(ray->dir, edge2);
 	const float3 qVec = cross(tVec, edge1);
-	const float invDet = native_recip(dot(edge1, pVec));
+	const float invDet = 1.0f/(dot(edge1, pVec));
 
 	*t = dot(edge2, qVec) * invDet;
 

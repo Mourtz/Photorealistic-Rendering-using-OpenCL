@@ -62,6 +62,7 @@ typedef struct {
 	} bounce;
 
 	bool reset;
+	uint samples;
 	//int mesh_id;
 } RLH;
 
@@ -138,8 +139,9 @@ __kernel void render_kernel(
 
 	Ray ray = tempToRay(r_flat[work_item_id].ray);
 
-	// firstBounce
-	if (rlh->reset || framenumber == 1) {
+	// firstBounce or reset
+	if (rlh->reset || rlh->samples == 0) {
+		++rlh->samples;
 		rlh->bounce.total = 0;
 		rlh->bounce.diff = 0;
 		rlh->bounce.spec = 0;
@@ -162,5 +164,5 @@ __kernel void render_kernel(
 	r_flat[work_item_id].ray = rayToTemp(ray);
 
 	/* update the output GLTexture */
-	write_imagef(output_tex, i_coord, rlh->acc / (float)(framenumber));
+	write_imagef(output_tex, i_coord, rlh->acc / (float)(rlh->samples));
 }

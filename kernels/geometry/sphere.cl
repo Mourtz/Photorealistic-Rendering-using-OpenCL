@@ -10,7 +10,7 @@ bool intersect_sphere(Ray* ray, const Mesh* sphere) {
     float C = dot(p, p) - sphere->radius * sphere->radius ;
     float detSq = B*B - C;
 	if (detSq >= 0.0f) {
-		float det = native_sqrt(detSq);
+		float det = sqrt(detSq);
 		float t = -B - det;
 		if (t < ray->t && t > EPS) {
 			ray->t = t;
@@ -29,7 +29,7 @@ bool intersect_sphere(Ray* ray, const Mesh* sphere) {
 	float det = b * b - dot(rayToCenter, rayToCenter) + sphere->radius * sphere->radius;
 
 	if (det < 0.0f) return false;
-	det = native_sqrt(det);
+	det = sqrt(det);
 
 	*dist = b - det;
 	if (*dist > EPS && *dist < ray->t) return true;
@@ -43,7 +43,7 @@ bool intersect_sphere(Ray* ray, const Mesh* sphere) {
 float sphere_solidAngle(const Mesh* sphere, const float3* p) {
 	float3 L = sphere->pos - *p;
 	float d = fast_length(L);
-	float cosTheta = native_sqrt(fmax(d * d - sphere->radius * sphere->radius, 0.0f)) / d;
+	float cosTheta = sqrt(fmax(d * d - sphere->radius * sphere->radius, 0.0f)) / d;
 
 	return TWO_PI * (1.0f - cosTheta);
 }
@@ -58,7 +58,7 @@ float sphere_area(const Mesh* sphere){
 
 float sphere_directPdf(const Mesh* sphere, const float3* p) {
 	float dist = length(sphere->pos - *p);
-	float cosTheta = native_sqrt(fmax(dist * dist - sphere->radius * sphere->radius, 0.0f)) / dist;
+	float cosTheta = sqrt(fmax(dist * dist - sphere->radius * sphere->radius, 0.0f)) / dist;
 	return uniformSphericalCapPdf(cosTheta);
 }
 
@@ -71,12 +71,12 @@ bool sphere_sampleDirect(const Mesh* sphere, const float3* p, LightSample* sampl
 		return false;
 
 	L = normalize(L);
-	float cosTheta = native_sqrt(C) / d;
+	float cosTheta = sqrt(C) / d;
 
 	sample->d = uniformSphericalCap(next2D(RNG_SEED_VALUE), cosTheta);
 
 	float B = d * sample->d.z;
-	float det = native_sqrt(fmax(B * B - C, 0.0f));
+	float det = sqrt(fmax(B * B - C, 0.0f));
 	sample->dist = B - det;
 
 

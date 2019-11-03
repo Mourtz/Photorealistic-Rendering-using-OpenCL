@@ -45,7 +45,7 @@ bool quad_sampleDirect(const Mesh* plane, const float3* p, LightSample* sample, 
 	float3 q = _base + xi.x * _edge0 + xi.y * _edge1;
 	sample->d = q - *p;
 	float rSq = dot(sample->d, sample->d);
-	sample->dist = native_sqrt(rSq);
+	sample->dist = sqrt(rSq);
 	sample->d /= sample->dist;
 	float cosTheta = -dot(_normal, sample->d);
 	sample->pdf = rSq / (cosTheta * _area);

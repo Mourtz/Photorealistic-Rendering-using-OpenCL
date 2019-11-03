@@ -146,7 +146,7 @@ float3 toLocal(const TangentFrame* tf, const float3 p) {
 		dot(tf->tangent, p),
 		dot(tf->bitangent, p),
 		dot(tf->normal, p)
-		);
+	);
 }
 
 float3 toGlobal(const TangentFrame* tf, const float3 p) {

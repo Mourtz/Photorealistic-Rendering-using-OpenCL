@@ -1,8 +1,6 @@
 ![header](header.png)
 # Photorealistic-Rendering-using-OpenCL
 My BSc thesis on Photorealistic rendering using OpenCL
-___
-Latest branch: [bleeding-edge](https://github.com/Mourtz/Photorealistic-Rendering-using-OpenCL/tree/bleeding-edge)
 
 ## Controls
 __Escape__ - Exit\

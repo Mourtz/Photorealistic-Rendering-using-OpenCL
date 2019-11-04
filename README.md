@@ -59,6 +59,7 @@ __Prtsc__ - Export
 - Oren-Nayar BRDF
 - Denoiser
 - LBVH using spatial Morton codes
+- Phong Tessellation
 
 ## How To Build
 

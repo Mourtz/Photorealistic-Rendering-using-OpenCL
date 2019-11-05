@@ -87,7 +87,7 @@ cl_uint framenumber = 0;
 Camera *hostRendercam = nullptr;
 InteractiveCamera *interactiveCamera = nullptr;
 host_scene *scene = nullptr;
-std::string scene_filepath = "../scenes/test.json";
+std::string scene_filepath = "../scenes/cornell.json";
 bool ALPHA_TESTING = false;
 
 //----------------------------------------------

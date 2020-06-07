@@ -6,7 +6,6 @@
 #include <utility>
 #include <map>
 
-#include <Model/obj_parser.h>
 #include <utils.h>
 
 #include <assimp/Importer.hpp> // C++ importer interface
@@ -63,9 +62,6 @@ namespace IO
 		ModelLoader();
 		~ModelLoader();
 		void loadModel(std::string filepath, std::string filename);
-
-		static void getFaceNormalsOfObject(object3D object, std::vector<cl_uint4> &faceNormals, cl_int offset);
-		static void getFacesOfObject(object3D object, std::vector<cl_uint4> &faces, cl_int offset);
 
 		bool ImportFromFile(const std::string &filepath, std::unique_ptr<SceneData> &sceneData);
 		std::unique_ptr<SceneData> ProcessData(const aiScene *scene);

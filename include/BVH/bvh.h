@@ -26,11 +26,7 @@ class BVH {
 
 public:
 	BVH();
-	BVH(
-		const std::vector<object3D> sceneObjects,
-		const std::vector<cl_float> vertices,
-		const std::vector<cl_float> normals
-	);
+	BVH(const std::unique_ptr<IO::SceneData>& sceneData);
 	~BVH();
 	std::vector<BVHNode*> getContainerNodes();
 	cl_uint getDepth();
@@ -40,6 +36,8 @@ public:
 	void visualize(std::vector<cl_float>* vertices, std::vector<cl_uint>* indices);
 
 protected:
+	std::vector<BVHNode*> buildTreesFromObjects(const std::unique_ptr<IO::SceneData>& sceneData);
+
 	void assignFacesToBins(
 		const cl_uint axis, const cl_uint splits, const std::vector<Tri>* faces,
 		const std::vector< std::vector<vec3> >* leftBin,
@@ -49,11 +47,6 @@ protected:
 	BVHNode* buildTree(
 		const std::vector<Tri> faces, const vec3 bbMin, const vec3 bbMax,
 		cl_uint depth, const cl_float rootSA
-	);
-	std::vector<BVHNode*> buildTreesFromObjects(
-		const std::vector<object3D>* sceneObjects,
-		const std::vector<cl_float>* vertices,
-		const std::vector<cl_float>* normals
 	);
 	void buildWithMeanSplit(
 		BVHNode* node, const std::vector<Tri> faces,

@@ -22,6 +22,9 @@ public:
 		std::vector<cl_float4> vertices, vec3& bbMin, vec3& bbMax
 	);
 	static void getAABB(
+		std::vector<vec3> vertices, vec3& bbMin, vec3& bbMax
+	);
+	static void getAABB(
 		std::vector<vec3> bbMins, std::vector<vec3> bbMaxs,
 		vec3* bbMin, vec3* bbMax
 	);

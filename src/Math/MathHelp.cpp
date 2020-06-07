@@ -25,6 +25,23 @@ void MathHelp::getAABB(vector<cl_float4> vertices, vec3& bbMin, vec3& bbMax) {
 	}
 }
 
+void MathHelp::getAABB(vector<vec3> vertices, vec3& bbMin, vec3& bbMax) {
+	bbMin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
+	bbMax = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
+
+	for (cl_uint i = 1; i < vertices.size(); i++) {
+		vec3 v = vertices[i];
+
+		(bbMin)[0] = ((bbMin)[0] < v.x) ? (bbMin)[0] : v.x;
+		(bbMin)[1] = ((bbMin)[1] < v.y) ? (bbMin)[1] : v.y;
+		(bbMin)[2] = ((bbMin)[2] < v.z) ? (bbMin)[2] : v.z;
+
+		(bbMax)[0] = ((bbMax)[0] > v.x) ? (bbMax)[0] : v.x;
+		(bbMax)[1] = ((bbMax)[1] > v.y) ? (bbMax)[1] : v.y;
+		(bbMax)[2] = ((bbMax)[2] > v.z) ? (bbMax)[2] : v.z;
+	}
+}
+
 void MathHelp::getAABB(
 	vector<vec3> bbMins, vector<vec3> bbMaxs, vec3* bbMin, vec3* bbMax
 ) {

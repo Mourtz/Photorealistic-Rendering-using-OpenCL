@@ -92,14 +92,14 @@ bool ALPHA_TESTING = false;
 
 //----------------------------------------------
 
+using namespace IO;
+
 std::size_t
-initOpenCLBuffers_BVH(BVH *bvh, ModelLoader *ml, std::vector<cl_uint> faces)
+initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
 {
 	std::vector<BVHNode *> bvhNodes = bvh->getNodes();
 	std::vector<bvhNode_cl> bvhNodesCL;
 
-	std::vector<cl_uint> facesVN = ml->getObjParser()->getFacesVN();
-	std::vector<cl_int> facesMtl = ml->getObjParser()->getFacesMtl();
 	std::vector<cl_uint4> facesV;
 	std::vector<cl_uint4> facesN;
 
@@ -189,9 +189,9 @@ initOpenCLBuffers_BVH(BVH *bvh, ModelLoader *ml, std::vector<cl_uint> faces)
 			// Material of face @ToDo
 			//fv.w = facesMtl[tri.face.w];
 
-			fn.s[0] = facesVN[tri.normals.s[3] * 3];
-			fn.s[1] = facesVN[tri.normals.s[3] * 3 + 1];
-			fn.s[2] = facesVN[tri.normals.s[3] * 3 + 2];
+			fn.s[0] = faces[tri.normals.s[3] * 3];
+			fn.s[1] = faces[tri.normals.s[3] * 3 + 1];
+			fn.s[2] = faces[tri.normals.s[3] * 3 + 2];
 			fn.s[3] = 0;
 
 			facesV.push_back(fv);
@@ -251,9 +251,13 @@ std::size_t initOpenCLBuffers_Faces(
 }
 
 void initOpenCLBuffers(
-	std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals,
+	const std::unique_ptr<SceneData>& data,
 	ModelLoader *ml, BVH *accelStruc)
 {
+	std::vector<unsigned int> faces = getIndices(data->at(0));
+	std::vector<float> vertices = getPositions(data->at(0));
+	std::vector<float> normals = getNormals(data->at(0));
+
 	double timerStart;
 	double timerEnd;
 	double timeDiff;
@@ -277,7 +281,7 @@ void initOpenCLBuffers(
 
 	// Buffer: Acceleration Structure
 	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_BVH(accelStruc, ml, faces);
+	bytes = initOpenCLBuffers_BVH(accelStruc, faces);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
@@ -569,22 +573,13 @@ int main(int argc, char **argv)
 		mBufMaterial = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
 		queue.enqueueWriteBuffer(mBufMaterial, CL_TRUE, 0, sizeof(Material), scene->obj_mat);
 
-		ModelLoader *ml = new ModelLoader();
-		ml->loadModel(models_directory, scene->obj_path);
+		std::unique_ptr<ModelLoader> ml = std::make_unique<ModelLoader>();
+		std::unique_ptr<SceneData> data;
+		ml->ImportFromFile(std::string(models_directory + scene->obj_path), data);
 
-		ObjParser *op = ml->getObjParser();
+		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(data);
 
-		std::vector<cl_uint> mFaces = op->getFacesV();
-		std::vector<cl_float> mNormals = op->getNormals();
-		std::vector<cl_float> mVertices = op->getVertices();
-
-		BVH *accelStruct = new BVH(op->getObjects(), mVertices, mNormals);
-
-		initOpenCLBuffers(mVertices, mFaces, mNormals, ml, accelStruct);
-
-		delete ml;
-		delete accelStruct;
-		// clReleaseProgram(bvh_program());
+		initOpenCLBuffers(data, ml.get(), accelStruct.get());
 	}
 
 	//

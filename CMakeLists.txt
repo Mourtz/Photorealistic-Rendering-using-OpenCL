@@ -4,6 +4,10 @@ PROJECT( OpenCL_Pathtracer )
 
 set(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+##############################################################
+# output paths
+##############################################################
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -127,6 +131,20 @@ set(ASSIMP_DIR "${CMAKE_SOURCE_DIR}/external/assimp")
 add_subdirectory("${ASSIMP_DIR}")
 target_include_directories(${PROJECT_NAME} PRIVATE "${ASSIMP_DIR}/include")
 target_link_libraries(${PROJECT_NAME} "assimp")
+
+# # TBB
+# SET(EMBREE_TBB_DEBUG_ROOT "${CMAKE_SOURCE_DIR}/external/embree")
+# SET(EMBREE_TBB_ROOT "${CMAKE_SOURCE_DIR}/external/embree")
+
+# # EMBREE
+# set(EMBREE_DIR "${CMAKE_SOURCE_DIR}/external/embree")
+# INCLUDE("${EMBREE_DIR}/common/cmake/embree-config.cmake")
+# SET(ENABLE_TUTORIALS OFF)
+# SET(ENABLE_INSTALLER OFF)
+# set(EMBREE_ISPC_SUPPORT OFF)
+# add_subdirectory("${EMBREE_DIR}")
+# target_include_directories(${PROJECT_NAME} PRIVATE "${EMBREE_DIR}/include")
+# target_link_libraries(${PROJECT_NAME} "embree")
 
 # set(AMD_APP_SDK "./external")
 #

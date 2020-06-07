@@ -7,9 +7,3 @@
 [submodule "external/glew-cmake"]
 	path = external/glew-cmake
 	url = https://github.com/Perlmint/glew-cmake
-[submodule "external/embree"]
-	path = external/embree
-	url = https://github.com/embree/embree
-[submodule "external/tbb"]
-	path = external/tbb
-	url = https://github.com/wjakob/tbb

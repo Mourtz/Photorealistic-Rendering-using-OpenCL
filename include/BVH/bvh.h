@@ -38,12 +38,6 @@ public:
 protected:
 	std::vector<BVHNode*> buildTreesFromObjects(const std::unique_ptr<IO::SceneData>& sceneData);
 
-	void assignFacesToBins(
-		const cl_uint axis, const cl_uint splits, const std::vector<Tri>* faces,
-		const std::vector< std::vector<vec3> >* leftBin,
-		const std::vector< std::vector<vec3> >* rightBin,
-		std::vector< std::vector<Tri> >* leftBinFaces, std::vector< std::vector<Tri> >* rightBinFaces
-	);
 	BVHNode* buildTree(
 		const std::vector<Tri> faces, const vec3 bbMin, const vec3 bbMax,
 		cl_uint depth, const cl_float rootSA
@@ -61,10 +55,6 @@ protected:
 		const cl_float rightSA, const cl_float rightNumFaces
 	);
 	void combineNodes(const cl_uint numSubTrees);
-	std::vector<Tri> facesToTriStructs(
-		const std::vector<cl_uint4>* facesThisObj, const std::vector<cl_uint4>* faceNormalsThisObj,
-		const std::vector<cl_float4>* vertices4, const std::vector<float>* normals
-	);
 	cl_float getMean(const std::vector<Tri> faces, const cl_uint axis);
 	cl_float getMeanOfNodes(const std::vector<BVHNode*> nodes, const cl_uint axis);
 	void groupTreesToNodes(std::vector<BVHNode*> nodes, BVHNode* parent, cl_uint depth);

@@ -47,43 +47,6 @@ BVH::~BVH() {
 	}
 }
 
-void BVH::assignFacesToBins(
-	const cl_uint axis, const cl_uint splits, const vector<Tri>* faces,
-	const vector< vector<vec3> >* leftBin,
-	const vector< vector<vec3> >* rightBin,
-	vector< vector<Tri> >* leftBinFaces, vector< vector<Tri> >* rightBinFaces
-) {
-	for (cl_uint i = 0; i < splits; i++) {
-		vector<vec3> leftAABB = (*leftBin)[i];
-		vector<vec3> rightAABB = (*rightBin)[i];
-
-		for (cl_uint j = 0; j < faces->size(); j++) {
-			Tri tri = (*faces)[j];
-
-			if (tri.bbMin[axis] <= leftAABB[1][axis] && tri.bbMax[axis] >= leftAABB[0][axis]) {
-				Tri triCpy;
-				triCpy.face = tri.face;
-				triCpy.bbMin = vec3(tri.bbMin);
-				triCpy.bbMax = vec3(tri.bbMax);
-				triCpy.bbMin[axis] = fmax(tri.bbMin[axis], leftAABB[0][axis]);
-				triCpy.bbMax[axis] = fmin(tri.bbMax[axis], leftAABB[1][axis]);
-
-				(*leftBinFaces)[i].push_back(triCpy);
-			}
-			if (tri.bbMin[axis] <= rightAABB[1][axis] && tri.bbMax[axis] >= rightAABB[0][axis]) {
-				Tri triCpy;
-				triCpy.face = tri.face;
-				triCpy.bbMin = vec3(tri.bbMin);
-				triCpy.bbMax = vec3(tri.bbMax);
-				triCpy.bbMin[axis] = fmax(tri.bbMin[axis], rightAABB[0][axis]);
-				triCpy.bbMax[axis] = fmin(tri.bbMax[axis], rightAABB[1][axis]);
-
-				(*rightBinFaces)[i].push_back(triCpy);
-			}
-		}
-	}
-}
-
 BVHNode* BVH::buildTree(
 	const vector<Tri> faces, const vec3 bbMin, const vec3 bbMax,
 	cl_uint depth, const cl_float rootSA
@@ -172,7 +135,6 @@ std::vector<BVHNode*> BVH::buildTreesFromObjects(const std::unique_ptr<IO::Scene
 			Tri tri;
 
 			tri.face = facesThisObj[j];
-			tri.normals = facesThisObj[j];
 
 			vector<vec3> v;
 			v.push_back(vec3(vertices[tri.face.x*3+0], vertices[tri.face.x*3+1], vertices[tri.face.x*3+2]));
@@ -272,24 +234,6 @@ void BVH::combineNodes(const cl_uint numSubTrees) {
 	if (BVH_SKIPAHEAD) {
 		this->skipAheadOfNodes();
 	}
-}
-
-vector<Tri> BVH::facesToTriStructs(
-	const vector<cl_uint4>* facesThisObj, const vector<cl_uint4>* faceNormalsThisObj,
-	const vector<cl_float4>* vertices4, const vector<float>* normals
-) {
-	vector<cl_float4> normals4 = this->packFloatAsFloat4(normals);
-	vector<Tri> triFaces;
-
-	for (cl_uint j = 0; j < facesThisObj->size(); j++) {
-		Tri tri;
-		tri.face = (*facesThisObj)[j];
-		tri.normals = (*faceNormalsThisObj)[j];
-		MathHelp::triCalcAABB(&tri, vertices4, &normals4);
-		triFaces.push_back(tri);
-	}
-
-	return triFaces;
 }
 
 cl_float BVH::getMean(const vector<Tri> faces, const cl_uint axis) {

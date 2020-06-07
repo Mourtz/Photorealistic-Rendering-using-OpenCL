@@ -10,7 +10,6 @@
 
 struct Tri {
 	cl_uint4 face;
-	cl_uint4 normals;
 	vec3 bbMin;
 	vec3 bbMax;
 };

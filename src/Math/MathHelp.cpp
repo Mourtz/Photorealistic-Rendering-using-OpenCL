@@ -241,9 +241,9 @@ void MathHelp::triCalcAABB(
 	vec3 p2 = vec3(v[1].x, v[1].y, v[1].z);
 	vec3 p3 = vec3(v[2].x, v[2].y, v[2].z);
 
-	cl_float4 fn1 = (*normals)[tri->normals.x];
-	cl_float4 fn2 = (*normals)[tri->normals.y];
-	cl_float4 fn3 = (*normals)[tri->normals.z];
+	cl_float4 fn1 = (*normals)[tri->face.x];
+	cl_float4 fn2 = (*normals)[tri->face.y];
+	cl_float4 fn3 = (*normals)[tri->face.z];
 
 	vec3 n1 = vec3(fn1.x, fn1.y, fn1.z);
 	vec3 n2 = vec3(fn2.x, fn2.y, fn2.z);

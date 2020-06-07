@@ -75,7 +75,6 @@ cl::ImageGL cl_env_map;
 std::vector<cl::Memory> cl_screens;
 cl::Buffer mBufBVH;
 cl::Buffer mBufFacesV;
-cl::Buffer mBufFacesN;
 cl::Buffer mBufVertices;
 cl::Buffer mBufNormals;
 cl::Buffer mBufMaterial;
@@ -102,7 +101,6 @@ initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
 	std::vector<bvhNode_cl> bvhNodesCL;
 
 	std::vector<cl_uint4> facesV;
-	std::vector<cl_uint4> facesN;
 
 	bool skipNext = false;
 
@@ -182,7 +180,6 @@ initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
 		{
 			Tri tri = facesVec[j];
 			cl_uint4 fv;
-			cl_uint4 fn;
 
 			fv.s[0] = faces[tri.face.s[3] * 3];
 			fv.s[1] = faces[tri.face.s[3] * 3 + 1];
@@ -190,13 +187,7 @@ initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
 			// Material of face @ToDo
 			//fv.w = facesMtl[tri.face.w];
 
-			fn.s[0] = faces[tri.normals.s[3] * 3];
-			fn.s[1] = faces[tri.normals.s[3] * 3 + 1];
-			fn.s[2] = faces[tri.normals.s[3] * 3 + 2];
-			fn.s[3] = 0;
-
 			facesV.push_back(fv);
-			facesN.push_back(fn);
 		}
 	}
 
@@ -213,10 +204,7 @@ initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
 	std::size_t bytesFV = sizeof(cl_uint4) * facesV.size();
 	mBufFacesV = clw::buffer::create(facesV, bytesFV);
 
-	std::size_t bytesFN = sizeof(cl_uint4) * facesN.size();
-	mBufFacesN = clw::buffer::create(facesN, bytesFN);
-
-	return bytesBVH + bytesFV + bytesFN;
+	return bytesBVH + bytesFV;
 }
 
 std::size_t initOpenCLBuffers_Faces(
@@ -399,14 +387,13 @@ void initCLKernel()
 	kernel.setArg(9, BVH_NUM_NODES);
 	kernel.setArg(10, mBufBVH);
 	kernel.setArg(11, mBufFacesV);
-	kernel.setArg(12, mBufFacesN);
-	kernel.setArg(13, mBufVertices);
-	kernel.setArg(14, mBufNormals);
-	kernel.setArg(15, mBufMaterial);
+	kernel.setArg(12, mBufVertices);
+	kernel.setArg(13, mBufNormals);
+	kernel.setArg(14, mBufMaterial);
 
-	kernel.setArg(16, cl_env_map);
+	kernel.setArg(15, cl_env_map);
 	// kernel.setArg(18, cl_noise_tex);
-	kernel.setArg(17, cl_flattenI);
+	kernel.setArg(16, cl_flattenI);
 }
 
 //---------------------------------------------------------------------------------------

@@ -109,7 +109,6 @@ __kernel void render_kernel(
 	const uint BVH_NUM_NODES,
 	__constant bvhNode* bvh,
 	__constant uint4* facesV,
-	__constant uint4* facesN,
 	__constant float4* vertices,
 	__constant float4* normals,
 	__constant Material* mat,
@@ -156,7 +155,7 @@ __kernel void render_kernel(
 		ray = createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P);
 	}
 
-	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, facesN, vertices, normals, mat };
+	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, vertices, normals, mat };
 
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
 	rlh->acc += radiance(&scene, env_map, &ray, rlh, RNG_SEED_VALUE_P);

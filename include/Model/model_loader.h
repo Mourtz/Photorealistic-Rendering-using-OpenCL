@@ -59,15 +59,15 @@ namespace IO
 	{
 
 	public:
-		ModelLoader();
-		~ModelLoader();
-		void loadModel(std::string filepath, std::string filename);
+		ModelLoader(){}
+		~ModelLoader(){}
 
 		bool ImportFromFile(const std::string &filepath, std::unique_ptr<SceneData> &sceneData);
-		std::unique_ptr<SceneData> ProcessData(const aiScene *scene);
 
-		const MeshData assimpGetMeshData(const aiMesh *mesh);
 	private:
+		std::unique_ptr<SceneData> ProcessData(const aiScene *scene);
+		const MeshData assimpGetMeshData(const aiMesh *mesh);
+		
 		// Create an instance of the Importer class
 		Assimp::Importer importer;
 	};

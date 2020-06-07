@@ -4,6 +4,11 @@
 #include <assimp/scene.h>		// Output data structure
 #include <assimp/postprocess.h> // Post processing flags
 
+#ifdef PROFILING
+#include <iomanip>      // std::setprecision
+#include <GLFW/glfw3.h> // glfwGetTime
+#endif
+
 /*
 extern cl::Context context;
 extern cl::CommandQueue queue;
@@ -11,29 +16,12 @@ extern cl::Program bvh_program;
 */
 namespace IO
 {
-	ModelLoader::ModelLoader(){	}
-
-	ModelLoader::~ModelLoader(){}
-
-	void ModelLoader::loadModel(std::string filepath, std::string filename)
-	{
-		// using std::vector;
-
-		// char msg[256];
-		// snprintf(msg, 256, "[ModelLoader] Importing model \"%s\" ...", filename.c_str());
-		// std::cout << msg << std::endl;
-
-		// mObjParser->load(filepath, filename);
-
-		// vector<cl_uint> facesV = mObjParser->getFacesV();
-		// vector<cl_uint> facesVN = mObjParser->getFacesVN();
-		// vector<cl_float> vertices = mObjParser->getVertices();
-
-		// std::cout << "[ModelLoader] ... Done." << std::endl;
-	}
-
 	bool ModelLoader::ImportFromFile(const std::string &filepath, std::unique_ptr<SceneData> &sceneData)
 	{
+#ifdef PROFILING
+		std::cout << "Loading " << filepath << " ..." << std::endl;
+		double start = glfwGetTime();
+#endif
 		//check if file exists
 		std::ifstream fin(filepath.c_str());
 		if (!fin.fail())
@@ -58,6 +46,10 @@ namespace IO
 
 		sceneData = ProcessData(scene);
 
+#ifdef PROFILING
+		std::cout << std::setprecision(4) << "Loaded " << filepath << " at "
+			<< (glfwGetTime()-start) << "s ..." << std::endl;
+#endif
 		return true;
 	}
 
@@ -69,12 +61,6 @@ namespace IO
 
 		std::vector<const aiNode *> nodeBuff;
 		nodeBuff.push_back(scene->mRootNode);
-
-		/* if (modelScene->mNumMeshes > 0)
-   {
-   for (unsigned int m=0;m<modelScene->mNumMeshes;m++)
-   this->assimpGetMeshData(modelScene->mMeshes[m]);
-   }*/
 
 		// I raise all nodes tree to the root level
 		while (repeat)

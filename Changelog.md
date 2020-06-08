@@ -1,0 +1,26 @@
+# Changelog
+## # Version **0.0**
+- SAH BVH
+- Volumetric pathtracing (homogeneous, exponential medium)
+- Multiple Importance Sampling (MIS)
+- SDF Raymarching
+- Thin lens camera
+- Image-based lighting
+- Alpha blending
+- Media
+  - Homogeneous
+  - Exponential
+- Phase functions
+  - Isotropic
+  - Henyey-Greenstein
+  - Rayleigh
+- Materials
+  - Lambertian BRDF
+  - Burley BRDF
+  - Rough Conductor
+  - Rough Dielectric + Absorption
+  - Microfacet
+    - GGX
+    - Beckmann
+    - Phong
+  - Specular Subsurface Scattering

@@ -1,4 +1,9 @@
 # Changelog
+## # Version **0.1** (*WIP*)
+- Add support for more 3D file formats using Assimp
+- Add support for loading multiple objects. (*WIP*)
+- Multithreaded loading of the meshes (*WIP*)
+- Scene Management (*TBD*)
 ## # Version **0.0**
 - SAH BVH
 - Volumetric pathtracing (homogeneous, exponential medium)

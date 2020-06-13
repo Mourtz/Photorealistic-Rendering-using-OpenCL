@@ -1,9 +1,17 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0.2)
 
-PROJECT( OpenCL_Pathtracer )
+SET(PROJECT_NAME "OpenCL_Pathtracer")
+SET(TRACER_TARGET "OpenCL_Pathtracer")
 
-set(CMAKE_CXX_STANDARD 14)
+PROJECT(${PROJECT_NAME})
+
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+IF(COMMAND cmake_policy)
+  if (POLICY CMP0043)
+    cmake_policy(SET CMP0043 NEW)
+  endif()
+ENDIF(COMMAND cmake_policy)
 
 ##############################################################
 # output paths
@@ -26,14 +34,9 @@ function(assign_source_group)
     endforeach()
 endfunction(assign_source_group)
 
-IF(UNIX)
-    ADD_DEFINITIONS(-Wall -std=c++11 -fvisibility=hidden)
-ENDIF()
-
 # OS Definitions
 IF(UNIX)
     IF(APPLE)
-        ADD_DEFINITIONS(-DOS_MAC)
         SET(CMAKE_MACOSX_RPATH ON)
         SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
         SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
@@ -44,40 +47,11 @@ IF(UNIX)
         IF("${isSystemDir}" STREQUAL "-1")
             SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}")
         ENDIF("${isSystemDir}" STREQUAL "-1")
-    ELSE(APPLE)
-        ADD_DEFINITIONS(-DOS_LNX)
     ENDIF(APPLE)
-ELSE(UNIX)
-    ADD_DEFINITIONS(-DOS_WIN -DNOMINMAX)
 ENDIF(UNIX)
-
-SET(X11_LIBS "")
-IF(APPLE)
-    FIND_PACKAGE(X11 REQUIRED)
-    INCLUDE_DIRECTORIES(${X11_INCLUDE_DIR})
-    SET(X11_LIBS ${X11_LIBRARIES})
-ENDIF(APPLE)
 
 # Profiling Option
 ADD_DEFINITIONS(-DPROFILING)
-
-FIND_PACKAGE(OpenGL REQUIRED)
-FIND_PACKAGE(OpenCL REQUIRED)
-FIND_PACKAGE(OpenMP)
-
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
-
-INCLUDE_DIRECTORIES(
-    ${OPENGL_INCLUDE_DIR}
-    ${GLFW_INCLUDE_DIR}
-    ${OpenCL_INCLUDE_DIRS}
-    "${CMAKE_SOURCE_DIR}/include"
-    "${CMAKE_SOURCE_DIR}/external"
-)
 
 FILE( GLOB_RECURSE SRCS "${CMAKE_SOURCE_DIR}/src/*.cpp" )
 FILE( GLOB_RECURSE INC "${CMAKE_SOURCE_DIR}/include/*.h")
@@ -93,20 +67,68 @@ if(WIN32)
   	assign_source_group(${SCENES})
 ENDIF(WIN32)
 
+################################
+# Target Definitions
+################################
+
 ADD_EXECUTABLE(${PROJECT_NAME} ${SRCS} ${INC} ${CL_SRCS} ${SHADERS} ${SCENES})
 
-# if(MSVC)
-# 	SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
-# 	SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
-# 	SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
-# ENDIF(MSVC)
+TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/external")
+
+IF(UNIX)
+    IF(APPLE)
+        TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PRIVATE -DOS_MAC)
+    ELSE(APPLE)
+        TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PRIVATE -DOS_LNX)
+    ENDIF(APPLE)
+ELSE(UNIX)
+    TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PRIVATE -DOS_WIN)
+ENDIF(UNIX)
+
+################################
+# Compile Flags
+################################
+
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES
+ CXX_STANDARD 17
+ CXX_STANDARD_REQUIRED ON)
+
+ SET(RAYTRACER_COMPILE_FLAGS "")
+ IF(MSVC)
+   LIST(APPEND RAYTRACER_COMPILE_FLAGS "/W3")
+   LIST(APPEND RAYTRACER_COMPILE_FLAGS "/MP4")
+ ELSE(MSVC)
+   LIST(APPEND RAYTRACER_COMPILE_FLAGS "-std=c++17")
+   LIST(APPEND RAYTRACER_COMPILE_FLAGS "-fexceptions")
+   LIST(APPEND RAYTRACER_COMPILE_FLAGS "-frtti")
+   LIST(APPEND RAYTRACER_COMPILE_FLAGS "-Wall")
+ ENDIF(MSVC)
+ TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PUBLIC "${RAYTRACER_COMPILE_FLAGS}")
+
+################################
+# Dependencies
+################################
+
+# OpenGL
+FIND_PACKAGE(OpenGL REQUIRED)
+FIND_PACKAGE(OpenCL REQUIRED)
+
+TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
+    ${OPENGL_INCLUDE_DIR}
+    ${OpenCL_INCLUDE_DIRS}
+)
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
     ${OPENGL_LIBRARIES}
-    ${GLFW_LIBRARY}
     ${OpenCL_LIBRARIES}
-    ${X11_LIBS}
 )
+
+# X11
+IF(APPLE)
+    FIND_PACKAGE(X11 REQUIRED)
+    TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} ${X11_INCLUDE_DIR})
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${X11_LIBS})
+ENDIF(APPLE)
 
 # GLFW
 set(GLFW_DIR "${CMAKE_SOURCE_DIR}/external/glfw")
@@ -131,6 +153,7 @@ target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/build/lib/Debug/glewd
 
 # Assimp
 set(ASSIMP_DIR "${CMAKE_SOURCE_DIR}/external/assimp")
+set(ASSIMP_INSTALL OFF)
 add_subdirectory("${ASSIMP_DIR}")
 target_include_directories(${PROJECT_NAME} PRIVATE "${ASSIMP_DIR}/include")
 target_link_libraries(${PROJECT_NAME} "assimp")
@@ -139,13 +162,20 @@ target_link_libraries(${PROJECT_NAME} "assimp")
 # SET(EMBREE_TBB_DEBUG_ROOT "${CMAKE_SOURCE_DIR}/external/embree")
 # SET(EMBREE_TBB_ROOT "${CMAKE_SOURCE_DIR}/external/embree")
 
-# # EMBREE
-# set(EMBREE_DIR "${CMAKE_SOURCE_DIR}/external/embree")
-# INCLUDE("${EMBREE_DIR}/common/cmake/embree-config.cmake")
-# SET(ENABLE_TUTORIALS OFF)
-# SET(ENABLE_INSTALLER OFF)
-# set(EMBREE_ISPC_SUPPORT OFF)
+# EMBREE
+# set(EMBREE_DIR "external/embree")
+# set(EMBREE_STATIC_LIB ON CACHE BOOL "Build Embree as a static library." FORCE)
+# set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "Build Embree with support for ISPC applications." FORCE)
+# set(EMBREE_TUTORIALS OFF CACHE BOOL "Enable to build Embree tutorials" FORCE)
+# set(EMBREE_STAT_COUNTERS OFF CACHE BOOL "Enables statistic counters." FORCE)
+# set(EMBREE_RAY_MASK OFF CACHE BOOL "Enables ray mask support." FORCE)
+# set(EMBREE_BACKFACE_CULLING OFF CACHE BOOL "Enables backface culling." FORCE)
+# set(EMBREE_INTERSECTION_FILTER ON CACHE BOOL "Enables intersection filter callback." FORCE)
+# set(EMBREE_INTERSECTION_FILTER_RESTORE ON CACHE BOOL "Restores previous hit when hit is filtered out." FORCE)
+# set(EMBREE_TASKING_SYSTEM "INTERNAL" CACHE STRING "Selects tasking system" FORCE)
+# set(EMBREE_STATIC_RUNTIME OFF CACHE BOOL "Use the static version of the C/C++ runtime library." FORCE)
 # add_subdirectory("${EMBREE_DIR}")
+# add_definitions(-DEMBREE_STATIC_LIB=1)
 # target_include_directories(${PROJECT_NAME} PRIVATE "${EMBREE_DIR}/include")
 # target_link_libraries(${PROJECT_NAME} "embree")
 

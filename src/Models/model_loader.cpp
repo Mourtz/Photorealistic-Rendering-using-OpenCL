@@ -87,7 +87,7 @@ namespace IO
 			if (modelNode->mNumMeshes > 0)
 				for (unsigned int b = 0; b < modelNode->mNumMeshes; b++)
 				{
-					ret->emplace_back(assimpGetMeshData(scene->mMeshes[b]));
+					ret->push_back(assimpGetMeshData(scene->mMeshes[b]));
 					std::cout << "::::::::PROCESSING =>" << scene->mMeshes[b]->mName.C_Str() << " , Faces: " << scene->mMeshes[b]->mNumFaces << std::endl;
 				}
 		}
@@ -137,15 +137,15 @@ namespace IO
 			}
 		}
 
-		// if (mesh->HasTangentsAndBitangents())
-		// {
-		// 	for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
-		// 	{
-		// 		res.second.push_back(mesh->mTangents[v].x);
-		// 		res.second.push_back(mesh->mTangents[v].y);
-		// 		res.second.push_back(mesh->mTangents[v].z);
-		// 	}
-		// }
+		if (mesh->HasTangentsAndBitangents())
+		{
+			for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+			{
+				res.second.push_back(mesh->mTangents[v].x);
+				res.second.push_back(mesh->mTangents[v].y);
+				res.second.push_back(mesh->mTangents[v].z);
+			}
+		}
 
 		return res;
 	}

@@ -3,6 +3,7 @@
  */
 
 #define __DEBUG__
+#define NOMINMAX
 
 #include <iostream>
 #include <cstdlib>
@@ -95,19 +96,17 @@ bool ALPHA_TESTING = false;
 using namespace IO;
 
 std::size_t
-initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
+initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh, const std::vector<cl_uint>& faces)
 {
-	std::vector<BVHNode *> bvhNodes = bvh->getNodes();
+	const std::vector<BVHNode *> bvhNodes = bvh->getNodes();
 	std::vector<bvhNode_cl> bvhNodesCL;
 
 	std::vector<cl_uint4> facesV;
 
 	bool skipNext = false;
 
-	for (std::size_t i = 0; i < bvhNodes.size(); i++)
+	for (const auto& node : bvhNodes)
 	{
-		BVHNode *node = bvhNodes[i];
-
 		if (skipNext)
 		{
 			skipNext = node->skipNextLeft;
@@ -173,21 +172,12 @@ initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
 			}
 		}
 
-		bvhNodesCL.push_back(sn);
+		bvhNodesCL.emplace_back(sn);
 
 		// Faces
-		for (std::size_t j = 0; j < fvecLen; j++)
+		for (std::size_t j = 0; j < fvecLen; ++j)
 		{
-			Tri tri = facesVec[j];
-			cl_uint4 fv;
-
-			fv.s[0] = faces[tri.face.s[3] * 3];
-			fv.s[1] = faces[tri.face.s[3] * 3 + 1];
-			fv.s[2] = faces[tri.face.s[3] * 3 + 2];
-			// Material of face @ToDo
-			//fv.w = facesMtl[tri.face.w];
-
-			facesV.push_back(fv);
+			facesV.emplace_back(facesVec[j].face);
 		}
 	}
 
@@ -208,7 +198,7 @@ initOpenCLBuffers_BVH(BVH *bvh, std::vector<cl_uint> faces)
 }
 
 std::size_t initOpenCLBuffers_Faces(
-	ModelLoader *ml, std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals)
+	const std::vector<cl_float>& vertices, const std::vector<cl_uint>& faces, const std::vector<cl_float>& normals)
 {
 	std::vector<cl_float4> vertices4;
 	std::vector<cl_float4> normals4;
@@ -241,11 +231,11 @@ std::size_t initOpenCLBuffers_Faces(
 
 void initOpenCLBuffers(
 	const std::unique_ptr<SceneData>& data,
-	ModelLoader *ml, BVH *accelStruc)
+	const std::unique_ptr<BVH>& accelStruc)
 {
-	std::vector<unsigned int> faces = getIndices(data->at(0));
-	std::vector<float> vertices = getPositions(data->at(0));
-	std::vector<float> normals = getNormals(data->at(0));
+	const std::vector<unsigned int>& faces = getIndices(data);
+	const std::vector<float>& vertices = getPositions(data);
+	const std::vector<float>& normals = getNormals(data);
 
 	double timerStart;
 	double timerEnd;
@@ -261,7 +251,7 @@ void initOpenCLBuffers(
 
 	// Buffer: Faces
 	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_Faces(ml, vertices, faces, normals);
+	bytes = initOpenCLBuffers_Faces(vertices, faces, normals);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
@@ -567,7 +557,7 @@ int main(int argc, char **argv)
 
 		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(data);
 
-		initOpenCLBuffers(data, ml.get(), accelStruct.get());
+		initOpenCLBuffers(data, accelStruct);
 	}
 
 	//

@@ -18,13 +18,13 @@ class MathHelp {
 public:
 	static cl_float degToRad(cl_float deg);
 	static void getAABB(
-		std::vector<cl_float4> vertices, vec3& bbMin, vec3& bbMax
+		const std::vector<cl_float4>& vertices, vec3& bbMin, vec3& bbMax
 	);
 	static void getAABB(
-		std::vector<vec3> vertices, vec3& bbMin, vec3& bbMax
+		const std::vector<vec3>& vertices, vec3& bbMin, vec3& bbMax
 	);
 	static void getAABB(
-		std::vector<vec3> bbMins, std::vector<vec3> bbMaxs,
+		const std::vector<vec3>& bbMins, const std::vector<vec3>& bbMaxs,
 		vec3* bbMin, vec3* bbMax
 	);
 	static cl_float getOverlapSA(vec3 bbA, vec3 bbB);

@@ -114,32 +114,32 @@ std::vector<BVHNode*> BVH::buildTreesFromObjects(const std::unique_ptr<IO::Scene
 	vector<BVHNode*> subTrees;
 	cl_uint offset = 0;
 
+	#pragma omp parallel
+	#pragma omp for
 	for(const auto& mesh : *sceneData){
 		const std::vector<unsigned int>& faces = getIndices(mesh);
 		const std::vector<float>& vertices = getPositions(mesh);
-		const std::vector<float>& normals = getNormals(mesh);
+		// const std::vector<float>& normals = getNormals(mesh);
 		
-		vector<cl_uint4> facesThisObj;
+		std::vector<cl_uint4> facesThisObj;
 		// ModelLoader::getFacesOfObject((*sceneObjects)[i], facesThisObj, offset);
-		for(int i = 0; i < faces.size();i+=3){
-			facesThisObj.push_back({faces[i+0], faces[i+1], faces[i+2], static_cast<unsigned>(offset + facesThisObj.size())});
+		for(int i = 0; i < faces.size(); i+=3){
+			facesThisObj.push_back({faces[i+0], faces[i+1], faces[i+2], offset++});
 		}
-		offset += facesThisObj.size();
-		
 		
 		//------------------------------------------------------------------------
 		
 		vector<Tri> tris;
 		
-		for (cl_uint j = 0; j < facesThisObj.size(); j++) {
+		for (const auto& faces_it : facesThisObj) {
 			Tri tri;
 
-			tri.face = facesThisObj[j];
+			tri.face = faces_it;
 
-			vector<vec3> v;
-			v.push_back(vec3(vertices[tri.face.x*3+0], vertices[tri.face.x*3+1], vertices[tri.face.x*3+2]));
-			v.push_back(vec3(vertices[tri.face.y*3+0], vertices[tri.face.y*3+1], vertices[tri.face.y*3+2]));
-			v.push_back(vec3(vertices[tri.face.z*3+0], vertices[tri.face.z*3+1], vertices[tri.face.z*3+2]));
+			vector<cl_float4> v;
+			v.push_back({vertices[tri.face.x*3+0], vertices[tri.face.x*3+1], vertices[tri.face.x*3+2], 0.0f});
+			v.push_back({vertices[tri.face.y*3+0], vertices[tri.face.y*3+1], vertices[tri.face.y*3+2], 0.0f});
+			v.push_back({vertices[tri.face.z*3+0], vertices[tri.face.z*3+1], vertices[tri.face.z*3+2], 0.0f});
 
 			vec3 bbMin, bbMax;
 			MathHelp::getAABB(v, bbMin, bbMax);
@@ -576,9 +576,6 @@ cl_float BVH::splitFaces(
 
 	// Just do it 50:50.
 	if (leftFaces->size() == 0 || rightFaces->size() == 0) {
-#ifdef __DEBUG__
-		std::cout << "[BVH] Dividing faces by center left one side empty. Just doing it 50:50 now." << std::endl;
-#endif
 		bbMinsL.clear();
 		bbMaxsL.clear();
 		bbMinsR.clear();
@@ -718,23 +715,23 @@ void BVH::visualizeNextNode(
 	this->visualizeNextNode(node->rightChild, vertices, indices);
 }
 
-vector<BVHNode*> BVH::getContainerNodes() {
+const vector<BVHNode*> BVH::getContainerNodes() const {
 	return mContainerNodes;
 }
 
-cl_uint BVH::getDepth() {
+cl_uint BVH::getDepth() const {
 	return mDepthReached;
 }
 
-vector<BVHNode*> BVH::getLeafNodes() {
+const vector<BVHNode*> BVH::getLeafNodes() const {
 	return mLeafNodes;
 }
 
-vector<BVHNode*> BVH::getNodes() {
+const vector<BVHNode*> BVH::getNodes() const {
 	return mNodes;
 }
 
-BVHNode* BVH::getRoot() {
+const BVHNode* BVH::getRoot() const {
 	return mRoot;
 }
 

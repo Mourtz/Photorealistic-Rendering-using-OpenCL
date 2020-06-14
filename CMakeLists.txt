@@ -3,7 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0.2)
 SET(PROJECT_NAME "OpenCL_Pathtracer")
 SET(TRACER_TARGET "OpenCL_Pathtracer")
 
-PROJECT(${PROJECT_NAME})
+PROJECT(${TRACER_TARGET})
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -71,25 +71,25 @@ ENDIF(WIN32)
 # Target Definitions
 ################################
 
-ADD_EXECUTABLE(${PROJECT_NAME} ${SRCS} ${INC} ${CL_SRCS} ${SHADERS} ${SCENES})
+ADD_EXECUTABLE(${TRACER_TARGET} ${SRCS} ${INC} ${CL_SRCS} ${SHADERS} ${SCENES})
 
-TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/external")
+TARGET_INCLUDE_DIRECTORIES(${TRACER_TARGET} PUBLIC "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/external")
 
 IF(UNIX)
     IF(APPLE)
-        TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PRIVATE -DOS_MAC)
+        TARGET_COMPILE_DEFINITIONS(${TRACER_TARGET} PRIVATE -DOS_MAC)
     ELSE(APPLE)
-        TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PRIVATE -DOS_LNX)
+        TARGET_COMPILE_DEFINITIONS(${TRACER_TARGET} PRIVATE -DOS_LNX)
     ENDIF(APPLE)
 ELSE(UNIX)
-    TARGET_COMPILE_DEFINITIONS(${PROJECT_NAME} PRIVATE -DOS_WIN)
+    TARGET_COMPILE_DEFINITIONS(${TRACER_TARGET} PRIVATE -DOS_WIN)
 ENDIF(UNIX)
 
 ################################
 # Compile Flags
 ################################
 
-SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES
+SET_TARGET_PROPERTIES(${TRACER_TARGET} PROPERTIES
  CXX_STANDARD 17
  CXX_STANDARD_REQUIRED ON)
 
@@ -103,7 +103,7 @@ SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES
    LIST(APPEND RAYTRACER_COMPILE_FLAGS "-frtti")
    LIST(APPEND RAYTRACER_COMPILE_FLAGS "-Wall")
  ENDIF(MSVC)
- TARGET_COMPILE_OPTIONS(${PROJECT_NAME} PUBLIC "${RAYTRACER_COMPILE_FLAGS}")
+ TARGET_COMPILE_OPTIONS(${TRACER_TARGET} PUBLIC "${RAYTRACER_COMPILE_FLAGS}")
 
 ################################
 # Dependencies
@@ -113,12 +113,12 @@ SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES
 FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(OpenCL REQUIRED)
 
-TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
+TARGET_INCLUDE_DIRECTORIES(${TRACER_TARGET} PRIVATE
     ${OPENGL_INCLUDE_DIR}
     ${OpenCL_INCLUDE_DIRS}
 )
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+TARGET_LINK_LIBRARIES(${TRACER_TARGET}
     ${OPENGL_LIBRARIES}
     ${OpenCL_LIBRARIES}
 )
@@ -126,8 +126,8 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME}
 # X11
 IF(APPLE)
     FIND_PACKAGE(X11 REQUIRED)
-    TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} ${X11_INCLUDE_DIR})
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${X11_LIBS})
+    TARGET_INCLUDE_DIRECTORIES(${TRACER_TARGET} ${X11_INCLUDE_DIR})
+    TARGET_LINK_LIBRARIES(${TRACER_TARGET} ${X11_LIBS})
 ENDIF(APPLE)
 
 # GLFW
@@ -136,9 +136,9 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory("${GLFW_DIR}")
-target_link_libraries(${PROJECT_NAME} "glfw" "${GLFW_LIBRARIES}")
-target_include_directories(${PROJECT_NAME} PRIVATE "${GLFW_DIR}/include")
-target_compile_definitions(${PROJECT_NAME} PRIVATE "GLFW_INCLUDE_NONE")
+target_link_libraries(${TRACER_TARGET} "glfw" "${GLFW_LIBRARIES}")
+target_include_directories(${TRACER_TARGET} PRIVATE "${GLFW_DIR}/include")
+target_compile_definitions(${TRACER_TARGET} PRIVATE "GLFW_INCLUDE_NONE")
 
 # GLEW
 set(GLEW_DIR "${CMAKE_SOURCE_DIR}/external/glew-cmake")
@@ -147,16 +147,28 @@ set(glew-cmake_BUILD_STATIC OFF)
 set(glew-cmake_BUILD_MULTI_CONTEXT OFF)
 set(ONLY_LIBS ON)
 add_subdirectory("${GLEW_DIR}")
-target_include_directories(${PROJECT_NAME} PRIVATE "${GLEW_DIR}/include")
+target_include_directories(${TRACER_TARGET} PRIVATE "${GLEW_DIR}/include")
 
-target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/build/lib/Debug/glewd.lib")
+target_link_libraries(${TRACER_TARGET} "${CMAKE_SOURCE_DIR}/build/lib/Debug/glewd.lib")
+
+# OpenMP
+find_package(OpenMP QUIET)
+if (OpenMP_CXX_FOUND)
+    target_link_libraries(${TRACER_TARGET} INTERFACE ${OpenMP_CXX_LIBRARIES})
+    target_include_directories(${TRACER_TARGET} INTERFACE ${OpenMP_CXX_INCLUDE_DIRS})
+    target_link_options(${TRACER_TARGET} INTERFACE ${OpenMP_CXX_FLAGS})
+    target_compile_options(${TRACER_TARGET} INTERFACE ${OpenMP_CXX_FLAGS})
+endif ()
 
 # Assimp
 set(ASSIMP_DIR "${CMAKE_SOURCE_DIR}/external/assimp")
 set(ASSIMP_INSTALL OFF)
 add_subdirectory("${ASSIMP_DIR}")
-target_include_directories(${PROJECT_NAME} PRIVATE "${ASSIMP_DIR}/include")
-target_link_libraries(${PROJECT_NAME} "assimp")
+target_include_directories(${TRACER_TARGET} PRIVATE "${ASSIMP_DIR}/include")
+target_link_libraries(${TRACER_TARGET} "assimp")
+
+# BVH
+target_include_directories(${TRACER_TARGET} PRIVATE "external/bvh/include")
 
 # # TBB
 # SET(EMBREE_TBB_DEBUG_ROOT "${CMAKE_SOURCE_DIR}/external/embree")
@@ -176,8 +188,8 @@ target_link_libraries(${PROJECT_NAME} "assimp")
 # set(EMBREE_STATIC_RUNTIME OFF CACHE BOOL "Use the static version of the C/C++ runtime library." FORCE)
 # add_subdirectory("${EMBREE_DIR}")
 # add_definitions(-DEMBREE_STATIC_LIB=1)
-# target_include_directories(${PROJECT_NAME} PRIVATE "${EMBREE_DIR}/include")
-# target_link_libraries(${PROJECT_NAME} "embree")
+# target_include_directories(${TRACER_TARGET} PRIVATE "${EMBREE_DIR}/include")
+# target_link_libraries(${TRACER_TARGET} "embree")
 
 # set(AMD_APP_SDK "./external")
 #
@@ -191,6 +203,6 @@ target_link_libraries(${PROJECT_NAME} "assimp")
 # FILE( GLOB INC "include/*.h")
 # FILE( GLOB CL_SRCS "kernels/*.cl" )
 #
-# ADD_EXECUTABLE(${PROJECT_NAME} ${SRCS} ${INC} ${CL_SRCS})
+# ADD_EXECUTABLE(${TRACER_TARGET} ${SRCS} ${INC} ${CL_SRCS})
 #
-# target_link_libraries( ${PROJECT_NAME} OpenCL glut32 glew32 )
+# target_link_libraries( ${TRACER_TARGET} OpenCL glut32 glew32 )

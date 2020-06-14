@@ -28,11 +28,11 @@ public:
 	BVH();
 	BVH(const std::unique_ptr<IO::SceneData>& sceneData);
 	~BVH();
-	std::vector<BVHNode*> getContainerNodes();
-	cl_uint getDepth();
-	std::vector<BVHNode*> getLeafNodes();
-	std::vector<BVHNode*> getNodes();
-	BVHNode* getRoot();
+	const std::vector<BVHNode*> getContainerNodes() const;
+	cl_uint getDepth() const;
+	const std::vector<BVHNode*> getLeafNodes() const;
+	const std::vector<BVHNode*> getNodes() const;
+	const BVHNode* getRoot() const;
 	void visualize(std::vector<cl_float>* vertices, std::vector<cl_uint>* indices);
 
 protected:

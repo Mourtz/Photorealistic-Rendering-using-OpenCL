@@ -31,7 +31,7 @@ constexpr cl_float BVH_SKIPAHEAD_CMP(0.7);
 
 BVH::BVH() {}
 
-BVH::BVH(const std::unique_ptr<IO::SceneData>& sceneData){
+BVH::BVH(const std::shared_ptr<IO::SceneData>& sceneData){
 	mDepthReached = 0;
 	this->setMaxFaces(BVH_MAXFACES);
 
@@ -108,7 +108,7 @@ BVHNode* BVH::buildTree(
 	return containerNode;
 }
 
-std::vector<BVHNode*> BVH::buildTreesFromObjects(const std::unique_ptr<IO::SceneData>& sceneData){
+std::vector<BVHNode*> BVH::buildTreesFromObjects(const std::shared_ptr<IO::SceneData>& sceneData){
 	using namespace IO;
 	constexpr cl_float RENDER_PHONGTESS = 0;
 	vector<BVHNode*> subTrees;

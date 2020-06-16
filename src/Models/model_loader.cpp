@@ -16,7 +16,7 @@ extern cl::Program bvh_program;
 */
 namespace IO
 {
-	bool ModelLoader::ImportFromFile(const std::string &filepath, std::unique_ptr<SceneData> &sceneData)
+	bool ModelLoader::ImportFromFile(const std::string &filepath)
 	{
 #ifdef PROFILING
 		std::cout << "Loading " << filepath << " ..." << std::endl;
@@ -53,9 +53,9 @@ namespace IO
 		return true;
 	}
 
-	std::unique_ptr<SceneData> ModelLoader::ProcessData(const aiScene *scene)
+	std::shared_ptr<SceneData> ModelLoader::ProcessData(const aiScene *scene)
 	{
-		std::unique_ptr<SceneData> ret = std::make_unique<SceneData>();
+		std::shared_ptr<SceneData> ret = std::make_shared<SceneData>();
 
 		bool repeat = true;
 
@@ -145,6 +145,10 @@ namespace IO
 				res.second.push_back(mesh->mTangents[v].y);
 				res.second.push_back(mesh->mTangents[v].z);
 			}
+		} else {
+			res.second.push_back(0);
+			res.second.push_back(0);
+			res.second.push_back(0);
 		}
 
 		return res;

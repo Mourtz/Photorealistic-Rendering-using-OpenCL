@@ -93,8 +93,6 @@ bool ALPHA_TESTING = false;
 
 //----------------------------------------------
 
-using namespace IO;
-
 std::size_t
 initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh, const std::vector<cl_uint>& faces)
 {
@@ -230,12 +228,12 @@ std::size_t initOpenCLBuffers_Faces(
 }
 
 void initOpenCLBuffers(
-	const std::unique_ptr<SceneData>& data,
+	const std::shared_ptr<IO::SceneData>& data,
 	const std::unique_ptr<BVH>& accelStruc)
 {
-	const std::vector<unsigned int>& faces = getIndices(data);
-	const std::vector<float>& vertices = getPositions(data);
-	const std::vector<float>& normals = getNormals(data);
+	const std::vector<unsigned int>& faces = IO::getIndices(data);
+	const std::vector<float>& vertices = IO::getPositions(data);
+	const std::vector<float>& normals = IO::getNormals(data);
 
 	double timerStart;
 	double timerEnd;
@@ -551,9 +549,9 @@ int main(int argc, char **argv)
 		mBufMaterial = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
 		queue.enqueueWriteBuffer(mBufMaterial, CL_TRUE, 0, sizeof(Material), scene->obj_mat);
 
-		std::unique_ptr<ModelLoader> ml = std::make_unique<ModelLoader>();
-		std::unique_ptr<SceneData> data;
-		ml->ImportFromFile(std::string(models_directory + scene->obj_path), data);
+		std::unique_ptr<IO::ModelLoader> ml = std::make_unique<IO::ModelLoader>();
+		ml->ImportFromFile(std::string(models_directory + scene->obj_path));
+		const std::shared_ptr<IO::SceneData>& data = ml->getData();
 
 		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(data);
 

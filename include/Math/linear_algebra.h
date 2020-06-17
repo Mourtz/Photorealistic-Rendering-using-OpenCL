@@ -29,58 +29,68 @@ struct vec2
 
 //-------------------------------------------------------------------------------------------------
 
-struct vec4
+template<typename Scalar = float>
+struct Vector
 {
 	union {
-		struct { float x, y, z, w; };
-		float _v[4];
+		struct { Scalar x, y, z, w; };
+		Scalar _v[4];
 	};
 
 	// constructors
-	vec4()											: x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
-	vec4(float val)									: x(val), y(val), z(val), w(val) {}
-	vec4(float _x, float _y)						: x(_x), y(_y), z(0.0), w(0.0) {}
-	vec4(float _x, float _y, float _z)				: x(_x), y(_y), z(_z), w(0.0) {}
-	vec4(float _x, float _y, float _z, float _w)	: x(_x), y(_y), z(_z), w(_w) {}
-	vec4(const vec4& v)								: x(v.x), y(v.y), z(v.z), w(v.w) {}
+	Vector()											: x(0), y(0), z(0), w(0) {}
+	Vector(Scalar val)									: x(val), y(val), z(val), w(val) {}
+	Vector(Scalar _x, Scalar _y)						: x(_x), y(_y), z(0), w(0) {}
+	Vector(Scalar _x, Scalar _y, Scalar _z)				: x(_x), y(_y), z(_z), w(0) {}
+	Vector(Scalar _x, Scalar _y, Scalar _z, Scalar _w)	: x(_x), y(_y), z(_z), w(_w) {}
+	Vector(const Vector& v)								: x(v.x), y(v.y), z(v.z), w(v.w) {}
 
 	// operators
 
-	inline float& operator[](const int i) { return _v[std::min(i,3)]; }
-	inline float  operator[](const int i) const { return _v[std::min(i,3)]; }
+	inline Scalar& operator[](const int i) { return _v[std::min(i,3)]; }
+	inline Scalar  operator[](const int i) const { return _v[std::min(i,3)]; }
 
-	inline vec4 operator+(float a) const { return vec4(x + a, y + a, z + a, w + a); }
-	inline vec4 operator-(float a) const { return vec4(x - a, y - a, z - a, w - a); }
-	inline vec4 operator*(float a) const { return vec4(x * a, y * a, z * a, w * a); }
-	inline vec4 operator/(float a) const { return vec4(x / a, y / a, z / a, w / a); }
+	inline Vector operator+(Scalar a) const { return Vector(x + a, y + a, z + a, w + a); }
+	inline Vector operator-(Scalar a) const { return Vector(x - a, y - a, z - a, w - a); }
+	inline Vector operator*(Scalar a) const { return Vector(x * a, y * a, z * a, w * a); }
+	inline Vector operator/(Scalar a) const { return Vector(x / a, y / a, z / a, w / a); }
 
-	inline vec4 operator+(const vec4& v) const { return vec4(x + v.x, y + v.y, z + v.z, w + v.w); }
-	inline vec4 operator-(const vec4& v) const { return vec4(x - v.x, y - v.y, z - v.z, w - v.w); }
-	inline vec4 operator*(const vec4& v) const { return vec4(x * v.x, y * v.y, z * v.z, w * v.w); }
-	inline vec4 operator/(const vec4& v) const { return vec4(x / v.x, y / v.y, z / v.z, w / v.w); }
+	inline Vector operator+(const Vector& v) const { return Vector(x + v.x, y + v.y, z + v.z, w + v.w); }
+	inline Vector operator-(const Vector& v) const { return Vector(x - v.x, y - v.y, z - v.z, w - v.w); }
+	inline Vector operator*(const Vector& v) const { return Vector(x * v.x, y * v.y, z * v.z, w * v.w); }
+	inline Vector operator/(const Vector& v) const { return Vector(x / v.x, y / v.y, z / v.z, w / v.w); }
 
-	inline vec4& operator+=(const float& a) { return *this=(*this + a); }
-	inline vec4& operator+=(const vec4& v) { return *this=(*this + v); }
+	inline Vector& operator+=(const Scalar& a) { return *this=(*this + a); }
+	inline Vector& operator+=(const Vector& v) { return *this=(*this + v); }
 
-	inline vec4& operator-=(const float& a) { return *this=(*this - a); }
-	inline vec4& operator-=(const vec4& v) { return *this=(*this - v); }
+	inline Vector& operator-=(const Scalar& a) { return *this=(*this - a); }
+	inline Vector& operator-=(const Vector& v) { return *this=(*this - v); }
 
-	inline vec4& operator*=(const float& a) { return *this=(*this * a); }
-	inline vec4& operator*=(const vec4& v) { return *this=(*this * v); }
+	inline Vector& operator*=(const Scalar& a) { return *this=(*this * a); }
+	inline Vector& operator*=(const Vector& v) { return *this=(*this * v); }
 
-	inline vec4& operator/=(const float& a) { return *this=(*this / a); }
-	inline vec4& operator/=(const vec4& v) { return *this=(*this / v); }
+	inline Vector& operator/=(const Scalar& a) { return *this=(*this / a); }
+	inline Vector& operator/=(const Vector& v) { return *this=(*this / v); }
 
-	inline bool operator!=(const vec4& v) { return x != v.x || y != v.y || z != v.z; }
+	inline bool operator!=(const Vector& v) { return x != v.x || y != v.y || z != v.z; }
 
 	//-------------------------------------------------------------------------------------------------
 
-	inline float lengthsq3() { return sqrtf(x * x + y * y + z * z); }
-	inline float lengthsq4() { return sqrtf(x * x + y * y + z * z + w * w); }
-
-	// only for 3D vectors!
-	inline void normalize() { float norm = sqrtf(x * x + y * y + z * z); *this = *this / norm; }
+	float lengthsq3(){return 0.0f;};
+	float lengthsq4(){return 0.0f;};
+	void normalize(){};
 };
+
+template <>
+float Vector<float>::lengthsq3(){return sqrtf(x * x + y * y + z * z);}
+
+template <>
+float Vector<float>::lengthsq4(){return sqrtf(x * x + y * y + z * z + w * w);}
+
+template <>
+void Vector<float>::normalize(){float norm = sqrtf(x * x + y * y + z * z); *this = *this / norm; }
+
+#define vec4 Vector<float>
 
 inline vec4 operator+(const float& f, const vec4& v) { return v + f; }
 inline vec4 operator-(const float& f, const vec4& v) { return vec4(f) - v; }

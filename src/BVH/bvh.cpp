@@ -31,60 +31,19 @@ constexpr cl_float BVH_SKIPAHEAD_CMP(0.7);
 
 BVH::BVH() {}
 
-BVH::BVH(
-	const vector<object3D> sceneObjects,
-	const vector<cl_float> vertices,
-	const vector<cl_float> normals
-) {
+BVH::BVH(const std::unique_ptr<IO::ModelLoader>& ml){
 	mDepthReached = 0;
 	this->setMaxFaces(BVH_MAXFACES);
 
-	vector<BVHNode*> subTrees = this->buildTreesFromObjects(&sceneObjects, &vertices, &normals);
+	vector<BVHNode*> subTrees = this->buildTreesFromObjects(ml);
 	mRoot = this->makeContainerNode(subTrees, true);
-	this->groupTreesToNodes(subTrees, mRoot, mDepthReached);
+	this->groupTreesToNodes(subTrees, mRoot, 1);
 	this->combineNodes(subTrees.size());
 }
 
 BVH::~BVH() {
 	for (cl_uint i = 0; i < mNodes.size(); i++) {
 		delete mNodes[i];
-	}
-}
-
-void BVH::assignFacesToBins(
-	const cl_uint axis, const cl_uint splits, const vector<Tri>* faces,
-	const vector< vector<vec3> >* leftBin,
-	const vector< vector<vec3> >* rightBin,
-	vector< vector<Tri> >* leftBinFaces, vector< vector<Tri> >* rightBinFaces
-) {
-	for (cl_uint i = 0; i < splits; i++) {
-		vector<vec3> leftAABB = (*leftBin)[i];
-		vector<vec3> rightAABB = (*rightBin)[i];
-
-		for (cl_uint j = 0; j < faces->size(); j++) {
-			Tri tri = (*faces)[j];
-
-			if (tri.bbMin[axis] <= leftAABB[1][axis] && tri.bbMax[axis] >= leftAABB[0][axis]) {
-				Tri triCpy;
-				triCpy.face = tri.face;
-				triCpy.bbMin = vec3(tri.bbMin);
-				triCpy.bbMax = vec3(tri.bbMax);
-				triCpy.bbMin[axis] = fmax(tri.bbMin[axis], leftAABB[0][axis]);
-				triCpy.bbMax[axis] = fmin(tri.bbMax[axis], leftAABB[1][axis]);
-
-				(*leftBinFaces)[i].push_back(triCpy);
-			}
-			if (tri.bbMin[axis] <= rightAABB[1][axis] && tri.bbMax[axis] >= rightAABB[0][axis]) {
-				Tri triCpy;
-				triCpy.face = tri.face;
-				triCpy.bbMin = vec3(tri.bbMin);
-				triCpy.bbMax = vec3(tri.bbMax);
-				triCpy.bbMin[axis] = fmax(tri.bbMin[axis], rightAABB[0][axis]);
-				triCpy.bbMax[axis] = fmin(tri.bbMax[axis], rightAABB[1][axis]);
-
-				(*rightBinFaces)[i].push_back(triCpy);
-			}
-		}
 	}
 }
 
@@ -149,45 +108,43 @@ BVHNode* BVH::buildTree(
 	return containerNode;
 }
 
-
-vector<BVHNode*> BVH::buildTreesFromObjects(
-	const vector<object3D>* sceneObjects,
-	const vector<cl_float>* vertices,
-	const vector<cl_float>* normals
-) {
+std::vector<BVHNode*> BVH::buildTreesFromObjects(const std::unique_ptr<IO::ModelLoader>& ml){
+	using namespace IO;
+	constexpr cl_float RENDER_PHONGTESS = 0;
 	vector<BVHNode*> subTrees;
-	char msg[256];
 	cl_uint offset = 0;
-	cl_uint offsetN = 0;
 
-	vector<cl_float4> vertices4 = this->packFloatAsFloat4(vertices);
+	auto& scene = ml->getFaces();
+	for(const auto& mesh : scene->meshes){
+		vector<Tri> tris;
+		
+		for(const auto& face : mesh.faces){
+			Tri tri;
 
-	for (cl_uint i = 0; i < sceneObjects->size(); i++) {
-		vector<cl_uint4> facesThisObj;
-		ModelLoader::getFacesOfObject((*sceneObjects)[i], facesThisObj, offset);
-		offset += facesThisObj.size();
+			tri.face = {
+				face.points[0].id,
+				face.points[1].id,
+				face.points[2].id,
+				offset++};
 
-		snprintf(
-			msg, 256, "[BVH] Building tree %u/%lu: \"%s\". %lu faces.",
-			i + 1, sceneObjects->size(), (*sceneObjects)[i].oName.c_str(), facesThisObj.size()
-		);
-		cout << msg << std::endl;
+			vector<cl_float4> v;
+			v.push_back(face.points[0].pos);
+			v.push_back(face.points[1].pos);
+			v.push_back(face.points[2].pos);
 
+			vec3 bbMin, bbMax;
+			MathHelp::getAABB(v, bbMin, bbMax);
+			tri.bbMin = bbMin;
+			tri.bbMax = bbMax;
 
-		vector<cl_uint4> faceNormalsThisObj;
-		ModelLoader::getFaceNormalsOfObject((*sceneObjects)[i], faceNormalsThisObj, offsetN);
-		offsetN += faceNormalsThisObj.size();
+			tris.push_back(tri);
+		}
 
-		vector<Tri> triFaces = this->facesToTriStructs(
-			&facesThisObj, &faceNormalsThisObj, &vertices4, normals
-		);
-
-
-		BVHNode* rootNode = this->makeNode(triFaces, true);
+		BVHNode* rootNode = this->makeNode(tris, true);
 		cl_float rootSA = MathHelp::getSurfaceArea(rootNode->bbMin, rootNode->bbMax);
 
 		vec3 bbMin, bbMax;
-		BVHNode* st = this->buildTree(triFaces, bbMin, bbMax, 1, rootSA);
+		BVHNode* st = this->buildTree(tris, bbMin, bbMax, 1, rootSA);
 		subTrees.push_back(st);
 	}
 
@@ -268,24 +225,6 @@ void BVH::combineNodes(const cl_uint numSubTrees) {
 	if (BVH_SKIPAHEAD) {
 		this->skipAheadOfNodes();
 	}
-}
-
-vector<Tri> BVH::facesToTriStructs(
-	const vector<cl_uint4>* facesThisObj, const vector<cl_uint4>* faceNormalsThisObj,
-	const vector<cl_float4>* vertices4, const vector<float>* normals
-) {
-	vector<cl_float4> normals4 = this->packFloatAsFloat4(normals);
-	vector<Tri> triFaces;
-
-	for (cl_uint j = 0; j < facesThisObj->size(); j++) {
-		Tri tri;
-		tri.face = (*facesThisObj)[j];
-		tri.normals = (*faceNormalsThisObj)[j];
-		MathHelp::triCalcAABB(&tri, vertices4, &normals4);
-		triFaces.push_back(tri);
-	}
-
-	return triFaces;
 }
 
 cl_float BVH::getMean(const vector<Tri> faces, const cl_uint axis) {
@@ -628,9 +567,6 @@ cl_float BVH::splitFaces(
 
 	// Just do it 50:50.
 	if (leftFaces->size() == 0 || rightFaces->size() == 0) {
-#ifdef __DEBUG__
-		std::cout << "[BVH] Dividing faces by center left one side empty. Just doing it 50:50 now." << std::endl;
-#endif
 		bbMinsL.clear();
 		bbMaxsL.clear();
 		bbMinsR.clear();
@@ -770,23 +706,23 @@ void BVH::visualizeNextNode(
 	this->visualizeNextNode(node->rightChild, vertices, indices);
 }
 
-vector<BVHNode*> BVH::getContainerNodes() {
+const vector<BVHNode*> BVH::getContainerNodes() const {
 	return mContainerNodes;
 }
 
-cl_uint BVH::getDepth() {
+cl_uint BVH::getDepth() const {
 	return mDepthReached;
 }
 
-vector<BVHNode*> BVH::getLeafNodes() {
+const vector<BVHNode*> BVH::getLeafNodes() const {
 	return mLeafNodes;
 }
 
-vector<BVHNode*> BVH::getNodes() {
+const vector<BVHNode*> BVH::getNodes() const {
 	return mNodes;
 }
 
-BVHNode* BVH::getRoot() {
+const BVHNode* BVH::getRoot() const {
 	return mRoot;
 }
 

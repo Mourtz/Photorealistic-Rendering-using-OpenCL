@@ -3,6 +3,7 @@
  */
 
 #define __DEBUG__
+#define NOMINMAX
 
 #include <iostream>
 #include <cstdlib>
@@ -26,6 +27,7 @@
 #define GLFW_EXPOSE_NATIVE_GLX
 #endif
 
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
@@ -74,7 +76,6 @@ cl::ImageGL cl_env_map;
 std::vector<cl::Memory> cl_screens;
 cl::Buffer mBufBVH;
 cl::Buffer mBufFacesV;
-cl::Buffer mBufFacesN;
 cl::Buffer mBufVertices;
 cl::Buffer mBufNormals;
 cl::Buffer mBufMaterial;
@@ -93,22 +94,17 @@ bool ALPHA_TESTING = false;
 //----------------------------------------------
 
 std::size_t
-initOpenCLBuffers_BVH(BVH *bvh, ModelLoader *ml, std::vector<cl_uint> faces)
+initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh)
 {
-	std::vector<BVHNode *> bvhNodes = bvh->getNodes();
+	const std::vector<BVHNode *> bvhNodes = bvh->getNodes();
 	std::vector<bvhNode_cl> bvhNodesCL;
 
-	std::vector<cl_uint> facesVN = ml->getObjParser()->getFacesVN();
-	std::vector<cl_int> facesMtl = ml->getObjParser()->getFacesMtl();
 	std::vector<cl_uint4> facesV;
-	std::vector<cl_uint4> facesN;
 
 	bool skipNext = false;
 
-	for (std::size_t i = 0; i < bvhNodes.size(); i++)
+	for (const auto& node : bvhNodes)
 	{
-		BVHNode *node = bvhNodes[i];
-
 		if (skipNext)
 		{
 			skipNext = node->skipNextLeft;
@@ -174,28 +170,12 @@ initOpenCLBuffers_BVH(BVH *bvh, ModelLoader *ml, std::vector<cl_uint> faces)
 			}
 		}
 
-		bvhNodesCL.push_back(sn);
+		bvhNodesCL.emplace_back(sn);
 
 		// Faces
-		for (std::size_t j = 0; j < fvecLen; j++)
+		for (std::size_t j = 0; j < fvecLen; ++j)
 		{
-			Tri tri = facesVec[j];
-			cl_uint4 fv;
-			cl_uint4 fn;
-
-			fv.s[0] = faces[tri.face.s[3] * 3];
-			fv.s[1] = faces[tri.face.s[3] * 3 + 1];
-			fv.s[2] = faces[tri.face.s[3] * 3 + 2];
-			// Material of face @ToDo
-			//fv.w = facesMtl[tri.face.w];
-
-			fn.s[0] = facesVN[tri.normals.s[3] * 3];
-			fn.s[1] = facesVN[tri.normals.s[3] * 3 + 1];
-			fn.s[2] = facesVN[tri.normals.s[3] * 3 + 2];
-			fn.s[3] = 0;
-
-			facesV.push_back(fv);
-			facesN.push_back(fn);
+			facesV.emplace_back(facesVec[j].face);
 		}
 	}
 
@@ -212,14 +192,11 @@ initOpenCLBuffers_BVH(BVH *bvh, ModelLoader *ml, std::vector<cl_uint> faces)
 	std::size_t bytesFV = sizeof(cl_uint4) * facesV.size();
 	mBufFacesV = clw::buffer::create(facesV, bytesFV);
 
-	std::size_t bytesFN = sizeof(cl_uint4) * facesN.size();
-	mBufFacesN = clw::buffer::create(facesN, bytesFN);
-
-	return bytesBVH + bytesFV + bytesFN;
+	return bytesBVH + bytesFV;
 }
 
 std::size_t initOpenCLBuffers_Faces(
-	ModelLoader *ml, std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals)
+	const std::vector<cl_float>& vertices, const std::vector<cl_float>& normals)
 {
 	std::vector<cl_float4> vertices4;
 	std::vector<cl_float4> normals4;
@@ -251,9 +228,12 @@ std::size_t initOpenCLBuffers_Faces(
 }
 
 void initOpenCLBuffers(
-	std::vector<cl_float> vertices, std::vector<cl_uint> faces, std::vector<cl_float> normals,
-	ModelLoader *ml, BVH *accelStruc)
+	const std::unique_ptr<IO::ModelLoader>& ml,
+	const std::unique_ptr<BVH>& accelStruc)
 {
+	const std::vector<float>& vertices = ml->getPositions();
+	const std::vector<float>& normals = ml->getNormals();
+
 	double timerStart;
 	double timerEnd;
 	double timeDiff;
@@ -268,7 +248,7 @@ void initOpenCLBuffers(
 
 	// Buffer: Faces
 	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_Faces(ml, vertices, faces, normals);
+	bytes = initOpenCLBuffers_Faces(vertices, normals);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
@@ -277,7 +257,7 @@ void initOpenCLBuffers(
 
 	// Buffer: Acceleration Structure
 	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_BVH(accelStruc, ml, faces);
+	bytes = initOpenCLBuffers_BVH(accelStruc);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
@@ -394,14 +374,13 @@ void initCLKernel()
 	kernel.setArg(9, BVH_NUM_NODES);
 	kernel.setArg(10, mBufBVH);
 	kernel.setArg(11, mBufFacesV);
-	kernel.setArg(12, mBufFacesN);
-	kernel.setArg(13, mBufVertices);
-	kernel.setArg(14, mBufNormals);
-	kernel.setArg(15, mBufMaterial);
+	kernel.setArg(12, mBufVertices);
+	kernel.setArg(13, mBufNormals);
+	kernel.setArg(14, mBufMaterial);
 
-	kernel.setArg(16, cl_env_map);
+	kernel.setArg(15, cl_env_map);
 	// kernel.setArg(18, cl_noise_tex);
-	kernel.setArg(17, cl_flattenI);
+	kernel.setArg(16, cl_flattenI);
 }
 
 //---------------------------------------------------------------------------------------
@@ -569,22 +548,10 @@ int main(int argc, char **argv)
 		mBufMaterial = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
 		queue.enqueueWriteBuffer(mBufMaterial, CL_TRUE, 0, sizeof(Material), scene->obj_mat);
 
-		ModelLoader *ml = new ModelLoader();
-		ml->loadModel(models_directory, scene->obj_path);
-
-		ObjParser *op = ml->getObjParser();
-
-		std::vector<cl_uint> mFaces = op->getFacesV();
-		std::vector<cl_float> mNormals = op->getNormals();
-		std::vector<cl_float> mVertices = op->getVertices();
-
-		BVH *accelStruct = new BVH(op->getObjects(), mVertices, mNormals);
-
-		initOpenCLBuffers(mVertices, mFaces, mNormals, ml, accelStruct);
-
-		delete ml;
-		delete accelStruct;
-		// clReleaseProgram(bvh_program());
+		std::unique_ptr<IO::ModelLoader> ml = std::make_unique<IO::ModelLoader>();
+		ml->ImportFromFile(std::string(models_directory + scene->obj_path));
+		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(ml);
+		initOpenCLBuffers(ml, accelStruct);
 	}
 
 	//

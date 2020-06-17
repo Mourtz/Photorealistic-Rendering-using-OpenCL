@@ -227,7 +227,6 @@ typedef struct {
 	const uint NUM_NODES;
 	__constant bvhNode* bvh;
 	__constant uint4* facesV;
-	__constant uint4* facesN;
 	__constant float4* vertices;
 	__constant float4* normals;
 	__constant Material* mat;

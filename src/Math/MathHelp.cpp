@@ -8,7 +8,7 @@ cl_float MathHelp::degToRad(cl_float deg) {
 	return (deg * M_PI / 180.0f);
 }
 
-void MathHelp::getAABB(vector<cl_float4> vertices, vec3& bbMin, vec3& bbMax) {
+void MathHelp::getAABB(const vector<cl_float4>& vertices, vec3& bbMin, vec3& bbMax) {
 	bbMin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
 	bbMax = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
 
@@ -25,8 +25,25 @@ void MathHelp::getAABB(vector<cl_float4> vertices, vec3& bbMin, vec3& bbMax) {
 	}
 }
 
+void MathHelp::getAABB(const vector<vec3>& vertices, vec3& bbMin, vec3& bbMax) {
+	bbMin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
+	bbMax = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
+
+	for (cl_uint i = 1; i < vertices.size(); i++) {
+		vec3 v = vertices[i];
+
+		(bbMin)[0] = ((bbMin)[0] < v.x) ? (bbMin)[0] : v.x;
+		(bbMin)[1] = ((bbMin)[1] < v.y) ? (bbMin)[1] : v.y;
+		(bbMin)[2] = ((bbMin)[2] < v.z) ? (bbMin)[2] : v.z;
+
+		(bbMax)[0] = ((bbMax)[0] > v.x) ? (bbMax)[0] : v.x;
+		(bbMax)[1] = ((bbMax)[1] > v.y) ? (bbMax)[1] : v.y;
+		(bbMax)[2] = ((bbMax)[2] > v.z) ? (bbMax)[2] : v.z;
+	}
+}
+
 void MathHelp::getAABB(
-	vector<vec3> bbMins, vector<vec3> bbMaxs, vec3* bbMin, vec3* bbMax
+	const vector<vec3>& bbMins, const vector<vec3>& bbMaxs, vec3* bbMin, vec3* bbMax
 ) {
 	(*bbMin)[0] = bbMins[0][0];
 	(*bbMin)[1] = bbMins[0][1];
@@ -224,9 +241,9 @@ void MathHelp::triCalcAABB(
 	vec3 p2 = vec3(v[1].x, v[1].y, v[1].z);
 	vec3 p3 = vec3(v[2].x, v[2].y, v[2].z);
 
-	cl_float4 fn1 = (*normals)[tri->normals.x];
-	cl_float4 fn2 = (*normals)[tri->normals.y];
-	cl_float4 fn3 = (*normals)[tri->normals.z];
+	cl_float4 fn1 = (*normals)[tri->face.x];
+	cl_float4 fn2 = (*normals)[tri->face.y];
+	cl_float4 fn3 = (*normals)[tri->face.z];
 
 	vec3 n1 = vec3(fn1.x, fn1.y, fn1.z);
 	vec3 n2 = vec3(fn2.x, fn2.y, fn2.z);

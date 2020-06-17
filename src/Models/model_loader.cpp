@@ -5,7 +5,7 @@
 #include <assimp/postprocess.h> // Post processing flags
 
 #ifdef PROFILING
-#include <iomanip>      // std::setprecision
+#include <iomanip>		// std::setprecision
 #include <GLFW/glfw3.h> // glfwGetTime
 #endif
 
@@ -18,6 +18,10 @@ namespace IO
 {
 	bool ModelLoader::ImportFromFile(const std::string &filepath)
 	{
+		// free cached scene
+		scene.reset(); 
+		sceneData.reset();
+
 #ifdef PROFILING
 		std::cout << "Loading " << filepath << " ..." << std::endl;
 		double start = glfwGetTime();
@@ -44,18 +48,18 @@ namespace IO
 			return false;
 		}
 
-		sceneData = ProcessData(scene);
+		updateSceneData(scene);
 
 #ifdef PROFILING
 		std::cout << std::setprecision(4) << "Loaded " << filepath << " at "
-			<< (glfwGetTime()-start) << "s ..." << std::endl;
+				  << (glfwGetTime() - start) << "s ..." << std::endl;
 #endif
 		return true;
 	}
 
-	std::shared_ptr<SceneData> ModelLoader::ProcessData(const aiScene *scene)
+	void ModelLoader::updateSceneData(const aiScene *scene)
 	{
-		std::shared_ptr<SceneData> ret = std::make_shared<SceneData>();
+		sceneData.reset(new SceneData);
 
 		bool repeat = true;
 
@@ -87,26 +91,31 @@ namespace IO
 			if (modelNode->mNumMeshes > 0)
 				for (unsigned int b = 0; b < modelNode->mNumMeshes; b++)
 				{
-					ret->push_back(assimpGetMeshData(scene->mMeshes[b]));
+					sceneData->push_back(assimpGetMeshData(scene->mMeshes[b]));
 					std::cout << "::::::::PROCESSING =>" << scene->mMeshes[b]->mName.C_Str() << " , Faces: " << scene->mMeshes[b]->mNumFaces << std::endl;
 				}
 		}
-		return ret;
 	}
 
 	const MeshData ModelLoader::assimpGetMeshData(const aiMesh *mesh)
 	{
 		MeshData res;
 
+		// total faces
 		res.first.push_back(mesh->mNumFaces);
+		// total vertices
 		res.first.push_back(mesh->mNumVertices);
 
 		for (unsigned int f = 0; f < mesh->mNumFaces; f++)
 		{
 			aiFace *face = &mesh->mFaces[f];
-			res.first.push_back(face->mIndices[0]);
-			res.first.push_back(face->mIndices[1]);
-			res.first.push_back(face->mIndices[2]);
+			for(unsigned int i = 0; i < face->mNumIndices; ++i){
+				if(i>2){
+					std::cerr << "there's only support for triangles at the moment!" << std::endl;
+					break;
+				}
+				res.first.emplace_back(face->mIndices[i]);
+			}
 		}
 
 		for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
@@ -145,13 +154,312 @@ namespace IO
 				res.second.push_back(mesh->mTangents[v].y);
 				res.second.push_back(mesh->mTangents[v].z);
 			}
-		} else {
-			res.second.push_back(0);
-			res.second.push_back(0);
-			res.second.push_back(0);
+		}
+		else
+		{
+			for (unsigned int v = 0; v < mesh->mNumVertices; ++v)
+			{
+				res.second.push_back(0);
+				res.second.push_back(0);
+				res.second.push_back(0);
+			}
 		}
 
 		return res;
 	}
 
+	const std::shared_ptr<Scene> ModelLoader::getFaces()
+	{
+		scene.reset(new Scene);
+		unsigned int offset = 0;
+
+		const std::vector<float> &vertices = getPositions();
+		const std::vector<float> &normals = getNormals();
+		const std::vector<float> &uvs = getTextureCoords();
+		const std::vector<float> &tangents = getTangents();
+
+		for (const MeshData& meshData : *sceneData)
+		{
+			Mesh mesh;
+			for (const auto &f : getIndices4(meshData))
+			{
+				std::vector<Vertex> verts;
+				for (int i = 0; i < 3; ++i)
+				{
+					const unsigned i0 = (offset + f.s[i])*3;
+					const unsigned i1 = i0 + 1;
+					const unsigned i2 = i1 + 1;
+
+					verts.push_back(Vertex(
+					{
+						vertices[i0], vertices[i1], vertices[i2]
+					},
+					{
+						normals[i0], normals[i1], normals[i2]
+					},
+					{
+						uvs[(offset + f.s[i])*2], uvs[(offset + f.s[i])*2+1],
+					},
+					{
+						tangents[i0], tangents[i1], tangents[i2]
+					},
+					i0/3));
+				}
+				mesh.faces.push_back(Face(verts[0], verts[1], verts[2]));
+			}
+			offset += meshData.first[1];
+			scene->meshes.push_back(mesh);
+		}
+
+		return scene;
+	}
+
+	const void *ModelLoader::getPositionsPtr(const MeshData &data)
+	{
+		return &data.second[0];
+	}
+
+	const void *ModelLoader::getNormalsPtr(const MeshData &data)
+	{
+		return &data.second[3 * data.first[1]];
+	}
+
+	const void *ModelLoader::getTextureCoordsPtr(const MeshData &data)
+	{
+		return &data.second[6 * data.first[1]];
+	}
+
+	const void *ModelLoader::getTangentsPtr(const MeshData &data)
+	{
+		return &data.second[8 * data.first[1]];
+	}
+
+	std::vector<unsigned int> ModelLoader::getIndices(const MeshData &data) const 
+	{
+		return std::vector<unsigned int>(data.first.begin() + 2, data.first.end());
+	}
+
+	std::vector<cl_uint4> ModelLoader::getIndices4(const MeshData &data) const
+	{
+		std::vector<cl_uint4> res;
+
+		const auto &indices = getIndices(data);
+		for (unsigned int i = 0; i < indices.size();)
+		{
+			res.push_back({indices[i++], indices[i++], indices[i++], 0U});
+		}
+		return res;
+	}
+
+	std::vector<unsigned int> ModelLoader::getIndices() const
+	{
+		std::vector<unsigned int> res;
+
+		for (const auto &meshData : *sceneData)
+		{
+			const std::vector<unsigned int> &faces = getIndices(meshData);
+			res.insert(res.end(), faces.begin(), faces.end());
+		}
+
+		return res;
+	}
+
+	std::vector<cl_uint4> ModelLoader::getIndices4() const
+	{
+		std::vector<cl_uint4> res;
+
+		for (const auto &meshData : *sceneData)
+		{
+			const auto &faces = getIndices4(meshData);
+			res.insert(res.end(), faces.begin(), faces.end());
+		}
+
+		return res;
+	}
+
+	std::vector<unsigned int> ModelLoader::getIndicesAt(unsigned index) const{
+		return getIndices(sceneData->at(index));
+	}
+
+	std::vector<float> ModelLoader::getPositions(const MeshData &data) const
+	{
+		return std::vector<float>(data.second.begin(), data.second.begin() + data.first[1] * 3);
+	}
+
+	std::vector<cl_float4> ModelLoader::getPositions4(const MeshData &data) const
+	{
+		std::vector<cl_float4> res;
+
+		const auto &positions = getPositions(data);
+		for (int i = 0; i < positions.size();)
+		{
+			res.push_back({positions[i++], positions[i++], positions[i++], 0.0f});
+		}
+		return res;
+	}
+
+	std::vector<float> ModelLoader::getPositions() const
+	{
+		std::vector<float> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const std::vector<float> &pos = getPositions(mesh);
+			res.insert(res.end(), pos.begin(), pos.end());
+		}
+
+		return res;
+	}
+
+	std::vector<cl_float4> ModelLoader::getPositions4() const
+	{
+		std::vector<cl_float4> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const auto &pos = getPositions4(mesh);
+			res.insert(res.end(), pos.begin(), pos.end());
+		}
+
+		return res;
+	}
+
+	std::vector<float> ModelLoader::getPositionsAt(unsigned index) const
+	{
+		return getPositions(sceneData->at(index));
+	}
+
+	std::vector<float> ModelLoader::getNormals(const MeshData &data) const
+	{
+		return std::vector<float>(data.second.begin() + data.first[1] * 3, data.second.begin() + data.first[1] * 6);
+	}
+
+	std::vector<cl_float4> ModelLoader::getNormals4(const MeshData &data) const
+	{
+		std::vector<cl_float4> res;
+
+		const auto &normals = getNormals(data);
+		for (int i = 0; i < normals.size();)
+		{
+			res.push_back({normals[i++], normals[i++], normals[i++], 0.0f});
+		}
+		return res;
+	}
+
+	std::vector<float> ModelLoader::getNormals() const
+	{
+		std::vector<float> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const std::vector<float> &nor = getNormals(mesh);
+			res.insert(res.end(), nor.begin(), nor.end());
+		}
+
+		return res;
+	}
+
+	std::vector<cl_float4> ModelLoader::getNormals4() const
+	{
+		std::vector<cl_float4> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const auto &nor = getNormals4(mesh);
+			res.insert(res.end(), nor.begin(), nor.end());
+		}
+
+		return res;
+	}
+
+	std::vector<float> ModelLoader::getNormalsAt(unsigned index) const
+	{
+		return getNormals(sceneData->at(index));
+	}
+
+	std::vector<float> ModelLoader::getTextureCoords(const MeshData &data) const
+	{
+		return std::vector<float>(data.second.begin() + data.first[1] * 6, data.second.begin() + data.first[1] * 8);
+	}
+
+	std::vector<cl_float4> ModelLoader::getTextureCoords4(const MeshData &data) const
+	{
+		std::vector<cl_float4> res;
+
+		const auto &tex_coord = getTextureCoords(data);
+		for (int i = 0; i < tex_coord.size();)
+		{
+			res.push_back({tex_coord[i++], tex_coord[i++], tex_coord[i++], 0.0f});
+		}
+		return res;
+	}
+
+	std::vector<float> ModelLoader::getTextureCoords() const
+	{
+		std::vector<float> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const std::vector<float> &uv = getTextureCoords(mesh);
+			res.insert(res.end(), uv.begin(), uv.end());
+		}
+
+		return res;
+	}
+
+	std::vector<cl_float4> ModelLoader::getTextureCoords4() const
+	{
+		std::vector<cl_float4> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const auto &uv = getTextureCoords4(mesh);
+			res.insert(res.end(), uv.begin(), uv.end());
+		}
+
+		return res;
+	}
+
+	std::vector<float> ModelLoader::getTangents(const MeshData &data) const
+	{
+		return std::vector<float>(data.second.begin() + data.first[1] * 8, data.second.begin() + data.first[1] * 11);
+	}
+
+	std::vector<cl_float4> ModelLoader::getTangents4(const MeshData &data) const
+	{
+		std::vector<cl_float4> res;
+
+		const auto &tg = getTangents(data);
+		for (int i = 0; i < tg.size();)
+		{
+			res.push_back({tg[i++], tg[i++], tg[i++], 0.0f});
+		}
+		return res;
+	}
+
+	std::vector<float> ModelLoader::getTangents() const
+	{
+		std::vector<float> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const std::vector<float> &tangent = getTangents(mesh);
+			res.insert(res.end(), tangent.begin(), tangent.end());
+		}
+
+		return res;
+	}
+
+	std::vector<cl_float4> ModelLoader::getTangents4() const
+	{
+		std::vector<cl_float4> res;
+
+		for (const auto &mesh : *sceneData)
+		{
+			const auto &tangent = getTangents4(mesh);
+			res.insert(res.end(), tangent.begin(), tangent.end());
+		}
+
+		return res;
+	}
 } // namespace IO

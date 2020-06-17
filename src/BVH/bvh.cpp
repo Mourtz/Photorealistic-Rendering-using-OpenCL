@@ -31,11 +31,11 @@ constexpr cl_float BVH_SKIPAHEAD_CMP(0.7);
 
 BVH::BVH() {}
 
-BVH::BVH(const std::shared_ptr<IO::SceneData>& sceneData){
+BVH::BVH(const std::unique_ptr<IO::ModelLoader>& ml){
 	mDepthReached = 0;
 	this->setMaxFaces(BVH_MAXFACES);
 
-	vector<BVHNode*> subTrees = this->buildTreesFromObjects(sceneData);
+	vector<BVHNode*> subTrees = this->buildTreesFromObjects(ml);
 	mRoot = this->makeContainerNode(subTrees, true);
 	this->groupTreesToNodes(subTrees, mRoot, 1);
 	this->combineNodes(subTrees.size());
@@ -108,47 +108,38 @@ BVHNode* BVH::buildTree(
 	return containerNode;
 }
 
-std::vector<BVHNode*> BVH::buildTreesFromObjects(const std::shared_ptr<IO::SceneData>& sceneData){
+std::vector<BVHNode*> BVH::buildTreesFromObjects(const std::unique_ptr<IO::ModelLoader>& ml){
 	using namespace IO;
 	constexpr cl_float RENDER_PHONGTESS = 0;
 	vector<BVHNode*> subTrees;
 	cl_uint offset = 0;
 
-	#pragma omp parallel
-	#pragma omp for
-	for(const auto& mesh : *sceneData){
-		const std::vector<unsigned int>& faces = getIndices(mesh);
-		const std::vector<float>& vertices = getPositions(mesh);
-		// const std::vector<float>& normals = getNormals(mesh);
-		
-		std::vector<cl_uint4> facesThisObj;
-		// ModelLoader::getFacesOfObject((*sceneObjects)[i], facesThisObj, offset);
-		for(int i = 0; i < faces.size(); i+=3){
-			facesThisObj.push_back({faces[i+0], faces[i+1], faces[i+2], offset++});
-		}
-		
-		//------------------------------------------------------------------------
-		
+	auto& scene = ml->getFaces();
+	for(const auto& mesh : scene->meshes){
 		vector<Tri> tris;
 		
-		for (const auto& faces_it : facesThisObj) {
+		for(const auto& face : mesh.faces){
 			Tri tri;
 
-			tri.face = faces_it;
+			tri.face = {
+				face.points[0].id,
+				face.points[1].id,
+				face.points[2].id,
+				offset++};
 
 			vector<cl_float4> v;
-			v.push_back({vertices[tri.face.x*3+0], vertices[tri.face.x*3+1], vertices[tri.face.x*3+2], 0.0f});
-			v.push_back({vertices[tri.face.y*3+0], vertices[tri.face.y*3+1], vertices[tri.face.y*3+2], 0.0f});
-			v.push_back({vertices[tri.face.z*3+0], vertices[tri.face.z*3+1], vertices[tri.face.z*3+2], 0.0f});
+			v.push_back(face.points[0].pos);
+			v.push_back(face.points[1].pos);
+			v.push_back(face.points[2].pos);
 
 			vec3 bbMin, bbMax;
 			MathHelp::getAABB(v, bbMin, bbMax);
 			tri.bbMin = bbMin;
 			tri.bbMax = bbMax;
 
-			tris.emplace_back(tri);
+			tris.push_back(tri);
 		}
-		
+
 		BVHNode* rootNode = this->makeNode(tris, true);
 		cl_float rootSA = MathHelp::getSurfaceArea(rootNode->bbMin, rootNode->bbMax);
 

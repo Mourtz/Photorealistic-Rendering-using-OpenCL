@@ -26,7 +26,7 @@ class BVH {
 
 public:
 	BVH();
-	BVH(const std::shared_ptr<IO::SceneData>& sceneData);
+	BVH(const std::unique_ptr<IO::ModelLoader>& ml);
 	~BVH();
 	const std::vector<BVHNode*> getContainerNodes() const;
 	cl_uint getDepth() const;
@@ -36,7 +36,7 @@ public:
 	void visualize(std::vector<cl_float>* vertices, std::vector<cl_uint>* indices);
 
 protected:
-	std::vector<BVHNode*> buildTreesFromObjects(const std::shared_ptr<IO::SceneData>& sceneData);
+	std::vector<BVHNode*> buildTreesFromObjects(const std::unique_ptr<IO::ModelLoader>& ml);
 
 	BVHNode* buildTree(
 		const std::vector<Tri> faces, const vec3 bbMin, const vec3 bbMax,

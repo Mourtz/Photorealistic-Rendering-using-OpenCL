@@ -94,7 +94,7 @@ bool ALPHA_TESTING = false;
 //----------------------------------------------
 
 std::size_t
-initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh, const std::vector<cl_uint>& faces)
+initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh)
 {
 	const std::vector<BVHNode *> bvhNodes = bvh->getNodes();
 	std::vector<bvhNode_cl> bvhNodesCL;
@@ -196,7 +196,7 @@ initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh, const std::vector<cl_uint
 }
 
 std::size_t initOpenCLBuffers_Faces(
-	const std::vector<cl_float>& vertices, const std::vector<cl_uint>& faces, const std::vector<cl_float>& normals)
+	const std::vector<cl_float>& vertices, const std::vector<cl_float>& normals)
 {
 	std::vector<cl_float4> vertices4;
 	std::vector<cl_float4> normals4;
@@ -228,12 +228,11 @@ std::size_t initOpenCLBuffers_Faces(
 }
 
 void initOpenCLBuffers(
-	const std::shared_ptr<IO::SceneData>& data,
+	const std::unique_ptr<IO::ModelLoader>& ml,
 	const std::unique_ptr<BVH>& accelStruc)
 {
-	const std::vector<unsigned int>& faces = IO::getIndices(data);
-	const std::vector<float>& vertices = IO::getPositions(data);
-	const std::vector<float>& normals = IO::getNormals(data);
+	const std::vector<float>& vertices = ml->getPositions();
+	const std::vector<float>& normals = ml->getNormals();
 
 	double timerStart;
 	double timerEnd;
@@ -249,7 +248,7 @@ void initOpenCLBuffers(
 
 	// Buffer: Faces
 	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_Faces(vertices, faces, normals);
+	bytes = initOpenCLBuffers_Faces(vertices, normals);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
@@ -258,7 +257,7 @@ void initOpenCLBuffers(
 
 	// Buffer: Acceleration Structure
 	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_BVH(accelStruc, faces);
+	bytes = initOpenCLBuffers_BVH(accelStruc);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
@@ -551,11 +550,8 @@ int main(int argc, char **argv)
 
 		std::unique_ptr<IO::ModelLoader> ml = std::make_unique<IO::ModelLoader>();
 		ml->ImportFromFile(std::string(models_directory + scene->obj_path));
-		const std::shared_ptr<IO::SceneData>& data = ml->getData();
-
-		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(data);
-
-		initOpenCLBuffers(data, accelStruct);
+		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(ml);
+		initOpenCLBuffers(ml, accelStruct);
 	}
 
 	//

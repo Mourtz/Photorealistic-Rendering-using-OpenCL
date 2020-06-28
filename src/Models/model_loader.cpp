@@ -9,17 +9,14 @@
 #include <GLFW/glfw3.h> // glfwGetTime
 #endif
 
-/*
-extern cl::Context context;
-extern cl::CommandQueue queue;
-extern cl::Program bvh_program;
-*/
+namespace CL_RAYTRACER
+{
 namespace IO
 {
 	bool ModelLoader::ImportFromFile(const std::string &filepath)
 	{
 		// free cached scene
-		scene.reset(); 
+		scene.reset();
 		sceneData.reset();
 
 #ifdef PROFILING
@@ -52,7 +49,7 @@ namespace IO
 
 #ifdef PROFILING
 		std::cout << std::setprecision(4) << "Loaded " << filepath << " at "
-				  << (glfwGetTime() - start) << "s ..." << std::endl;
+					<< (glfwGetTime() - start) << "s ..." << std::endl;
 #endif
 		return true;
 	}
@@ -109,8 +106,10 @@ namespace IO
 		for (unsigned int f = 0; f < mesh->mNumFaces; f++)
 		{
 			aiFace *face = &mesh->mFaces[f];
-			for(unsigned int i = 0; i < face->mNumIndices; ++i){
-				if(i>2){
+			for (unsigned int i = 0; i < face->mNumIndices; ++i)
+			{
+				if (i > 2)
+				{
 					std::cerr << "there's only support for triangles at the moment!" << std::endl;
 					break;
 				}
@@ -178,7 +177,9 @@ namespace IO
 		const std::vector<float> &uvs = getTextureCoords();
 		const std::vector<float> &tangents = getTangents();
 
-		for (const MeshData& meshData : *sceneData)
+#pragma omp parallel
+#pragma omp for
+		for (const MeshData &meshData : *sceneData)
 		{
 			Mesh mesh;
 			for (const auto &f : getIndices4(meshData))
@@ -186,24 +187,19 @@ namespace IO
 				std::vector<Vertex> verts;
 				for (int i = 0; i < 3; ++i)
 				{
-					const unsigned i0 = (offset + f.s[i])*3;
+					const unsigned i0 = (offset + f.s[i]) * 3;
 					const unsigned i1 = i0 + 1;
 					const unsigned i2 = i1 + 1;
 
 					verts.push_back(Vertex(
-					{
-						vertices[i0], vertices[i1], vertices[i2]
-					},
-					{
-						normals[i0], normals[i1], normals[i2]
-					},
-					{
-						uvs[(offset + f.s[i])*2], uvs[(offset + f.s[i])*2+1],
-					},
-					{
-						tangents[i0], tangents[i1], tangents[i2]
-					},
-					i0/3));
+						{vertices[i0], vertices[i1], vertices[i2]},
+						{normals[i0], normals[i1], normals[i2]},
+						{
+							uvs[(offset + f.s[i]) * 2],
+							uvs[(offset + f.s[i]) * 2 + 1],
+						},
+						{tangents[i0], tangents[i1], tangents[i2]},
+						i0 / 3));
 				}
 				mesh.faces.push_back(Face(verts[0], verts[1], verts[2]));
 			}
@@ -234,7 +230,7 @@ namespace IO
 		return &data.second[8 * data.first[1]];
 	}
 
-	std::vector<unsigned int> ModelLoader::getIndices(const MeshData &data) const 
+	std::vector<unsigned int> ModelLoader::getIndices(const MeshData &data) const
 	{
 		return std::vector<unsigned int>(data.first.begin() + 2, data.first.end());
 	}
@@ -277,7 +273,8 @@ namespace IO
 		return res;
 	}
 
-	std::vector<unsigned int> ModelLoader::getIndicesAt(unsigned index) const{
+	std::vector<unsigned int> ModelLoader::getIndicesAt(unsigned index) const
+	{
 		return getIndices(sceneData->at(index));
 	}
 
@@ -463,3 +460,4 @@ namespace IO
 		return res;
 	}
 } // namespace IO
+} // namespace CL_RAYTRACER

@@ -44,6 +44,7 @@ constexpr std::size_t RayI_size = 16 * 7;
 #include <Scene/scene.h>
 #include <GL/cl_gl_interop.h>
 #include <BVH/bvh.h>
+// #include <BVH/new_bvh.h>
 
 #include <CL/cl_help.h>
 #if 1
@@ -51,6 +52,8 @@ namespace clw = cl_help;
 #else
 #define clw cl_help
 #endif
+
+using namespace CL_RAYTRACER;
 
 // window width
 int window_width = 1280;
@@ -195,12 +198,15 @@ initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh)
 	return bytesBVH + bytesFV;
 }
 
-std::size_t initOpenCLBuffers_Faces(
-	const std::vector<cl_float>& vertices, const std::vector<cl_float>& normals)
+std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml)
 {
+	
 	std::vector<cl_float4> vertices4;
 	std::vector<cl_float4> normals4;
-
+	const std::vector<float>& vertices = ml->getPositions();
+	const std::vector<float>& normals = ml->getNormals();
+	
+#if 1 
 	for (std::size_t i = 0; i < vertices.size(); i += 3)
 	{
 		cl_float4 v = {vertices[i], vertices[i + 1], vertices[i + 2], 0.0f};
@@ -212,7 +218,17 @@ std::size_t initOpenCLBuffers_Faces(
 		cl_float4 n = {normals[i], normals[i + 1], normals[i + 2], 0.0f};
 		normals4.push_back(n);
 	}
-
+#else
+	const auto& scene = ml->getFaces();
+	for(const auto& mesh : scene->meshes){
+		for(const auto& face : mesh.faces){
+			for(int i = 0; i < 3; ++i){
+				vertices4.push_back(face.points[i].pos);
+				normals4.push_back(face.points[i].nor);
+			}
+		}
+	}
+#endif
 	std::size_t bytesV = sizeof(cl_float4) * vertices4.size();
 	std::size_t bytesN = sizeof(cl_float4) * normals4.size();
 
@@ -228,12 +244,9 @@ std::size_t initOpenCLBuffers_Faces(
 }
 
 void initOpenCLBuffers(
-	const std::unique_ptr<IO::ModelLoader>& ml,
+	const std::shared_ptr<IO::ModelLoader>& ml,
 	const std::unique_ptr<BVH>& accelStruc)
 {
-	const std::vector<float>& vertices = ml->getPositions();
-	const std::vector<float>& normals = ml->getNormals();
-
 	double timerStart;
 	double timerEnd;
 	double timeDiff;
@@ -248,7 +261,7 @@ void initOpenCLBuffers(
 
 	// Buffer: Faces
 	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_Faces(vertices, normals);
+	bytes = initOpenCLBuffers_Faces(ml);
 	timerEnd = glfwGetTime();
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
@@ -548,10 +561,12 @@ int main(int argc, char **argv)
 		mBufMaterial = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(Material));
 		queue.enqueueWriteBuffer(mBufMaterial, CL_TRUE, 0, sizeof(Material), scene->obj_mat);
 
-		std::unique_ptr<IO::ModelLoader> ml = std::make_unique<IO::ModelLoader>();
+		std::shared_ptr<IO::ModelLoader> ml = std::make_shared<IO::ModelLoader>();
 		ml->ImportFromFile(std::string(models_directory + scene->obj_path));
 		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(ml);
 		initOpenCLBuffers(ml, accelStruct);
+		
+		// std::unique_ptr<NEW_BVH> bvh = std::make_unique<NEW_BVH>(ml);
 	}
 
 	//

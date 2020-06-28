@@ -1,48 +1,9 @@
+#ifndef __OPENCL_RAYTRACER__
+#define __OPENCL_RAYTRACER__
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 __constant sampler_t samplerA = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
-
-#define RNG_TYPE 0
-
-#if RNG_TYPE == 0
-#define RNG_SEED_TYPE uint
-#define RNG_SEED_PARAM RNG_SEED_TYPE* seed0, RNG_SEED_TYPE* seed1
-#define RNG_SEED_VALUE seed0, seed1
-#define RNG_SEED_VALUE_P &seed0, &seed1
-#elif RNG_TYPE == 1
-#define RNG_SEED_TYPE ulong
-#define RNG_SEED_PARAM RNG_SEED_TYPE* state
-#define RNG_SEED_VALUE state
-#define RNG_SEED_VALUE_P &RNG_SEED_VALUE
-#elif RNG_TYPE == 2
-#define RNG_SEED_TYPE double
-#define RNG_SEED_PARAM RNG_SEED_TYPE* seed
-#define RNG_SEED_VALUE seed
-#define RNG_SEED_VALUE_P &RNG_SEED_VALUE
-#endif
-
-//------------- Ray -------------
-
-typedef struct {
-	float3 origin;			// origin
-	float3 dir;				// direction
-	float time;
-	float dist;
-} TempRay;
-
-typedef struct {
-	float3 origin;			// origin
-	float3 dir;				// direction
-	float3 normal;			// normal
-	float3 pos;				// position
-	union {
-		float t;				// dist from origin
-		float dist;
-	};
-	bool backside;			// inside?
-	float time;
-	// int hitFace;			// hitface id
-} Ray;
 
 #define tempToRay(tray) (Ray){ tray.origin, tray.dir, (float3)(0.0f), (float3)(0.0f), {tray.dist}, false, tray.time }
 #define rayToTemp(ray) (TempRay){ ray.origin, ray.dir, ray.t, ray.time }
@@ -165,3 +126,5 @@ __kernel void render_kernel(
 	/* update the output GLTexture */
 	write_imagef(output_tex, i_coord, rlh->acc / (float)(rlh->samples));
 }
+
+#endif

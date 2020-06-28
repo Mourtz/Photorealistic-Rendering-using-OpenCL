@@ -1,3 +1,9 @@
+#ifndef __CL_CAMERA__
+#define __CL_CAMERA__
+
+#FILE:header.cl
+#FILE:prng/prng.cl
+
 typedef struct {
 	float3 position;
 	float3 view;
@@ -58,3 +64,5 @@ Ray createCamRay(const int2 coord, const int width, const int height, __constant
 
 	return ray;
 }
+
+#endif

@@ -81,15 +81,6 @@ struct Vector
 	void normalize(){};
 };
 
-template <>
-float Vector<float>::lengthsq3(){return sqrtf(x * x + y * y + z * z);}
-
-template <>
-float Vector<float>::lengthsq4(){return sqrtf(x * x + y * y + z * z + w * w);}
-
-template <>
-void Vector<float>::normalize(){float norm = sqrtf(x * x + y * y + z * z); *this = *this / norm; }
-
 #define vec4 Vector<float>
 
 inline vec4 operator+(const float& f, const vec4& v) { return v + f; }

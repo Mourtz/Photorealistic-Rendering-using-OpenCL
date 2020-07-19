@@ -16,9 +16,18 @@ ENDIF(COMMAND cmake_policy)
 ##############################################################
 # output paths
 ##############################################################
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# First for the generic no-config case (e.g. with mingw)
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
+# Second, for multi-config builds (e.g. msvc)
+foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
+    string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
+    set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/bin )
+    set( CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/lib )
+    set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/lib )
+endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
 # https://stackoverflow.com/questions/31422680/how-to-set-visual-studio-filters-for-nested-sub-directory-using-cmake
 function(assign_source_group)
@@ -141,15 +150,28 @@ target_include_directories(${TRACER_TARGET} PRIVATE "${GLFW_DIR}/include")
 target_compile_definitions(${TRACER_TARGET} PRIVATE "GLFW_INCLUDE_NONE")
 
 # GLEW
-set(GLEW_DIR "${CMAKE_SOURCE_DIR}/external/glew-cmake")
-set(glew-cmake_BUILD_SHARED ON)
-set(glew-cmake_BUILD_STATIC OFF)
-set(glew-cmake_BUILD_MULTI_CONTEXT OFF)
-set(ONLY_LIBS ON)
-add_subdirectory("${GLEW_DIR}")
-target_include_directories(${TRACER_TARGET} PRIVATE "${GLEW_DIR}/include")
+FIND_PACKAGE(GLEW)
+SET(GLEW_LIBRARIES GLEW::glew)
+IF(GLEW_FOUND)
+  MESSAGE(STATUS "Found GLEW on system, using that...")
+  TARGET_INCLUDE_DIRECTORIES(${TRACER_TARGET} PRIVATE ${GLEW_INCLUDE_DIRS})
+  TARGET_LINK_LIBRARIES(${TRACER_TARGET} ${GLEW_LIBRARIES})
+ELSE()
+  MESSAGE(STATUS "Compiling GLEW from external submodules...")
+  set(GLEW_DIR "${CMAKE_SOURCE_DIR}/external/glew-cmake")
+  set(glew-cmake_BUILD_SHARED ON)
+  set(glew-cmake_BUILD_STATIC OFF)
+  set(PKG_CONFIG_REPRESENTATIVE_TARGET OFF)
+  set(ONLY_LIBS ON)
+  add_subdirectory("${GLEW_DIR}")
 
-target_link_libraries(${TRACER_TARGET} "${CMAKE_SOURCE_DIR}/build/lib/Debug/glewd.lib")
+  target_include_directories(${TRACER_TARGET} PRIVATE "${GLEW_DIR}/include")
+  target_link_libraries(${TRACER_TARGET} debug "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/glewd.lib" optimized "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/glew.lib")
+  
+  # copy DLLs
+  #   GET_TARGET_PROPERTY(DLL_PATH ${GLEW_LIBRARIES} IMPORTED_LOCATION_RELEASE)
+  #   FILE(COPY ${DLL_PATH} DESTINATION "../bin")
+ENDIF()
 
 # OpenMP
 find_package(OpenMP QUIET)
@@ -163,6 +185,7 @@ endif ()
 # Assimp
 set(ASSIMP_DIR "${CMAKE_SOURCE_DIR}/external/assimp")
 set(ASSIMP_INSTALL OFF)
+set(ASSIMP_BUILD_TESTS OFF)
 add_subdirectory("${ASSIMP_DIR}")
 target_include_directories(${TRACER_TARGET} PRIVATE "${ASSIMP_DIR}/include")
 target_link_libraries(${TRACER_TARGET} "assimp")

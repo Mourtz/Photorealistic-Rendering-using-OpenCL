@@ -81,7 +81,16 @@ struct Vector
 	void normalize(){};
 };
 
-#define vec4 Vector<float>
+using vec4 = Vector<float>;
+
+template <>
+float vec4::lengthsq3(){return sqrtf(x * x + y * y + z * z);}
+
+template <>
+float vec4::lengthsq4(){return sqrtf(x * x + y * y + z * z + w * w);}
+
+template <>
+void vec4::normalize(){float norm = sqrtf(x * x + y * y + z * z); *this = *this / norm; }
 
 inline vec4 operator+(const float& f, const vec4& v) { return v + f; }
 inline vec4 operator-(const float& f, const vec4& v) { return vec4(f) - v; }
@@ -100,7 +109,7 @@ inline float v_max4(const vec4& v) { return fmax(fmax(fmax(v.x, v.y), v.z), v.w)
 //-------------------------------------------------------------------------------------------------
 
 // OpenCL handles vec3 exactly the same as vec4
-#define vec3 vec4
+using vec3 = vec4;
 
 inline vec3 cross(const vec3& v1, const vec3& v2) { return vec3(v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x); }
 inline float dot(const vec3& v1, const vec3& v2) { return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z; }

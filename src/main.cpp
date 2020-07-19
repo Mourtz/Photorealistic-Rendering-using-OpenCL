@@ -2,7 +2,6 @@
  *	@author Alex Mourtziapis - 2019 
  */
 
-#define __DEBUG__
 #define NOMINMAX
 
 #include <iostream>
@@ -385,7 +384,7 @@ void initCLKernel()
 
 //---------------------------------------------------------------------------------------
 
-#ifdef __DEBUG__
+#ifndef NDEBUG
 double acc_time(0);
 #endif
 
@@ -398,13 +397,13 @@ void runKernel()
 	queue.enqueueAcquireGLObjects(&cl_screens);
 	queue.finish();
 
-#ifdef __DEBUG__
+#ifndef NDEBUG
 	double tStart = glfwGetTime();
 #endif
 	// launch the kernel
 	queue.enqueueNDRangeKernel(kernel, NULL, global_work_size, local_work_size); // local_work_size
 	queue.finish();
-#ifdef __DEBUG__
+#ifndef NDEBUG
 #if 1
 	acc_time += (glfwGetTime() - tStart);
 	// display avg render time per frame
@@ -427,7 +426,7 @@ void render()
 
 	if (buffer_reset)
 	{
-#ifdef __DEBUG__
+#ifndef NDEBUG
 		acc_time = 0;
 #endif
 		queue.enqueueFillBuffer(cl_flattenI, 0, 0, window_width * window_height * RayI_size);
@@ -469,7 +468,7 @@ int main(int argc, char **argv)
 {
 
 	// debug statements
-#ifdef __DEBUG__
+#ifndef NDEBUG
 	std::cout << "size of int: " << sizeof(int) << std::endl;
 	std::cout << "size of cl_int: " << sizeof(cl_int) << std::endl;
 	std::cout << "size of float: " << sizeof(float) << std::endl;
@@ -526,7 +525,7 @@ int main(int argc, char **argv)
 	// initialise OpenCL
 	initOpenCL();
 
-#ifdef __DEBUG__
+#ifndef NDEBUG
 	std::cout << "device specifications:" << std::endl;
 	if (!device.getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err))
 	{

@@ -103,11 +103,15 @@ SET_TARGET_PROPERTIES(${TRACER_TARGET} PROPERTIES
  CXX_STANDARD_REQUIRED ON)
 
  SET(RAYTRACER_COMPILE_FLAGS)
+ # set C++ standard
  LIST(APPEND RAYTRACER_COMPILE_FLAGS "-std=c++17")
+ # -fexceptions: enables exceptions
  LIST(APPEND RAYTRACER_COMPILE_FLAGS "-fexceptions")
+ # -frtti: enables runtime type check (required for virtual functions, etc.)
  LIST(APPEND RAYTRACER_COMPILE_FLAGS "-frtti")
+ # -Wall: displays all warnings
  LIST(APPEND RAYTRACER_COMPILE_FLAGS "-Wall")
- LIST(APPEND RAYTRACER_COMPILE_FLAGS "-Werror")
+ 
  TARGET_COMPILE_OPTIONS(${TRACER_TARGET} PUBLIC "${RAYTRACER_COMPILE_FLAGS}")
 
 ################################

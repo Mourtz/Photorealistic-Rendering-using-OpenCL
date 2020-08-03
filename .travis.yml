@@ -19,10 +19,8 @@ matrix:
 
 before_install:
     - eval "${MATRIX_EVAL}"
-    - echo "deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list	   - gcc
     - sudo apt-get -qq update
     - sudo apt-get -y -qq install make cmake build-essential libglew-dev nvidia-opencl-dev libfreeimage-dev
-    - sudo apt-get -y -qq --allow-unauthenticated install libglfw3-dev
 
 install:
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
@@ -30,7 +28,7 @@ install:
   
   - |
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      CMAKE_URL="http://www.cmake.org/files/v3.3/cmake-3.3.2-Linux-x86_64.tar.gz"
+      CMAKE_URL="http://www.cmake.org/files/v3.18/cmake-3.3.2-Linux-x86_64.tar.gz"
       mkdir cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
       export PATH=${DEPS_DIR}/cmake/bin:${PATH}
     fi

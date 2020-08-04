@@ -20,7 +20,7 @@ matrix:
 before_install:
     - eval "${MATRIX_EVAL}"
     - sudo apt-get -qq update
-    - sudo apt-get -y -qq install make cmake build-essential libglew-dev nvidia-opencl-dev libfreeimage-dev
+    - sudo apt-get -y -qq install make cmake build-essential libglew-dev nvidia-opencl-dev libfreeimage-dev x11-xserver-utils
 
 install:
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"

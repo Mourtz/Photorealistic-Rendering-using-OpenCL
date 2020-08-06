@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <Model/model_loader.h>
 #include <Math/linear_algebra.h>
 #include <Math/MathHelp.h>

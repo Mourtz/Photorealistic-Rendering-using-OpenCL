@@ -7,6 +7,7 @@
 #include <utility>
 #include <map>
 #include <utils.h>
+#include <memory>
 
 #include <Math/linear_algebra.h>
 #include <assimp/Importer.hpp> // C++ importer interface

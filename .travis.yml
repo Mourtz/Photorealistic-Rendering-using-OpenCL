@@ -30,5 +30,5 @@ addons:
 script:
   - mkdir build
   - cd build
-  - ${DEPS_DIR}/cmake/bin/cmake ..
+  - cmake ..
   - make VERBOSE=1 -j

@@ -20,7 +20,7 @@ matrix:
 before_install:
     - eval "${MATRIX_EVAL}"
     - sudo apt-get -qq update
-    - sudo apt-get -y -qq install make cmake build-essential libglew-dev nvidia-opencl-dev libfreeimage-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libassimp-dev libglfw3-dev
+    - sudo apt-get -y -qq install make build-essential libglew-dev nvidia-opencl-dev libfreeimage-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libassimp-dev libglfw3-dev
 
 install:
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
@@ -40,4 +40,10 @@ install:
 script:
      - mkdir build
      - cd build
-     - ${DEPS_DIR}/cmake/bin/cmake .. && make -j
+     - ${DEPS_DIR}/cmake/bin/cmake ..
+# Build steps
+script:
+     - mkdir build
+     - cd build
+     - ${DEPS_DIR}/cmake/bin/cmake ..
+     - make VERBOSE=1 -j

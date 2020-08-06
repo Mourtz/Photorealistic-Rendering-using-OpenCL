@@ -1,7 +1,9 @@
 dist: bionic
 sudo: required
 
-# Enable C++ support
+os:
+  - linux
+
 language: cpp
 compiler: gcc
 

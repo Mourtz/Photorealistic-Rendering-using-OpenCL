@@ -16,6 +16,9 @@ addons:
       - gcc-7
       - cmake
       - make
+      - libglu1-mesa-dev
+      - freeglut3-dev
+      - mesa-common-dev
       - build-essential
       - libglew-dev
       - nvidia-opencl-dev

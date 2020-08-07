@@ -7,6 +7,7 @@
 #include <utility>
 #include <map>
 #include <utils.h>
+#include <memory>
 
 #include <Math/linear_algebra.h>
 #include <assimp/Importer.hpp> // C++ importer interface
@@ -14,6 +15,8 @@
 struct aiScene;
 struct aiMesh;
 
+namespace CL_RAYTRACER
+{
 namespace IO
 {
 	struct Vertex
@@ -42,18 +45,20 @@ namespace IO
 		}
 	};
 
-	struct Mesh{
+	struct Mesh
+	{
 		std::vector<Face> faces;
 
-		Mesh(){}
-		Mesh(std::vector<Face>& _faces) : faces(_faces) {}
+		Mesh() {}
+		Mesh(std::vector<Face> &_faces) : faces(_faces) {}
 	};
 
-	struct Scene{
+	struct Scene
+	{
 		std::vector<Mesh> meshes;
 
-		Scene(){}
-		Scene(std::vector<Mesh>& _meshes) : meshes(_meshes) {}
+		Scene() {}
+		Scene(std::vector<Mesh> &_meshes) : meshes(_meshes) {}
 	};
 
 	// Raw Data
@@ -68,7 +73,8 @@ namespace IO
 		~ModelLoader() {}
 
 		bool ImportFromFile(const std::string &filepath);
-		const std::shared_ptr<SceneData> getData() const {
+		const std::shared_ptr<SceneData> getData() const
+		{
 			return sceneData;
 		}
 		const std::shared_ptr<Scene> getFaces();
@@ -112,7 +118,7 @@ namespace IO
 
 		std::vector<unsigned int> getIndices(const MeshData &data) const;
 		std::vector<cl_uint4> getIndices4(const MeshData &data) const;
-	
+
 		std::vector<float> getPositions(const MeshData &data) const;
 		std::vector<cl_float4> getPositions4(const MeshData &data) const;
 
@@ -126,3 +132,4 @@ namespace IO
 		std::vector<cl_float4> getTangents4(const MeshData &data) const;
 	};
 } // namespace IO
+} // namespace CL_RAYTRACER

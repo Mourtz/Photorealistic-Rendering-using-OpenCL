@@ -1,13 +1,16 @@
 #pragma once
 
+#include <memory>
+
 #include <Model/model_loader.h>
 #include <Math/linear_algebra.h>
 #include <Math/MathHelp.h>
 
-struct BVHNode {
-	BVHNode* leftChild;
-	BVHNode* rightChild;
-	BVHNode* parent;
+struct BVHNode
+{
+	BVHNode *leftChild;
+	BVHNode *rightChild;
+	BVHNode *parent;
 	std::vector<Tri> faces;
 	vec3 bbMin;
 	vec3 bbMax;
@@ -15,18 +18,31 @@ struct BVHNode {
 	cl_uint depth;
 	cl_uint numSkipsToHere;
 	bool skipNextLeft;
+
+	BVHNode() : leftChild(nullptr), rightChild(nullptr), parent(nullptr){
+
+	}
+
+	~BVHNode(){
+		if(leftChild != nullptr) delete leftChild;
+		if(rightChild != nullptr) delete rightChild;
+		if(parent != nullptr) delete parent;
+	}
 };
 
-struct bvhNode_cl {
+struct bvhNode_cl
+{
 	cl_float4 bbMin;
 	cl_float4 bbMax;
 };
 
+namespace CL_RAYTRACER
+{
 class BVH {
 
 public:
 	BVH();
-	BVH(const std::unique_ptr<IO::ModelLoader>& ml);
+	BVH(const std::shared_ptr<IO::ModelLoader>& ml);
 	~BVH();
 	const std::vector<BVHNode*> getContainerNodes() const;
 	cl_uint getDepth() const;
@@ -36,7 +52,7 @@ public:
 	void visualize(std::vector<cl_float>* vertices, std::vector<cl_uint>* indices);
 
 protected:
-	std::vector<BVHNode*> buildTreesFromObjects(const std::unique_ptr<IO::ModelLoader>& ml);
+	std::vector<BVHNode*> buildTreesFromObjects(const std::shared_ptr<IO::ModelLoader>& ml);
 
 	BVHNode* buildTree(
 		const std::vector<Tri> faces, const vec3 bbMin, const vec3 bbMax,
@@ -96,3 +112,4 @@ private:
 	cl_uint mDepthReached;
 
 };
+} // namespace CL_RAYTRACER

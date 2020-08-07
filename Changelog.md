@@ -1,6 +1,7 @@
 # Changelog
 ## # Version **0.1** (*WIP*)
 - Add support for more 3D file formats using Assimp
+- Fix compilation errors on Linux
 - Add support for loading multiple objects. (*WIP*)
 - Multithreaded loading of the meshes (*WIP*)
 - Scene Management (*TBD*)

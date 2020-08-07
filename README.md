@@ -1,5 +1,7 @@
 ![header](header2.png)
 
+[![Build Status](https://travis-ci.org/Mourtz/Photorealistic-Rendering-using-OpenCL.svg?branch=bleeding-edge)](https://travis-ci.org/Mourtz/Photorealistic-Rendering-using-OpenCL)
+
 ## Controls
 __Escape__ - Exit\
 __Space__ - Reset\

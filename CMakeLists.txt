@@ -207,7 +207,8 @@ ENDIF()
 
 
 # BVH
-target_include_directories(${TRACER_TARGET} PRIVATE "external/bvh/include")
+add_subdirectory("external/bvh")
+target_link_libraries(${TRACER_TARGET} PRIVATE "bvh")
 
 # # TBB
 # SET(EMBREE_TBB_DEBUG_ROOT "${CMAKE_SOURCE_DIR}/external/embree")

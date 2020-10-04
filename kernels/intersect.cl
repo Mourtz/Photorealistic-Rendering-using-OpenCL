@@ -164,10 +164,9 @@ bool intersect_scene(
 	*mesh_id = -1;
 
 #ifdef __BVH__
-		if(traverse(scene, ray)){
-			ray->normal = normalize(ray->normal);
-			ray->pos = ray->origin + ray->dir * ray->t;
-		}
+		traverse(scene, ray);
+		ray->normal = normalize(ray->normal);
+		ray->pos = ray->origin + ray->dir * ray->t;
 #endif
 
 #ifdef __SPHERE__

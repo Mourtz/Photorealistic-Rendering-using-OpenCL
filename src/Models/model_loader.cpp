@@ -177,10 +177,12 @@ namespace IO
 		// const std::vector<float> &uvs = getTextureCoords();
 		// const std::vector<float> &tangents = getTangents();
 
-#pragma omp parallel
-#pragma omp for
-		for (const MeshData &meshData : *sceneData)
+		#pragma omp parallel
+		#pragma omp for
+		for (std::size_t m = 0; m < sceneData->size(); ++m)
 		{
+			const MeshData &meshData = (*sceneData)[m];
+
 			Mesh mesh;
 			for (const auto &f : getIndices4(meshData))
 			{

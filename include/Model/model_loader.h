@@ -23,13 +23,13 @@ namespace IO
 	{
 		cl_float3 pos;
 		cl_float3 nor;
+
+		/*
 		cl_float3 tangent;
 		cl_float2 uv;
-
 		cl_uint id;
-
+		*/
 		Vertex() {}
-		Vertex(cl_float3 _pos, cl_float3 _nor, cl_float2 _uv, cl_float3 _tangent, cl_uint _id) : pos(_pos), nor(_nor), uv(_uv), tangent(_tangent), id(_id) {}
 	};
 
 	struct Face

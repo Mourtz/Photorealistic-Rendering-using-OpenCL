@@ -170,12 +170,12 @@ namespace IO
 	const std::shared_ptr<Scene> ModelLoader::getFaces()
 	{
 		scene.reset(new Scene);
-		unsigned int offset = 0;
+		std::size_t offset = 0;
 
 		const std::vector<float> &vertices = getPositions();
 		const std::vector<float> &normals = getNormals();
-		const std::vector<float> &uvs = getTextureCoords();
-		const std::vector<float> &tangents = getTangents();
+		// const std::vector<float> &uvs = getTextureCoords();
+		// const std::vector<float> &tangents = getTangents();
 
 #pragma omp parallel
 #pragma omp for
@@ -184,27 +184,18 @@ namespace IO
 			Mesh mesh;
 			for (const auto &f : getIndices4(meshData))
 			{
-				std::vector<Vertex> verts;
-				for (int i = 0; i < 3; ++i)
+				std::array<Vertex, 3> verts;
+				for (std::size_t i = 0; i < 3; ++i)
 				{
-					const unsigned i0 = (offset + f.s[i]) * 3;
-					const unsigned i1 = i0 + 1;
-					const unsigned i2 = i1 + 1;
-
-					verts.push_back(Vertex(
-						{vertices[i0], vertices[i1], vertices[i2]},
-						{normals[i0], normals[i1], normals[i2]},
-						{
-							uvs[(offset + f.s[i]) * 2],
-							uvs[(offset + f.s[i]) * 2 + 1],
-						},
-						{tangents[i0], tangents[i1], tangents[i2]},
-						i0 / 3));
+					const std::size_t index = (offset + f.s[i])*3;
+					verts[i].pos = {vertices[index], vertices[index+1], vertices[index+2]};
+					verts[i].nor = {normals[index], normals[index+1], normals[index+2]};
 				}
-				mesh.faces.push_back(Face(verts[0], verts[1], verts[2]));
+				mesh.faces.emplace_back(verts[0], verts[1], verts[2]);
 			}
-			offset += meshData.first[1];
 			scene->meshes.push_back(mesh);
+			break; // only 1 mesh for the moment
+			offset += meshData.first[1];
 		}
 
 		return scene;
@@ -240,6 +231,11 @@ namespace IO
 		std::vector<cl_uint4> res;
 
 		const auto &indices = getIndices(data);
+
+		if(indices.size()%3 != 0){
+			std::cerr << "[Error]: indices%3 != 0 !!!!!!!!!!" << std::endl;
+		}
+
 		for (unsigned int i = 0; i < indices.size();)
 		{
 			res.push_back({indices[i++], indices[i++], indices[i++], 0U});

@@ -43,7 +43,7 @@ constexpr std::size_t RayI_size = 16 * 7;
 #include <Scene/scene.h>
 #include <GL/cl_gl_interop.h>
 #include <BVH/bvh.h>
-// #include <BVH/new_bvh.h>
+#include <BVH/new_bvh.h>
 
 #include <CL/cl_help.h>
 #if 1
@@ -77,11 +77,12 @@ cl::ImageGL cl_env_map;
 //  clw::ImageGL cl_noise_tex;
 std::vector<cl::Memory> cl_screens;
 cl::Buffer mBufBVH;
-cl::Buffer mBufFacesV;
 cl::Buffer mBufVertices;
 cl::Buffer mBufNormals;
 cl::Buffer mBufMaterial;
 cl::Buffer cl_flattenI;
+cl::Buffer mNewBufBVH;
+cl::Buffer mNewBufIndices;
 
 std::size_t global_work_size;
 std::size_t local_work_size;
@@ -191,21 +192,19 @@ initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh)
 	snprintf(msg, 16, "%lu", BVH_NUM_NODES);
 	std::cout << "BVH_NODES: " << msg << std::endl;
 
-	std::size_t bytesFV = sizeof(cl_uint4) * facesV.size();
-	mBufFacesV = clw::buffer::create(facesV, bytesFV);
-
-	return bytesBVH + bytesFV;
+	return bytesBVH;
 }
 
 std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml)
 {
 	
-	std::vector<cl_float4> vertices4;
-	std::vector<cl_float4> normals4;
+	std::vector<vec3> vertices4;
+	std::vector<vec3> normals4;
+	
+#if 0
 	const std::vector<float>& vertices = ml->getPositions();
 	const std::vector<float>& normals = ml->getNormals();
 	
-#if 1 
 	for (std::size_t i = 0; i < vertices.size(); i += 3)
 	{
 		cl_float4 v = {vertices[i], vertices[i + 1], vertices[i + 2], 0.0f};
@@ -218,26 +217,27 @@ std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml)
 		normals4.push_back(n);
 	}
 #else
+
 	const auto& scene = ml->getFaces();
-	for(const auto& mesh : scene->meshes){
-		for(const auto& face : mesh.faces){
-			for(int i = 0; i < 3; ++i){
-				vertices4.push_back(face.points[i].pos);
-				normals4.push_back(face.points[i].nor);
-			}
+	for (const auto &mesh : scene->meshes)
+	{
+		for (const auto &face : mesh.faces)
+		{
+			vertices4.emplace_back(face.points[0].pos.x, face.points[0].pos.y, face.points[0].pos.z);
+			vertices4.emplace_back(face.points[1].pos.x, face.points[1].pos.y, face.points[1].pos.z);
+			vertices4.emplace_back(face.points[2].pos.x, face.points[2].pos.y, face.points[2].pos.z);
+
+			normals4.emplace_back(face.points[0].nor.x, face.points[0].nor.y, face.points[0].nor.z);
+			normals4.emplace_back(face.points[1].nor.x, face.points[1].nor.y, face.points[1].nor.z);
+			normals4.emplace_back(face.points[2].nor.x, face.points[2].nor.y, face.points[2].nor.z);
 		}
 	}
 #endif
-	std::size_t bytesV = sizeof(cl_float4) * vertices4.size();
-	std::size_t bytesN = sizeof(cl_float4) * normals4.size();
+	std::size_t bytesV = sizeof(vec3) * vertices4.size();
+	std::size_t bytesN = sizeof(vec3) * normals4.size();
 
-	mBufVertices = cl::Buffer(context, CL_MEM_READ_ONLY, bytesV);
-	queue.enqueueWriteBuffer(mBufVertices, CL_TRUE, 0, bytesV, vertices4.data());
-	//mBufVertices = mCL->createBuffer(vertices4, bytesV);
-
-	mBufNormals = cl::Buffer(context, CL_MEM_READ_ONLY, bytesN);
-	queue.enqueueWriteBuffer(mBufNormals, CL_TRUE, 0, bytesN, normals4.data());
-	//mBufNormals = mCL->createBuffer(normals4, bytesN);
+	mBufVertices = clw::buffer::create(vertices4, bytesV);	
+	mBufNormals = clw::buffer::create(normals4, bytesN);
 
 	return bytesV + bytesN;
 }
@@ -385,14 +385,15 @@ void initCLKernel()
 
 	kernel.setArg(9, BVH_NUM_NODES);
 	kernel.setArg(10, mBufBVH);
-	kernel.setArg(11, mBufFacesV);
-	kernel.setArg(12, mBufVertices);
-	kernel.setArg(13, mBufNormals);
-	kernel.setArg(14, mBufMaterial);
+	kernel.setArg(11, mBufVertices);
+	kernel.setArg(12, mBufNormals);
+	kernel.setArg(13, mBufMaterial);
 
-	kernel.setArg(15, cl_env_map);
+	kernel.setArg(14, cl_env_map);
 	// kernel.setArg(18, cl_noise_tex);
-	kernel.setArg(16, cl_flattenI);
+	kernel.setArg(15, cl_flattenI);
+	kernel.setArg(16, mNewBufBVH);
+	kernel.setArg(17, mNewBufIndices);
 }
 
 //---------------------------------------------------------------------------------------
@@ -565,7 +566,14 @@ int main(int argc, char **argv)
 		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(ml);
 		initOpenCLBuffers(ml, accelStruct);
 		
-		// std::unique_ptr<NEW_BVH> bvh = std::make_unique<NEW_BVH>(ml);
+		std::unique_ptr<NEW_BVH> bvh = std::make_unique<NEW_BVH>(ml);
+		std::vector<cl_BVHnode>& nodes = bvh->PrepareData();
+		std::size_t bytesBVH = sizeof(cl_BVHnode) * nodes.size();
+		mNewBufBVH = clw::buffer::create(nodes, bytesBVH);
+	
+		std::vector<cl_ulong>& indices = bvh->GetPrimitiveIndices();
+		std::size_t bytesIndices = sizeof(cl_ulong) * indices.size();
+		mNewBufIndices = clw::buffer::create(indices, bytesIndices);
 	}
 
 	//

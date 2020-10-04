@@ -1,50 +1,44 @@
 #ifndef __TRIANGLE__
 #define __TRIANGLE__
 
-/* Triangle intersection */
-float3 flatTriAndRayIntersect(
-	const float3 a, const float3 b, const float3 c,
-	const Ray* ray, float* t, const float tNear
+bool intersectTriangle(
+	const Scene* scene, Ray* ray, const uint fIndex
 ) {
-	const float f = fmax(0.0f, tNear - 0.001f);
-	const float3 closeOrigin = fma(ray->dir, f, ray->origin);
-	const float3 edge1 = b - a;
-	const float3 edge2 = c - a;
-	const float3 tVec = closeOrigin - a;
-	const float3 pVec = cross(ray->dir, edge2);
-	const float3 qVec = cross(tVec, edge1);
-	const float invDet = native_recip(dot(edge1, pVec));
+	const uint fv = scene->indices[fIndex]*3;
+	const float3 p0 = scene->vertices[fv+0].xyz;
+	const float3 p1 = scene->vertices[fv+1].xyz;
+	const float3 p2 = scene->vertices[fv+2].xyz;
 
-	*t = dot(edge2, qVec) * invDet;
+	const float3 e1 = p0 - p1;
+	const float3 e2 = p2 - p0;
 
-	if (*t >= ray->t || *t <= EPS) {
-		*t = INF;
-		return (float3)(0.0f);
+#if 0
+	const float3 n0 = scene->normals[fv+0].xyz;
+	const float3 n1 = scene->normals[fv+1].xyz;
+	const float3 n2 = scene->normals[fv+2].xyz;
+	const float3 n = (n0 + n1 + n2)/3.0f;
+#else
+	const float3 n = cross(e1, e2);
+#endif
+
+	float3 c = p0 - ray->origin;
+	float3 r = cross(ray->dir, c);
+	float inv_det = native_recip(dot(n, ray->dir));
+
+	float u = dot(r, e2) * inv_det;
+	float v = dot(r, e1) * inv_det;
+	float w = 1.0f - u - v;
+
+	if(u >= 0 && v >= 0 && w >= 0){
+		float t = dot(n, c) * inv_det;
+		if(t > EPS && t < ray->t){
+			ray->t = t;
+			ray->normal = normalize(n);
+			return true;
+		}
 	}
 
-	const float u = dot(tVec, pVec) * invDet;
-	const float v = dot(ray->dir, qVec) * invDet;
-
-	if (u + v > 1.0f || fmin(u, v) < 0.0f) {
-		*t = INF;
-		return (float3)(0.0f);
-	}
-
-	*t += f;
-
-	return normalize(cross(edge1, edge2));
-}
-
-float3 checkFaceIntersection(
-	const Scene* scene, const Ray* ray, const int fIndex, float* t,
-	const float tNear, const float tFar
-) {
-	const uint4 fv = scene->facesV[fIndex];
-	const float3 a = scene->vertices[fv.x].xyz;
-	const float3 b = scene->vertices[fv.y].xyz;
-	const float3 c = scene->vertices[fv.z].xyz;
-
-	return flatTriAndRayIntersect(a, b, c, ray, t, tNear);
+	return false;
 }
 
 #endif

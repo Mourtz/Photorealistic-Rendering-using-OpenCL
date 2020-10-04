@@ -1,6 +1,25 @@
 #ifndef __OPENCL_RAYTRACER__
 #define __OPENCL_RAYTRACER__
 
+#define DEBUG 1
+
+#define VIEW_RESULTS  		(0)
+#define VIEW_NORMAL   		(1<<0)
+#define VIEW_STACK_INDEX   	(1<<1)
+#define VIEW_ALBEDO			(1<<2)
+#define VIEW_SPECULAR       (1<<3)
+#define VIEW_BVH_HIT	    (1<<4)
+
+#define VIEW_OPTION (~(0xFF<<(DEBUG*8)) & VIEW_RESULTS) 
+
+#if DEBUG
+	#define LOGWARNING(x) printf(x);
+	#define LOGERROR(x) printf(x);
+#else
+	#define LOGERROR(x)
+	#define LOGWARNING(x)
+#endif
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 __constant sampler_t samplerA = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
@@ -69,7 +88,6 @@ __kernel void render_kernel(
 	/* BVH */
 	const uint BVH_NUM_NODES,
 	__constant bvhNode* bvh,
-	__constant uint4* facesV,
 	__constant float4* vertices,
 	__constant float4* normals,
 	__constant Material* mat,
@@ -77,7 +95,11 @@ __kernel void render_kernel(
 	/* enviroment map */
 	__read_only image2d_t env_map,
 
-	__global RTD* r_flat
+	__global RTD* r_flat,
+
+	__constant new_bvhNode* new_bvh_node,
+
+	__constant uint* primitive_indices
 ) {
 	const int work_item_id = get_global_id(0);			/* the unique global id of the work item for the current pixel */
 
@@ -116,15 +138,31 @@ __kernel void render_kernel(
 		ray = createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P);
 	}
 
-	const Scene scene = { meshes, &mesh_count, BVH_NUM_NODES, bvh, facesV, vertices, normals, mat };
+	const Scene scene = { meshes, primitive_indices, new_bvh_node, &mesh_count, BVH_NUM_NODES, bvh, vertices, normals, mat };
 
+#if VIEW_OPTION == VIEW_RESULTS
 	/* add pixel colour to accumulation buffer (accumulates all samples) */
 	rlh->acc += radiance(&scene, env_map, &ray, rlh, RNG_SEED_VALUE_P);
+#elif VIEW_OPTION == VIEW_NORMAL
+	radiance(&scene, env_map, &ray, rlh, RNG_SEED_VALUE_P);
+	rlh->acc = (float4)(ray.normal, 1.0f);
+#elif VIEW_OPTION == VIEW_STACK_INDEX
+	radiance(&scene, env_map, &ray, rlh, RNG_SEED_VALUE_P);
+	// rlh->acc = (float4)((float3)((float)(64-ray.bvh_stackIndex)/64.0f), 1.0f);
+	rlh->acc = (float4)((float3)(fmin(1.0f, (float)(ray.bvh_stackIndex))), 1.0f);
+#elif VIEW_OPTION == VIEW_BVH_HIT
+	radiance(&scene, env_map, &ray, rlh, RNG_SEED_VALUE_P);
+	rlh->acc = (float4)(ray.normal, 1.0f);
+#endif
 
 	r_flat[work_item_id].ray = rayToTemp(ray);
 
 	/* update the output GLTexture */
+#if VIEW_OPTION == VIEW_RESULTS
 	write_imagef(output_tex, i_coord, rlh->acc / (float)(rlh->samples));
+#else
+	write_imagef(output_tex, i_coord, rlh->acc);
+#endif
 }
 
 #endif

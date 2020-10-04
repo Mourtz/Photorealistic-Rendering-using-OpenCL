@@ -194,7 +194,7 @@ namespace buffer
 {
 template <typename T>
 inline cl::Buffer create(
-	std::vector<T> data,
+	std::vector<T>& data,
 	std::size_t size,
 	cl_mem_flags flags = (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR))
 {

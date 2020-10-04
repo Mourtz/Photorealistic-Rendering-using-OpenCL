@@ -138,11 +138,11 @@ std::vector<BVHNode *> BVH::buildTreesFromObjects(const std::shared_ptr<IO::Mode
 		{
 			Tri tri;
 
-			tri.face = {
-				face.points[0].id,
-				face.points[1].id,
-				face.points[2].id,
-				offset++};
+			// tri.face = {
+			// 	face.points[0].id,
+			// 	face.points[1].id,
+			// 	face.points[2].id,
+			// 	offset++};
 
 			std::vector<cl_float4> v;
 			v.push_back(face.points[0].pos);

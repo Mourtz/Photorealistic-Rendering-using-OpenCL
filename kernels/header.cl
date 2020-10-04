@@ -162,6 +162,10 @@ typedef struct {
 	};
 	bool backside;			// inside?
 	float time;
+	//---------------------
+#if VIEW_OPTION == VIEW_STACK_INDEX
+	uchar bvh_stackIndex;
+#endif
 	// int hitFace;			// hitface id
 } Ray;
 
@@ -249,6 +253,13 @@ typedef struct {
 	float4 bbMax;
 } bvhNode;
 
+typedef struct {
+	float bounds[6];
+	uint first_child_or_primitive;
+	uint primitive_count;
+	bool isLeaf;
+} new_bvhNode;
+
 //------------- Light Sampler -------------
 typedef struct {
 	float3 d;
@@ -267,10 +278,11 @@ typedef struct {
 
 typedef struct {
 	__constant Mesh* meshes;
+	__constant ulong* indices;
+	__constant new_bvhNode* new_nodes;
 	const uint* mesh_count;
 	const uint NUM_NODES;
 	__constant bvhNode* bvh;
-	__constant uint4* facesV;
 	__constant float4* vertices;
 	__constant float4* normals;
 	__constant Material* mat;

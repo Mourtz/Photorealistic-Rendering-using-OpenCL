@@ -1,103 +1,118 @@
 #ifndef __BVH__
 #define __BVH__
 
-void intersectFace(
-	const Scene* scene, Ray* ray,
-	const int faceIndex, float* t,
-	const float tNear, float tFar
-) {
-	const float3 normal = checkFaceIntersection(scene, ray, faceIndex, t, tNear, tFar);
-
-	if (ray->t > *t) {
-		ray->normal = normal;
-		// ray->hitFace = faceIndex;
-		ray->t = *t;
-	}
-}
-
-void intersectFaces(const Scene* scene, Ray* ray, const bvhNode* node, const float tNear, float tFar) {
-	float t = INF;
-
-	intersectFace(scene, ray, node->bbMin.w, &t, tNear, tFar);
-
-	if (node->bbMax.w == -1) {
-		return;
-	}
-
-	intersectFace(scene, ray, node->bbMax.w, &t, tNear, tFar);
-}
-
-void traverseShadows(const Scene* scene, Ray* ray) {
-	const float tLight = ray->t;
+float intersectAxis(int axis, const float p, const Ray* ray){
 	const float3 invDir = native_recip(ray->dir);
-	int index = 1;
+	const float3 scaled_origin = -ray->origin*invDir;
 
-	do {
-		const bvhNode node = scene->bvh[index];
-		const int currentIndex = index;
+	return fma(p, ((float*)(&invDir))[axis], ((float*)(&scaled_origin))[axis]);
+}
 
-		index = (node.bbMin.w <= -1.0f) ? (int)node.bbMax.w : currentIndex + 1;
+float2 intersectNode(__constant new_bvhNode* node, const Ray* ray){
+	int3 octant = (int3)(ray->dir.x < 0.0f, ray->dir.y < 0.0f, ray->dir.z < 0.0f);
+	
+	float entry0 = intersectAxis(0, node->bounds[0 * 2 + octant.x], ray);
+	float entry1 = intersectAxis(1, node->bounds[1 * 2 + octant.y], ray);
+	float entry2 = intersectAxis(2, node->bounds[2 * 2 + octant.z], ray);
 
-		float tNear = 0.0f;
-		float tFar = INF;
+	float exit0 = intersectAxis(0, node->bounds[0 * 2 + 1 - octant.x], ray);
+	float exit1 = intersectAxis(1, node->bounds[1 * 2 + 1 - octant.y], ray);
+	float exit2 = intersectAxis(2, node->bounds[2 * 2 + 1 - octant.z], ray);
 
-		bool isNodeHit = (
-			intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) &&
-			tFar > EPS
-		);
+	return (float2)(
+		fmax(entry0, fmax(entry1, fmax(entry2, EPS))),
+		fmin(exit0, fmin(exit1, fmin(exit2, ray->t)))
+	);
+} 
 
-		if (!isNodeHit) {
-			continue;
-		}
+bool intersectLeaf(const Scene* scene, 
+	__constant new_bvhNode* node, 
+	Ray* ray){
 
-		index = currentIndex + 1;
+	uint begin = node->first_child_or_primitive;
+	uint end = begin + node->primitive_count;
+	
+	bool res = false;
+	for(uint i = begin; i < end; ++i){
+		res |= intersectTriangle(scene, ray, i);
+	}
+	return res;
+}
 
-		// Skip the next left child node.
-		if (node.bbMin.w == -2.0f) {
-			index++;
-		}
+#define STACK_SIZE 64
+bool traverse(const Scene* scene, Ray* ray) {
+	__constant new_bvhNode* stack[STACK_SIZE];
+	uchar stackSize = 0;
+	
+	__constant new_bvhNode* node = &scene->new_nodes[0];
 
-		// Node is leaf node. Test faces.
-		if (node.bbMin.w >= 0.0f) {
-			intersectFaces(scene, ray, &node, tNear, tFar);
+	if(node->isLeaf){
+		LOGWARNING("[Warning]: root is a leaf!\n");
+		return intersectLeaf(scene, node, ray);
+	}
 
-			// It's enough to know that something blocks the way. It doesn't matter what or where.
-			// TODO: It *does* matter what and where, if the material has transparency.
-			if (ray->t < tLight) {
-				break;
+
+	while(true){
+		uint first_child = node->first_child_or_primitive;
+		__constant new_bvhNode* left_child = 
+			&scene->new_nodes[first_child + 0];
+		__constant new_bvhNode* right_child = 
+			&scene->new_nodes[first_child + 1];
+		float2 dist_left = intersectNode(left_child, ray);
+		float2 dist_right = intersectNode(right_child, ray);
+		
+		// left child
+		bool l_child = true;
+		if(dist_left.x <= dist_left.y){
+			if(left_child->isLeaf){
+				if(intersectLeaf(scene, left_child, ray)){
+					return true;
+				}
+				l_child = false;
 			}
+		} else {
+			l_child = false;
 		}
-	} while (index > 0 && index < scene->NUM_NODES);
+
+		// right child
+		bool r_child = true;
+		if(dist_right.x <= dist_right.y){
+			if(right_child->isLeaf){
+				if(intersectLeaf(scene, right_child, ray)){
+					return true;
+				}
+				r_child = false;
+			}
+		} else {
+			r_child = false;
+		}
+
+		if(l_child ^ r_child){
+			node = l_child ? left_child : right_child;
+		} else if(l_child & r_child){
+			if(dist_left.x > dist_right.x){
+				__constant new_bvhNode* temp = left_child;
+				left_child = right_child;
+				right_child = temp;
+			}
+			stack[stackSize++] = right_child;
+			node = left_child;
+		} else {
+			if(stackSize == 0)
+				break;
+			node = stack[--stackSize];
+		}
+	}
+#if DEBUG
+#if VIEW_OPTION == VIEW_STACK_INDEX
+	ray->bvh_stackSize = stackSize;
+#endif
+	if(stackSize >= STACK_SIZE)
+		LOGWARNING("[WARNING]: exceeded max stack size!\n");
+#endif
+
+	return false;
 }
-
-void traverse(const Scene* scene, Ray* ray) {
-	const float3 invDir = native_recip(ray->dir);
-	int index = 1;
-
-	do {
-		const bvhNode node = scene->bvh[index];
-		const int currentIndex = index;
-
-		index = (node.bbMin.w <= -1.0f) ? (int)node.bbMax.w : currentIndex + 1;
-
-		float tNear = 0.0f;
-		float tFar = INF;
-
-		bool isNodeHit = (
-			intersectBox(ray, &invDir, node.bbMin, node.bbMax, &tNear, &tFar) &&
-			tFar > EPS && tNear < ray->t
-		);
-
-		if (!isNodeHit) {
-			continue;
-		}
-
-		index = currentIndex + 1;
-
-		if (node.bbMin.w >= 0.0f) {
-			intersectFaces(scene, ray, &node, tNear, tFar);
-		}
-	} while (index > 0 && index < scene->NUM_NODES);
-}
+#undef STACK_SIZE
 
 #endif

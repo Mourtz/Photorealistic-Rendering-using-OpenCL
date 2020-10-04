@@ -83,17 +83,17 @@ public:
                     << (glfwGetTime() - t0) << "seconds" << std::endl;
     }
 
-    std::vector<cl_ulong> GetPrimitiveIndices() const {
-        std::vector<cl_ulong> res;
+    std::unique_ptr<std::vector<cl_ulong>> GetPrimitiveIndices() const {
+        std::unique_ptr<std::vector<cl_ulong>> res = std::make_unique<std::vector<cl_ulong>>();
         for(size_t i = 0; i < triangles.size(); ++i){
-            res.emplace_back(bvh->primitive_indices[i]);
+            res->emplace_back(bvh->primitive_indices[i]);
         }
         return res;
     }
 
-    std::vector<cl_BVHnode> PrepareData() const
+    std::unique_ptr<std::vector<cl_BVHnode>> PrepareData() const
     {
-        std::vector<cl_BVHnode> res;
+        std::unique_ptr<std::vector<cl_BVHnode>> res = std::make_unique<std::vector<cl_BVHnode>>();
         for (int i = 0; i < bvh->node_count; ++i)
         {
             const Bvh::Node &node = bvh->nodes[i];
@@ -108,7 +108,7 @@ public:
             bb.is_leaf = node.is_leaf;
             bb.first_child_or_primitive = node.first_child_or_primitive;
             bb.primitive_count = node.primitive_count;
-            res.push_back(bb);
+            res->push_back(bb);
         }
         return res;
     }

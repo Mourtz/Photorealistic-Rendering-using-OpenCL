@@ -66,7 +66,8 @@ bool traverse(const Scene* scene, Ray* ray) {
 		if(dist_left.x <= dist_left.y){
 			if(left_child->isLeaf){
 				if(intersectLeaf(scene, left_child, ray)){
-					return true;
+					if(ray->t <= EPS)
+						return true;
 				}
 				l_child = false;
 			}
@@ -79,7 +80,8 @@ bool traverse(const Scene* scene, Ray* ray) {
 		if(dist_right.x <= dist_right.y){
 			if(right_child->isLeaf){
 				if(intersectLeaf(scene, right_child, ray)){
-					return true;
+					if(ray->t <= EPS)
+						return true;
 				}
 				r_child = false;
 			}

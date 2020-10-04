@@ -76,7 +76,6 @@ cl::ImageGL cl_screen;
 cl::ImageGL cl_env_map;
 //  clw::ImageGL cl_noise_tex;
 std::vector<cl::Memory> cl_screens;
-cl::Buffer mBufBVH;
 cl::Buffer mBufVertices;
 cl::Buffer mBufNormals;
 cl::Buffer mBufMaterial;
@@ -93,107 +92,6 @@ InteractiveCamera *interactiveCamera = nullptr;
 host_scene *scene = nullptr;
 std::string scene_filepath = "../scenes/cornell.json";
 bool ALPHA_TESTING = false;
-
-//----------------------------------------------
-
-std::size_t
-initOpenCLBuffers_BVH(const std::unique_ptr<BVH>& bvh)
-{
-	const std::vector<BVHNode *> bvhNodes = bvh->getNodes();
-	std::vector<bvhNode_cl> bvhNodesCL;
-
-	std::vector<cl_uint4> facesV;
-
-	bool skipNext = false;
-
-	for (const auto& node : bvhNodes)
-	{
-		if (skipNext)
-		{
-			skipNext = node->skipNextLeft;
-			continue;
-		}
-
-		cl_float4 bbMin = {node->bbMin[0], node->bbMin[1], node->bbMin[2], 0.0f};
-		cl_float4 bbMax = {node->bbMax[0], node->bbMax[1], node->bbMax[2], 0.0f};
-
-		bvhNode_cl sn;
-		sn.bbMin = bbMin;
-		sn.bbMax = bbMax;
-
-		std::vector<Tri> facesVec = node->faces;
-		std::size_t fvecLen = facesVec.size();
-		sn.bbMin.s[3] = (fvecLen > 0) ? (cl_float)facesV.size() + 0 : -1.0f;
-		sn.bbMax.s[3] = (fvecLen > 1) ? (cl_float)facesV.size() + 1 : -1.0f;
-
-		// Set the flag to skip the next left child node.
-		if (fvecLen == 0 && node->skipNextLeft)
-		{
-			skipNext = true;
-		}
-
-		// No parent means it's the root node.
-		// Otherwise it is some other node, including leaves.
-		// Also for leaf nodes the next node to visit is given by the position in memory.
-		if (node->parent != NULL && fvecLen == 0)
-		{
-			bool isLeftNode = (node->parent->leftChild == node);
-
-			if (!isLeftNode)
-			{
-				if (node->parent->parent != NULL)
-				{
-					BVHNode *dummy = new BVHNode();
-					dummy->parent = node->parent;
-
-					// As long as we are on the right side of a (sub)tree,
-					// skip parents until we either are at the root or
-					// our parent has a true sibling again.
-					while (dummy->parent->parent->rightChild == dummy->parent)
-					{
-						dummy->parent = dummy->parent->parent;
-
-						if (dummy->parent->parent == NULL)
-						{
-							break;
-						}
-					}
-
-					// Reached a parent with a true sibling.
-					if (dummy->parent->parent != NULL)
-					{
-						sn.bbMax.s[3] = dummy->parent->parent->rightChild->id - dummy->parent->parent->rightChild->numSkipsToHere;
-					}
-				}
-			}
-			// Node on the left, go to the right sibling.
-			else
-			{
-				sn.bbMax.s[3] = node->parent->rightChild->id - node->parent->rightChild->numSkipsToHere;
-			}
-		}
-
-		bvhNodesCL.emplace_back(sn);
-
-		// Faces
-		for (std::size_t j = 0; j < fvecLen; ++j)
-		{
-			facesV.emplace_back(facesVec[j].face);
-		}
-	}
-
-	std::size_t bytesBVH = sizeof(bvhNode_cl) * bvhNodesCL.size();
-	mBufBVH = clw::buffer::create(bvhNodesCL, bytesBVH);
-
-	BVH_NUM_NODES = bvhNodesCL.size();
-	//mCL->setReplacement(string("#BVH_NUM_NODES#"), string(msg));
-
-	char msg[16];
-	snprintf(msg, 16, "%lu", BVH_NUM_NODES);
-	std::cout << "BVH_NODES: " << msg << std::endl;
-
-	return bytesBVH;
-}
 
 std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml)
 {
@@ -265,15 +163,6 @@ void initOpenCLBuffers(
 	timeDiff = (timerEnd - timerStart);
 	utils::formatBytes(bytes, &bytesFloat, &unit);
 	snprintf(msg, MSG_LENGTH, "[PathTracer] Created faces buffer in %g ms -- %.2f %s.", timeDiff, bytesFloat, unit.c_str());
-	std::cout << msg << std::endl;
-
-	// Buffer: Acceleration Structure
-	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_BVH(accelStruc);
-	timerEnd = glfwGetTime();
-	timeDiff = (timerEnd - timerStart);
-	utils::formatBytes(bytes, &bytesFloat, &unit);
-	snprintf(msg, MSG_LENGTH, "[PathTracer] Created BVH buffer in %g ms -- %.2f %s.", timeDiff, bytesFloat, unit.c_str());
 	std::cout << msg << std::endl;
 }
 
@@ -383,17 +272,15 @@ void initCLKernel()
 	kernel.setArg(7, rand());
 	kernel.setArg(8, cl_screen);
 
-	kernel.setArg(9, BVH_NUM_NODES);
-	kernel.setArg(10, mBufBVH);
-	kernel.setArg(11, mBufVertices);
-	kernel.setArg(12, mBufNormals);
-	kernel.setArg(13, mBufMaterial);
+	kernel.setArg(9, mNewBufIndices);
+	kernel.setArg(10, mBufVertices);
+	kernel.setArg(11, mBufNormals);
+	kernel.setArg(12, mBufMaterial);
 
-	kernel.setArg(14, cl_env_map);
+	kernel.setArg(13, cl_env_map);
 	// kernel.setArg(18, cl_noise_tex);
-	kernel.setArg(15, cl_flattenI);
-	kernel.setArg(16, mNewBufBVH);
-	kernel.setArg(17, mNewBufIndices);
+	kernel.setArg(14, cl_flattenI);
+	kernel.setArg(15, mNewBufBVH);
 }
 
 //---------------------------------------------------------------------------------------

@@ -281,8 +281,6 @@ typedef struct {
 	__constant ulong* indices;
 	__constant new_bvhNode* new_nodes;
 	const uint* mesh_count;
-	const uint NUM_NODES;
-	__constant bvhNode* bvh;
 	__constant float4* vertices;
 	__constant float4* normals;
 	__constant Material* mat;

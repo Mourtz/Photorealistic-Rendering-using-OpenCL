@@ -6,7 +6,7 @@ bool get_dist(float* dist, const Ray* sray, const Mesh* mesh, const Scene* scene
 	Ray temp_ray = *sray;
 	temp_ray.t = INF;
 
-	if(isOBJ && scene->NUM_NODES) {
+	if(isOBJ) {
 		traverse(scene, &temp_ray);
 	} 
 #ifdef __SPHERE__
@@ -43,7 +43,7 @@ bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool 
 
 	sray->t = INF;
 
-	if (isOBJ && scene->NUM_NODES) {
+	if (isOBJ) {
 		traverse(scene, sray);
 		sray->pos = sray->origin + sray->dir * sray->t;
 

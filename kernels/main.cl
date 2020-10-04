@@ -86,8 +86,7 @@ __kernel void render_kernel(
 	__write_only image2d_t output_tex,
 	
 	/* BVH */
-	const uint BVH_NUM_NODES,
-	__constant bvhNode* bvh,
+	__constant uint* primitive_indices,
 	__constant float4* vertices,
 	__constant float4* normals,
 	__constant Material* mat,
@@ -97,9 +96,7 @@ __kernel void render_kernel(
 
 	__global RTD* r_flat,
 
-	__constant new_bvhNode* new_bvh_node,
-
-	__constant uint* primitive_indices
+	__constant new_bvhNode* new_bvh_node
 ) {
 	const int work_item_id = get_global_id(0);			/* the unique global id of the work item for the current pixel */
 
@@ -138,7 +135,7 @@ __kernel void render_kernel(
 		ray = createCamRay(i_coord, width, height, cam, RNG_SEED_VALUE_P);
 	}
 
-	const Scene scene = { meshes, primitive_indices, new_bvh_node, &mesh_count, BVH_NUM_NODES, bvh, vertices, normals, mat };
+	const Scene scene = { meshes, primitive_indices, new_bvh_node, &mesh_count, vertices, normals, mat };
 
 #if VIEW_OPTION == VIEW_RESULTS
 	/* add pixel colour to accumulation buffer (accumulates all samples) */

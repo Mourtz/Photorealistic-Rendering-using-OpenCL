@@ -25,6 +25,95 @@ float2 intersectNode(__constant new_bvhNode* node, const Ray* ray){
 	);
 } 
 
+bool intersectLeafShadows(const Scene* scene, 
+	__constant new_bvhNode* node, 
+	Ray* ray){
+
+	uint begin = node->first_child_or_primitive;
+	uint end = begin + node->primitive_count;
+	
+	for(uint i = begin; i < end; ++i){
+		if(intersectTriangle(scene, ray, i))
+			return true;
+	}
+	return false;
+}
+
+#define STACK_SIZE 8
+bool traverseShadows(const Scene* scene, Ray* ray) {
+	__constant new_bvhNode* stack[STACK_SIZE];
+	uchar stackSize = 0;
+	
+	__constant new_bvhNode* node = &scene->new_nodes[0];
+
+	if(node->isLeaf){
+		LOGWARNING("[Warning]: root is a leaf!\n");
+		return intersectLeafShadows(scene, node, ray);
+	}
+
+	while(true){
+		uint first_child = node->first_child_or_primitive;
+		__constant new_bvhNode* left_child = 
+			&scene->new_nodes[first_child + 0];
+		__constant new_bvhNode* right_child = 
+			&scene->new_nodes[first_child + 1];
+		float2 dist_left = intersectNode(left_child, ray);
+		float2 dist_right = intersectNode(right_child, ray);
+		
+		// left child
+		bool l_child = true;
+		if(dist_left.x <= dist_left.y){
+			if(left_child->isLeaf){
+				if(intersectLeafShadows(scene, left_child, ray)){
+					return true;
+				}
+				l_child = false;
+			}
+		} else {
+			l_child = false;
+		}
+
+		// right child
+		bool r_child = true;
+		if(dist_right.x <= dist_right.y){
+			if(right_child->isLeaf){
+				if(intersectLeafShadows(scene, right_child, ray)){
+					return true;
+				}
+				r_child = false;
+			}
+		} else {
+			r_child = false;
+		}
+
+		if(l_child ^ r_child){
+			node = l_child ? left_child : right_child;
+		} else if(l_child & r_child){
+			if(dist_left.x > dist_right.x){
+				__constant new_bvhNode* temp = left_child;
+				left_child = right_child;
+				right_child = temp;
+			}
+			stack[stackSize++] = right_child;
+			node = left_child;
+		} else {
+			if(stackSize == 0)
+				break;
+			node = stack[--stackSize];
+		}
+	}
+#if DEBUG
+#if VIEW_OPTION == VIEW_STACK_INDEX
+	ray->bvh_stackSize = stackSize;
+#endif
+	if(stackSize >= STACK_SIZE)
+		LOGWARNING("[WARNING]: exceeded max stack size!\n");
+#endif
+
+	return false;
+}
+#undef STACK_SIZE
+
 bool intersectLeaf(const Scene* scene, 
 	__constant new_bvhNode* node, 
 	Ray* ray){

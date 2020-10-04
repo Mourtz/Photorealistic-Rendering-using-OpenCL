@@ -33,7 +33,7 @@ bool intersectTriangle(
 		float t = dot(n, c) * inv_det;
 		if(t > EPS && t < ray->t){
 			ray->t = t;
-			ray->normal = normalize(n);
+			ray->normal = n;
 			return true;
 		}
 	}

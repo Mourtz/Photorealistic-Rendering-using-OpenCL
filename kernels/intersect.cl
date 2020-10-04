@@ -97,13 +97,13 @@ bool shadow(
 ){ 
 	const float maxDist = ray->t;
 
-#if 0
-	if (scene->NUM_NODES) {
-		traverseShadows(scene, ray);
-		if (ray->t < maxDist) return false;
+#ifdef __BVH__
+	Ray temp_ray = *ray;
+	if(traverseShadows(scene, ray)){
+		*ray = temp_ray;
+		return false;
 	}
 #endif
-
 
 #ifdef __SPHERE__
 	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
@@ -164,9 +164,10 @@ bool intersect_scene(
 	*mesh_id = -1;
 
 #ifdef __BVH__
-		traverse(scene, ray);
-
-		ray->pos = ray->origin + ray->dir * ray->t;
+		if(traverse(scene, ray)){
+			ray->normal = normalize(ray->normal);
+			ray->pos = ray->origin + ray->dir * ray->t;
+		}
 #endif
 
 #ifdef __SPHERE__

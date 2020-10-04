@@ -454,13 +454,13 @@ int main(int argc, char **argv)
 		initOpenCLBuffers(ml, accelStruct);
 		
 		std::unique_ptr<NEW_BVH> bvh = std::make_unique<NEW_BVH>(ml);
-		std::vector<cl_BVHnode>& nodes = bvh->PrepareData();
-		std::size_t bytesBVH = sizeof(cl_BVHnode) * nodes.size();
-		mNewBufBVH = clw::buffer::create(nodes, bytesBVH);
+		std::unique_ptr<std::vector<cl_BVHnode>> nodes = bvh->PrepareData();
+		std::size_t bytesBVH = sizeof(cl_BVHnode) * nodes->size();
+		mNewBufBVH = clw::buffer::create(*nodes, bytesBVH);
 	
-		std::vector<cl_ulong>& indices = bvh->GetPrimitiveIndices();
-		std::size_t bytesIndices = sizeof(cl_ulong) * indices.size();
-		mNewBufIndices = clw::buffer::create(indices, bytesIndices);
+		std::unique_ptr<std::vector<cl_ulong>> indices = bvh->GetPrimitiveIndices();
+		std::size_t bytesIndices = sizeof(cl_ulong) * indices->size();
+		mNewBufIndices = clw::buffer::create(*indices, bytesIndices);
 	}
 
 	//

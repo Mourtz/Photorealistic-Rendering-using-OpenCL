@@ -1,10 +1,9 @@
 # Changelog
-## # Version **0.1** (*WIP*)
+## # Version **0.1**
 - Add support for more 3D file formats using Assimp
 - Fix compilation errors on Linux
-- Add support for loading multiple objects. (*WIP*)
-- Multithreaded loading of the meshes (*WIP*)
-- Scene Management (*TBD*)
+- New BVH accelation structure
+- Stack based BVH traversal on GPU
 ## # Version **0.0**
 - SAH BVH
 - Volumetric pathtracing (homogeneous, exponential medium)

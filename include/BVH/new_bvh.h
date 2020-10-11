@@ -94,7 +94,7 @@ public:
     std::unique_ptr<std::vector<cl_BVHnode>> PrepareData() const
     {
         std::unique_ptr<std::vector<cl_BVHnode>> res = std::make_unique<std::vector<cl_BVHnode>>();
-        for (int i = 0; i < bvh->node_count; ++i)
+        for (std::size_t i = 0; i < bvh->node_count; ++i)
         {
             const Bvh::Node &node = bvh->nodes[i];
             

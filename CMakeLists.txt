@@ -15,6 +15,16 @@ IF(COMMAND cmake_policy)
   endif()
 ENDIF(COMMAND cmake_policy)
 
+IF(NOT CMAKE_BUILD_TYPE MATCHES Release)
+  # Add "DEBUG"   
+  IF(CMAKE_BUILD_TYPE MATCHES Debug)
+    add_definitions(-DDEBUG)
+  ENDIF()
+  # Enable "Profiling" for all modes except "Release"
+  add_definitions(-DPROFILING)
+ENDIF()
+
+
 ##############################################################
 # output paths
 ##############################################################
@@ -60,9 +70,6 @@ IF(UNIX)
         ENDIF("${isSystemDir}" STREQUAL "-1")
     ENDIF(APPLE)
 ENDIF(UNIX)
-
-# Profiling Option
-ADD_DEFINITIONS(-DPROFILING)
 
 FILE( GLOB_RECURSE SRCS "${CMAKE_SOURCE_DIR}/src/*.cpp" )
 FILE( GLOB_RECURSE INC "${CMAKE_SOURCE_DIR}/include/*.h")

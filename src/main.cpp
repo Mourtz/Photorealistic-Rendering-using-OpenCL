@@ -285,7 +285,7 @@ void initCLKernel()
 
 //---------------------------------------------------------------------------------------
 
-#ifndef NDEBUG
+#ifdef PROFILING
 double acc_time(0);
 #endif
 
@@ -298,13 +298,13 @@ void runKernel()
 	queue.enqueueAcquireGLObjects(&cl_screens);
 	queue.finish();
 
-#ifndef NDEBUG
+#ifdef PROFILING
 	double tStart = glfwGetTime();
 #endif
 	// launch the kernel
 	queue.enqueueNDRangeKernel(kernel, NULL, global_work_size, local_work_size); // local_work_size
 	queue.finish();
-#ifndef NDEBUG
+#ifdef PROFILING
 #if 1
 	acc_time += (glfwGetTime() - tStart);
 	// display avg render time per frame
@@ -327,7 +327,7 @@ void render()
 
 	if (buffer_reset)
 	{
-#ifndef NDEBUG
+#ifndef PROFILING
 		acc_time = 0;
 #endif
 		queue.enqueueFillBuffer(cl_flattenI, 0, 0, window_width * window_height * RayI_size);
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 {
 
 	// debug statements
-#ifndef NDEBUG
+#ifdef DEBUG
 	std::cout << "size of int: " << sizeof(int) << std::endl;
 	std::cout << "size of cl_int: " << sizeof(cl_int) << std::endl;
 	std::cout << "size of float: " << sizeof(float) << std::endl;
@@ -426,7 +426,7 @@ int main(int argc, char **argv)
 	// initialise OpenCL
 	initOpenCL();
 
-#ifndef NDEBUG
+#ifdef DEBUG
 	std::cout << "device specifications:" << std::endl;
 	if (!device.getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err))
 	{

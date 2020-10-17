@@ -1,115 +1,57 @@
 #pragma once
 
+#include <vector>
 #include <memory>
+#include <CL/cl_platform.h>
 
-#include <Model/model_loader.h>
-#include <Math/linear_algebra.h>
-#include <Math/MathHelp.h>
-
-struct BVHNode
+//------------ fwd declarations -------------------
+namespace bvh
 {
-	BVHNode *leftChild;
-	BVHNode *rightChild;
-	BVHNode *parent;
-	std::vector<Tri> faces;
-	vec3 bbMin;
-	vec3 bbMax;
-	cl_uint id;
-	cl_uint depth;
-	cl_uint numSkipsToHere;
-	bool skipNextLeft;
+    template <typename Scalar>
+    struct Triangle;
+    template <typename Scalar>
+    struct Bvh;
+} // namespace bvh
 
-	BVHNode() : leftChild(nullptr), rightChild(nullptr), parent(nullptr){
+using Scalar = float;
+using Triangle = bvh::Triangle<float>;
+using Bvh = bvh::Bvh<float>;
 
-	}
-
-	~BVHNode(){
-		if(leftChild != nullptr) delete leftChild;
-		if(rightChild != nullptr) delete rightChild;
-		if(parent != nullptr) delete parent;
-	}
-};
-
-struct bvhNode_cl
+//-------------------- Logic ---------------------
+namespace CL_RAYTRACER
 {
-	cl_float4 bbMin;
-	cl_float4 bbMax;
-};
+    struct cl_Mesh;
+    struct cl_BVHnode
+    {
+        float bounds[6];
+        unsigned int first_child_or_primitive;
+        unsigned int primitive_count;
+        bool is_leaf;
+    };
+
+    namespace IO
+    {
+        class ModelLoader;
+    }
+} // namespace CL_RAYTRACER
 
 namespace CL_RAYTRACER
 {
-class BVH {
+    class BVH
+    {
+    private:
+        std::vector<Triangle> triangles;
+        std::unique_ptr<Bvh> bvh;
+        const std::shared_ptr<IO::ModelLoader> model_loader;
 
-public:
-	BVH();
-	BVH(const std::shared_ptr<IO::ModelLoader>& ml);
-	~BVH();
-	const std::vector<BVHNode*> getContainerNodes() const;
-	cl_uint getDepth() const;
-	const std::vector<BVHNode*> getLeafNodes() const;
-	const std::vector<BVHNode*> getNodes() const;
-	const BVHNode* getRoot() const;
-	void visualize(std::vector<cl_float>* vertices, std::vector<cl_uint>* indices);
+    public:
+        BVH(const std::shared_ptr<IO::ModelLoader> &ml);
+        ~BVH();
 
-protected:
-	std::vector<BVHNode*> buildTreesFromObjects(const std::shared_ptr<IO::ModelLoader>& ml);
+        void buildTree(const std::shared_ptr<IO::ModelLoader> &ml);
 
-	BVHNode* buildTree(
-		const std::vector<Tri> faces, const vec3 bbMin, const vec3 bbMax,
-		cl_uint depth, const cl_float rootSA
-	);
-	void buildWithMeanSplit(
-		BVHNode* node, const std::vector<Tri> faces,
-		std::vector<Tri>* leftFaces, std::vector<Tri>* rightFaces
-	);
-	cl_float buildWithSAH(
-		BVHNode* node, std::vector<Tri> faces,
-		std::vector<Tri>* leftFaces, std::vector<Tri>* rightFaces
-	);
-	cl_float calcSAH(
-		const cl_float leftSA, const cl_float leftNumFaces,
-		const cl_float rightSA, const cl_float rightNumFaces
-	);
-	void combineNodes(const cl_uint numSubTrees);
-	cl_float getMean(const std::vector<Tri> faces, const cl_uint axis);
-	cl_float getMeanOfNodes(const std::vector<BVHNode*> nodes, const cl_uint axis);
-	void groupTreesToNodes(std::vector<BVHNode*> nodes, BVHNode* parent, cl_uint depth);
-	void growAABBsForSAH(
-		const std::vector<Tri>* faces,
-		std::vector< std::vector<vec3> >* leftBB, std::vector< std::vector<vec3> >* rightBB,
-		std::vector<cl_float>* leftSA, std::vector<cl_float>* rightSA
-	);
-	//void logStats(boost::posix_time::ptime timerStart);
-	cl_uint longestAxis(const BVHNode* node);
-	BVHNode* makeNode(const std::vector<Tri> faces, bool ignore);
-	BVHNode* makeContainerNode(const std::vector<BVHNode*> subTrees, const bool isRoot);
-	void orderNodesByTraversal();
-	std::vector<cl_float4> packFloatAsFloat4(const std::vector<cl_float>* vertices);
-	cl_uint setMaxFaces(const int value);
-	void skipAheadOfNodes();
-	void splitBySAH(
-		cl_float* bestSAH, const cl_uint axis, std::vector<Tri> faces,
-		std::vector<Tri>* leftFaces, std::vector<Tri>* rightFaces
-	);
-	cl_float splitFaces(
-		const std::vector<Tri> faces, const cl_float midpoint, const cl_uint axis,
-		std::vector<Tri>* leftFaces, std::vector<Tri>* rightFaces
-	);
-	void splitNodes(
-		const std::vector<BVHNode*> nodes, const cl_float midpoint, const cl_uint axis,
-		std::vector<BVHNode*>* leftGroup, std::vector<BVHNode*>* rightGroup
-	);
-	void visualizeNextNode(
-		const BVHNode* node, std::vector<cl_float>* vertices, std::vector<cl_uint>* indices
-	);
-private:
-	std::vector<BVHNode*> mContainerNodes;
-	std::vector<BVHNode*> mLeafNodes;
-	std::vector<BVHNode*> mNodes;
-	BVHNode* mRoot;
+        std::unique_ptr<std::vector<cl_ulong>> GetPrimitiveIndices() const;
 
-	cl_uint mMaxFaces;
-	cl_uint mDepthReached;
-
-};
+        std::unique_ptr<std::vector<cl_BVHnode>> PrepareData() const;
+    };
 } // namespace CL_RAYTRACER

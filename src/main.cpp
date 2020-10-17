@@ -42,15 +42,11 @@ constexpr std::size_t RayI_size = 16 * 7;
 #include <Camera/camera.h>
 #include <Scene/scene.h>
 #include <GL/cl_gl_interop.h>
+#include <Model/model_loader.h>
 #include <BVH/bvh.h>
-#include <BVH/new_bvh.h>
 
 #include <CL/cl_help.h>
-#if 1
 namespace clw = cl_help;
-#else
-#define clw cl_help
-#endif
 
 using namespace CL_RAYTRACER;
 
@@ -141,8 +137,7 @@ std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml)
 }
 
 void initOpenCLBuffers(
-	const std::shared_ptr<IO::ModelLoader>& ml,
-	const std::unique_ptr<BVH>& accelStruc)
+	const std::shared_ptr<IO::ModelLoader>& ml)
 {
 	double timerStart;
 	double timerEnd;
@@ -450,10 +445,9 @@ int main(int argc, char **argv)
 
 		std::shared_ptr<IO::ModelLoader> ml = std::make_shared<IO::ModelLoader>();
 		ml->ImportFromFile(std::string(models_directory + scene->obj_path));
-		std::unique_ptr<BVH> accelStruct = std::make_unique<BVH>(ml);
-		initOpenCLBuffers(ml, accelStruct);
+		initOpenCLBuffers(ml);
 		
-		std::unique_ptr<NEW_BVH> bvh = std::make_unique<NEW_BVH>(ml);
+		std::unique_ptr<BVH> bvh = std::make_unique<BVH>(ml);
 		std::unique_ptr<std::vector<cl_BVHnode>> nodes = bvh->PrepareData();
 		std::size_t bytesBVH = sizeof(cl_BVHnode) * nodes->size();
 		mNewBufBVH = clw::buffer::create(*nodes, bytesBVH);

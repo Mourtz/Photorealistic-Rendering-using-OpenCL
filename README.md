@@ -46,7 +46,6 @@ __Prtsc__ - Export
     - GGX
     - Beckmann
     - Phong
-  - Specular Subsurface Scattering
 
 ## Possible Future work
 - Quasi Monte Carlo

@@ -6,9 +6,11 @@ bool get_dist(float* dist, const Ray* sray, const Mesh* mesh, const Scene* scene
 	Ray temp_ray = *sray;
 	temp_ray.t = INF;
 
+#ifdef __BVH__
 	if(isOBJ) {
 		traverse(scene, &temp_ray);
 	} 
+#endif
 #ifdef __SPHERE__
 	else if(mesh->t & SPHERE){ 
 		intersect_sphere(&temp_ray, mesh);
@@ -43,6 +45,7 @@ bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool 
 
 	sray->t = INF;
 
+#ifdef __BVH__
 	if (isOBJ) {
 		traverse(scene, sray);
 		sray->pos = sray->origin + sray->dir * sray->t;
@@ -50,6 +53,7 @@ bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool 
 		sray->backside = dot(sray->normal, sray->dir) >= 0.0f;
 		sray->normal = sray->backside ? -sray->normal : sray->normal;
 	}
+#endif
 #ifdef __SPHERE__
 	else if (mesh->t & SPHERE) {
 		if (intersect_sphere(sray, mesh)) {

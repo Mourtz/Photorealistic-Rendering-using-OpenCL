@@ -13,11 +13,15 @@
 #define VIEW_OPTION (~(0xFF<<(DEBUG*8)) & VIEW_RESULTS) 
 
 #if DEBUG
-	#define LOGWARNING(x) printf(x);
-	#define LOGERROR(x) printf(x);
+	#define LOGINFO(x) printf("[Info]: %s\n", x)
+	#define LOGWARNING(x) printf("[Warning]: %s\n", x)
+	#define LOGERROR(x) printf("[Error]: %s\n", x)
+	#define LOGPROFILING(x) printf("[Profiling]: %s\n", x)
 #else
-	#define LOGERROR(x)
+	#define LOGINFO(x)
 	#define LOGWARNING(x)
+	#define LOGERROR(x)
+	#define LOGPROFILING(x)
 #endif
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable

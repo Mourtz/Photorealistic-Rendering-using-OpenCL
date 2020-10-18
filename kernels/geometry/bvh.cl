@@ -47,7 +47,7 @@ bool traverseShadows(const Scene* scene, Ray* ray) {
 	__constant new_bvhNode* node = &scene->new_nodes[0];
 
 	if(node->isLeaf){
-		LOGWARNING("[Warning]: root is a leaf!\n");
+		LOGWARNING("root is a leaf!\n");
 		return intersectLeafShadows(scene, node, ray);
 	}
 
@@ -107,7 +107,7 @@ bool traverseShadows(const Scene* scene, Ray* ray) {
 	ray->bvh_stackSize = stackSize;
 #endif
 	if(stackSize >= STACK_SIZE)
-		LOGWARNING("[WARNING]: exceeded max stack size!\n");
+		LOGWARNING("exceeded max stack size!\n");
 #endif
 
 	return false;
@@ -136,7 +136,7 @@ bool traverse(const Scene* scene, Ray* ray) {
 	__constant new_bvhNode* node = &scene->new_nodes[0];
 
 	if(node->isLeaf){
-		LOGWARNING("[Warning]: root is a leaf!\n");
+		LOGWARNING("root is a leaf!\n");
 		return intersectLeaf(scene, node, ray);
 	}
 
@@ -199,7 +199,7 @@ bool traverse(const Scene* scene, Ray* ray) {
 	ray->bvh_stackSize = stackSize;
 #endif
 	if(stackSize >= STACK_SIZE)
-		LOGWARNING("[WARNING]: exceeded max stack size!\n");
+		LOGWARNING("exceeded max stack size!\n");
 #endif
 
 	return false;

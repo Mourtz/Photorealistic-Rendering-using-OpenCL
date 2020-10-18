@@ -16,7 +16,6 @@ namespace IO
 	bool ModelLoader::ImportFromFile(const std::string &filepath)
 	{
 		// free cached scene
-		scene.reset();
 		sceneData.reset();
 
 #ifdef PROFILING
@@ -45,7 +44,8 @@ namespace IO
 			return false;
 		}
 
-		updateSceneData(scene);
+		sceneData.reset(new SceneData);
+		updateSceneData(scene->mRootNode, scene);
 
 #ifdef PROFILING
 		std::cout << std::setprecision(4) << "Loaded " << filepath << " at "
@@ -54,44 +54,24 @@ namespace IO
 		return true;
 	}
 
-	void ModelLoader::updateSceneData(const aiScene *scene)
+	// from https://github.com/JoeyDeVries/LearnOpenGL/blob/0a8d6e582c99d90ad68181befe44c4589063ab20/includes/learnopengl/model.h
+	void ModelLoader::updateSceneData(aiNode *node, const aiScene *scene)
 	{
-		sceneData.reset(new SceneData);
+		// process each mesh located at the current node
+        for(unsigned int i = 0; i < node->mNumMeshes; i++)
+        {
+            // the node object only contains indices to index the actual objects in the scene. 
+            // the scene contains all the data, node is just to keep stuff organized (like relations between nodes).
+            aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+			sceneData->push_back(assimpGetMeshData(mesh));
+			std::cout << "::::::::PROCESSING =>" << mesh->mName.C_Str() << " , Faces: " << mesh->mNumFaces << std::endl;
+        }
 
-		bool repeat = true;
-
-		std::vector<const aiNode *> nodeBuff;
-		nodeBuff.push_back(scene->mRootNode);
-
-		// I raise all nodes tree to the root level
-		while (repeat)
-		{
-			for (unsigned int a = 0; a < nodeBuff.size(); a++)
-			{
-				const aiNode *modelNode = nodeBuff.at(a);
-				if (modelNode->mNumChildren > 0)
-					for (unsigned int c = 0; c < modelNode->mNumChildren; c++)
-					{
-						nodeBuff.push_back(modelNode->mChildren[c]);
-					}
-
-				else
-					repeat = false;
-			}
-		}
-
-		// Get node information from the root level (all nodes)
-		for (unsigned int a = 0; a < nodeBuff.size(); a++)
-		{
-			const aiNode *modelNode = nodeBuff.at(a);
-
-			if (modelNode->mNumMeshes > 0)
-				for (unsigned int b = 0; b < modelNode->mNumMeshes; b++)
-				{
-					sceneData->push_back(assimpGetMeshData(scene->mMeshes[b]));
-					std::cout << "::::::::PROCESSING =>" << scene->mMeshes[b]->mName.C_Str() << " , Faces: " << scene->mMeshes[b]->mNumFaces << std::endl;
-				}
-		}
+        // after we've processed all of the meshes (if any) we then recursively process each of the children nodes
+        for(unsigned int i = 0; i < node->mNumChildren; i++)
+        {
+            updateSceneData(node->mChildren[i], scene);
+        }
 	}
 
 	const MeshData ModelLoader::assimpGetMeshData(const aiMesh *mesh)
@@ -167,19 +147,15 @@ namespace IO
 		return res;
 	}
 
-	const std::shared_ptr<Scene> ModelLoader::getFaces()
+	const std::unique_ptr<Scene> ModelLoader::getFaces()
 	{
-		scene.reset(new Scene);
-		std::size_t offset = 0;
-
-		const std::vector<float> &vertices = getPositions();
-		const std::vector<float> &normals = getNormals();
-		// const std::vector<float> &uvs = getTextureCoords();
-		// const std::vector<float> &tangents = getTangents();
+		std::unique_ptr<Scene> scene = std::make_unique<Scene>();
 
 		for (std::size_t m = 0; m < sceneData->size(); ++m)
 		{
 			const MeshData &meshData = (*sceneData)[m];
+			const auto &vertices = getPositions4(meshData);
+			const auto &normals = getNormals4(meshData);
 
 			Mesh mesh;
 			for (const auto &f : getIndices4(meshData))
@@ -187,15 +163,13 @@ namespace IO
 				std::array<Vertex, 3> verts;
 				for (std::size_t i = 0; i < 3; ++i)
 				{
-					const std::size_t index = (offset + f.s[i])*3;
-					verts[i].pos = {vertices[index], vertices[index+1], vertices[index+2]};
-					verts[i].nor = {normals[index], normals[index+1], normals[index+2]};
+					const std::size_t index = f.s[i];
+					verts[i].pos = vertices[index];
+					verts[i].nor = normals[index];
 				}
 				mesh.faces.emplace_back(verts[0], verts[1], verts[2]);
 			}
 			scene->meshes.push_back(mesh);
-			break; // only 1 mesh for the moment
-			offset += meshData.first[1];
 		}
 
 		return scene;

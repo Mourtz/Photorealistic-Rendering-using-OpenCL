@@ -14,6 +14,7 @@
 
 struct aiScene;
 struct aiMesh;
+struct aiNode;
 
 namespace CL_RAYTRACER
 {
@@ -77,7 +78,7 @@ namespace IO
 		{
 			return sceneData;
 		}
-		const std::shared_ptr<Scene> getFaces();
+		const std::unique_ptr<Scene> getFaces();
 
 		std::vector<unsigned int> getIndices() const;
 		std::vector<cl_uint4> getIndices4() const;
@@ -100,12 +101,11 @@ namespace IO
 		// std::vector<float> getTangentsAt(unsigned index) const;
 
 	private:
-		void updateSceneData(const aiScene *scene);
+		void updateSceneData(aiNode *node, const aiScene *scene);
 		const MeshData assimpGetMeshData(const aiMesh *mesh);
 
 		// raw data
 		std::shared_ptr<SceneData> sceneData;
-		std::shared_ptr<Scene> scene;
 
 		// Create an instance of the Importer class
 		Assimp::Importer importer;

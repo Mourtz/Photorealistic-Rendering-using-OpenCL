@@ -35,6 +35,7 @@
 constexpr char *models_directory = "../resources/models/";
 constexpr char *kernel_filepath = "../kernels/main.cl";
 
+// @ToDo use the actual buffer size 
 constexpr std::size_t RayI_size = 16 * 7;
 
 //----------------------------------------------
@@ -89,28 +90,11 @@ host_scene *scene = nullptr;
 std::string scene_filepath = "../scenes/cornell.json";
 bool ALPHA_TESTING = false;
 
-std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml)
+std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml, const BVH* bvh)
 {
-	
+	std::unique_ptr<std::vector<cl_ulong>> indices = bvh->GetPrimitiveIndices();
 	std::vector<vec3> vertices4;
 	std::vector<vec3> normals4;
-	
-#if 0
-	const std::vector<float>& vertices = ml->getPositions();
-	const std::vector<float>& normals = ml->getNormals();
-	
-	for (std::size_t i = 0; i < vertices.size(); i += 3)
-	{
-		cl_float4 v = {vertices[i], vertices[i + 1], vertices[i + 2], 0.0f};
-		vertices4.push_back(v);
-	}
-
-	for (std::size_t i = 0; i < normals.size(); i += 3)
-	{
-		cl_float4 n = {normals[i], normals[i + 1], normals[i + 2], 0.0f};
-		normals4.push_back(n);
-	}
-#else
 
 	const auto& scene = ml->getFaces();
 	for (const auto &mesh : scene->meshes)
@@ -126,39 +110,15 @@ std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml)
 			normals4.emplace_back(face.points[2].nor.x, face.points[2].nor.y, face.points[2].nor.z);
 		}
 	}
-#endif
 	std::size_t bytesV = sizeof(vec3) * vertices4.size();
 	std::size_t bytesN = sizeof(vec3) * normals4.size();
+	std::size_t bytesIndices = sizeof(cl_ulong) * indices->size();
 
 	mBufVertices = clw::buffer::create(vertices4, bytesV);	
 	mBufNormals = clw::buffer::create(normals4, bytesN);
+	mNewBufIndices = clw::buffer::create(*indices, bytesIndices);
 
-	return bytesV + bytesN;
-}
-
-void initOpenCLBuffers(
-	const std::shared_ptr<IO::ModelLoader>& ml)
-{
-	double timerStart;
-	double timerEnd;
-	double timeDiff;
-	std::size_t bytes;
-	float bytesFloat;
-	std::string unit;
-
-	const int MSG_LENGTH = 128;
-	char msg[MSG_LENGTH];
-
-	std::cout << "Initializing OpenCL buffers ..." << std::endl;
-
-	// Buffer: Faces
-	timerStart = glfwGetTime();
-	bytes = initOpenCLBuffers_Faces(ml);
-	timerEnd = glfwGetTime();
-	timeDiff = (timerEnd - timerStart);
-	utils::formatBytes(bytes, &bytesFloat, &unit);
-	snprintf(msg, MSG_LENGTH, "[PathTracer] Created faces buffer in %g ms -- %.2f %s.", timeDiff, bytesFloat, unit.c_str());
-	std::cout << msg << std::endl;
+	return bytesV + bytesN + bytesIndices;
 }
 
 void initOpenCL()
@@ -445,16 +405,13 @@ int main(int argc, char **argv)
 
 		std::shared_ptr<IO::ModelLoader> ml = std::make_shared<IO::ModelLoader>();
 		ml->ImportFromFile(std::string(models_directory + scene->obj_path));
-		initOpenCLBuffers(ml);
 		
 		std::unique_ptr<BVH> bvh = std::make_unique<BVH>(ml);
 		std::unique_ptr<std::vector<cl_BVHnode>> nodes = bvh->PrepareData();
 		std::size_t bytesBVH = sizeof(cl_BVHnode) * nodes->size();
 		mNewBufBVH = clw::buffer::create(*nodes, bytesBVH);
-	
-		std::unique_ptr<std::vector<cl_ulong>> indices = bvh->GetPrimitiveIndices();
-		std::size_t bytesIndices = sizeof(cl_ulong) * indices->size();
-		mNewBufIndices = clw::buffer::create(*indices, bytesIndices);
+
+		initOpenCLBuffers_Faces(ml, bvh.get());
 	}
 
 	//

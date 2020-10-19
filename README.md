@@ -46,6 +46,7 @@ __Prtsc__ - Export
     - GGX
     - Beckmann
     - Phong
+  - Smooth/Flat shading
 
 ## Possible Future work
 - Quasi Monte Carlo

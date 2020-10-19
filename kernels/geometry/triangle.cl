@@ -12,14 +12,7 @@ bool intersectTriangle(
 	const float3 e1 = p0 - p1;
 	const float3 e2 = p2 - p0;
 
-#if 0
-	const float3 n0 = scene->normals[fv+0].xyz;
-	const float3 n1 = scene->normals[fv+1].xyz;
-	const float3 n2 = scene->normals[fv+2].xyz;
-	const float3 n = (n0 + n1 + n2)/3.0f;
-#else
 	const float3 n = cross(e1, e2);
-#endif
 
 	float3 c = p0 - ray->origin;
 	float3 r = cross(ray->dir, c);
@@ -33,7 +26,15 @@ bool intersectTriangle(
 		float t = dot(n, c) * inv_det;
 		if(t > EPS && t < ray->t){
 			ray->t = t;
+#if 1  // smooth shading
+			const float3 n0 = scene->normals[fv+0].xyz;
+			const float3 n1 = scene->normals[fv+1].xyz;
+			const float3 n2 = scene->normals[fv+2].xyz;
+
+			ray->normal = w * n0 + u * n1 + v * n2;
+#else
 			ray->normal = n;
+#endif
 			return true;
 		}
 	}

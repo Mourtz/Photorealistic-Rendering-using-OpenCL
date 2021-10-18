@@ -36,3 +36,5 @@ include/BVH/bvh_morton_code.h
 
 .vscode
 *.old
+
+external/AMD APP SDK/

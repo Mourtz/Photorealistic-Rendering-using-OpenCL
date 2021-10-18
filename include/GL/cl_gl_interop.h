@@ -52,8 +52,7 @@ bool initGL(){
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glMatrixMode(GL_PROJECTION);
-	gluOrtho2D(0.0, window_width, 0.0, window_height);
-
+	glOrtho(0.0f, window_width, window_height, 0.0f, 0.0f, 1.0f);
 	// create vbo
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);

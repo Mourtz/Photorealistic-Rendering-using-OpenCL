@@ -171,7 +171,7 @@ ELSE()
   add_subdirectory("${GLEW_DIR}")
 
   target_include_directories(${TRACER_TARGET} PRIVATE "${GLEW_DIR}/include")
-  target_link_libraries(${TRACER_TARGET} PRIVATE debug "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/glewd.lib" optimized "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/glew.lib")
+  target_link_libraries(${TRACER_TARGET} PRIVATE libglew_shared)
   
   # copy DLLs
   #   GET_TARGET_PROPERTY(DLL_PATH ${GLEW_LIBRARIES} IMPORTED_LOCATION_RELEASE)
@@ -179,8 +179,8 @@ ELSE()
 ENDIF()
 
 # OpenMP
-find_package(OpenMP QUIET)
-if (OpenMP_CXX_FOUND)
+FIND_PACKAGE(OpenMP QUIET)
+IF(OpenMP_CXX_FOUND)
     target_link_libraries(${TRACER_TARGET} INTERFACE ${OpenMP_CXX_LIBRARIES})
     target_include_directories(${TRACER_TARGET} INTERFACE ${OpenMP_CXX_INCLUDE_DIRS})
     if(${CMAKE_VERSION} VERSION_GREATER "3.13.0") 
@@ -190,7 +190,7 @@ if (OpenMP_CXX_FOUND)
 endif ()
 
 # Assimp
-FIND_PACKAGE(assimp REQUIRED)
+FIND_PACKAGE(assimp)
 IF(assimp_FOUND)
     target_include_directories(${TRACER_TARGET} PRIVATE ${assimp_INCLUDE_DIRS})
     target_link_libraries(${TRACER_TARGET} PRIVATE ${assimp_LIBRARIES})

@@ -51,9 +51,9 @@ namespace clw = cl_help;
 using namespace CL_RAYTRACER;
 
 // window width
-int window_width = 1280;
+int window_width = 1920;
 // window height
-int window_height = 720;
+int window_height = 1080;
 // enviroment map filepath
 std::string env_map_filepath = "";
 // encoder

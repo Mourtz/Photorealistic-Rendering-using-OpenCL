@@ -4,7 +4,7 @@
 #define FLT_MAX 3.402823466e+38F
 #endif
 
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 #include <Math/linear_algebra.h>
 #include <vector>
 

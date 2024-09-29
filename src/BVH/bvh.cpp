@@ -2,21 +2,31 @@
 
 #include <Math/linear_algebra.h>
 #include <Model/model_loader.h>
-#include <bvh/bvh.hpp>
-#include <bvh/binned_sah_builder.hpp>
-#include <bvh/sweep_sah_builder.hpp>
-#include <bvh/triangle.hpp>
-#include <bvh/ray.hpp>
 
-#include <bvh/single_ray_traverser.hpp>
+#include <bvh/v2/bvh.h>
+#include <bvh/v2/vec.h>
+#include <bvh/v2/ray.h>
+#include <bvh/v2/node.h>
+#include <bvh/v2/default_builder.h>
+#include <bvh/v2/thread_pool.h>
+#include <bvh/v2/executor.h>
+#include <bvh/v2/stack.h>
+#include <bvh/v2/tri.h>
+
 #include <iostream>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-using Vector3 = bvh::Vector3<Scalar>;
-using Ray = bvh::Ray<Scalar>;
-using BoundingBox = bvh::BoundingBox<Scalar>;
+using Scalar  = float;
+using Vec3    = bvh::v2::Vec<Scalar, 3>;
+using BBox    = bvh::v2::BBox<Scalar, 3>;
+using Tri     = bvh::v2::Tri<Scalar, 3>;
+using Node    = bvh::v2::Node<Scalar, 3>;
+using Bvh     = bvh::v2::Bvh<Node>;
+using Ray     = bvh::v2::Ray<Scalar, 3>;
+
+using PrecomputedTri = bvh::v2::PrecomputedTri<Scalar>;
 
 namespace CL_RAYTRACER
 {
@@ -51,25 +61,35 @@ namespace CL_RAYTRACER
             for (const auto &face : mesh.faces)
             {
                 triangles.emplace_back(
-                    Vector3(face.points[0].pos.x, face.points[0].pos.y, face.points[0].pos.z), Vector3(face.points[1].pos.x, face.points[1].pos.y, face.points[1].pos.z), Vector3(face.points[2].pos.x, face.points[2].pos.y, face.points[2].pos.z));
+                    Vec3(face.points[0].pos.x, face.points[0].pos.y, face.points[0].pos.z), Vec3(face.points[1].pos.x, face.points[1].pos.y, face.points[1].pos.z), Vec3(face.points[2].pos.x, face.points[2].pos.y, face.points[2].pos.z));
             }
         }
 
-        auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(triangles.data(), triangles.size());
-        auto global_bbox = bvh::compute_bounding_boxes_union(bboxes.get(), triangles.size());
+        bvh::v2::ThreadPool thread_pool;
+        bvh::v2::ParallelExecutor executor(thread_pool);
 
-        // bvh::BinnedSahBuilder<Bvh, 64> builder(*bvh);
-        bvh::SweepSahBuilder<Bvh> builder(*bvh);
-        builder.build(global_bbox, bboxes.get(), centers.get(), triangles.size());
+        // Get triangle centers and bounding boxes (required for BVH builder)
+        std::vector<BBox> bboxes(triangles.size());
+        std::vector<Vec3> centers(triangles.size());
+        executor.for_each(0, triangles.size(), [&] (size_t begin, size_t end) {
+        for (size_t i = begin; i < end; ++i) {
+            bboxes[i]  = triangles[i].get_bbox();
+            centers[i] = triangles[i].get_center();
+        }
+        });
 
-        std::cout << "[BVH] Finished builing BVH(node_count = " << bvh->node_count << ") in "
-                  << (glfwGetTime() - t0) << "seconds" << std::endl;
+        typename bvh::v2::DefaultBuilder<Node>::Config config;
+        config.quality = bvh::v2::DefaultBuilder<Node>::Quality::High;
+        bvh = std::make_unique<Bvh>(bvh::v2::DefaultBuilder<Node>::build(thread_pool, bboxes, centers, config));
+
+        double t1 = glfwGetTime();
+        std::cout << "[BVH] Tree built in " << t1 - t0 << " seconds" << std::endl;
     }
 
     std::unique_ptr<std::vector<cl_ulong>> BVH::GetPrimitiveIndices() const {
         std::unique_ptr<std::vector<cl_ulong>> res = std::make_unique<std::vector<cl_ulong>>();
         for(size_t i = 0; i < triangles.size(); ++i){
-            res->emplace_back(bvh->primitive_indices[i]);
+            res->emplace_back(bvh->prim_ids[i]);
         }
         return res;
     }
@@ -77,9 +97,9 @@ namespace CL_RAYTRACER
     std::unique_ptr<std::vector<cl_BVHnode>> BVH::PrepareData() const
     {
         std::unique_ptr<std::vector<cl_BVHnode>> res = std::make_unique<std::vector<cl_BVHnode>>();
-        for (int i = 0; i < bvh->node_count; ++i)
+        for (int i = 0; i < bvh->nodes.size(); ++i)
         {
-            const Bvh::Node &node = bvh->nodes[i];
+            const Node &node = bvh->nodes[i];
             
             cl_BVHnode bb;
             bb.bounds[0] = node.bounds[0];
@@ -88,9 +108,9 @@ namespace CL_RAYTRACER
             bb.bounds[3] = node.bounds[3];
             bb.bounds[4] = node.bounds[4];
             bb.bounds[5] = node.bounds[5];
-            bb.is_leaf = node.is_leaf;
-            bb.first_child_or_primitive = node.first_child_or_primitive;
-            bb.primitive_count = node.primitive_count;
+            bb.is_leaf = node.is_leaf();
+            bb.first_child_or_primitive = node.index.first_id();
+            bb.primitive_count = node.index.prim_count();
             res->push_back(bb);
         }
         return res;

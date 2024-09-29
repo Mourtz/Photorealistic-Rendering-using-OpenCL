@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint> 
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 
 #include <align.h>
 #include <Types/material.h>

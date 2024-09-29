@@ -47,8 +47,8 @@ struct Vector
 
 	// operators
 
-	inline Scalar& operator[](const int i) { return _v[std::min(i,3)]; }
-	inline Scalar  operator[](const int i) const { return _v[std::min(i,3)]; }
+	inline Scalar& operator[](const int i) { if (i == 0) return x; if (i == 1) return y; if (i == 2) return z; return w; }
+	inline Scalar  operator[](const int i) const {  if (i == 0) return x; if (i == 1) return y; if (i == 2) return z; return w; }
 
 	inline Vector operator+(Scalar a) const { return Vector(x + a, y + a, z + a, w + a); }
 	inline Vector operator-(Scalar a) const { return Vector(x - a, y - a, z - a, w - a); }

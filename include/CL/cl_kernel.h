@@ -33,7 +33,7 @@ inline std::string parse(std::string filepath, host_scene *scene)
         if (line.substr(0, 6) == "#FILE:")
         {
 
-            std::string filepath = "../kernels/" + line.substr(6);
+            std::string filepath = "../../kernels/" + line.substr(6);
             std::cout << "Appending (" << filepath << ")\n";
             source += parse(filepath, scene);
             continue;

@@ -5,7 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>

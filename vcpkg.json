@@ -1,0 +1,11 @@
+{
+  "dependencies": [
+    "assimp",
+    "eigen3",
+    "glew",
+    "glfw3",
+    "opencl",
+    "rapidjson",
+    "opengl"
+  ]
+}

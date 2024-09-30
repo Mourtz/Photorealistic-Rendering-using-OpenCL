@@ -66,32 +66,17 @@ __Prtsc__ - Export
 ## How To Build
 
 ### Windows
-1. Download GLFW from [here](http://www.glfw.org/download.html)
-2. Download AMD_APP_SDK from [here](https://drive.google.com/open?id=1Usg9hSx-EjntZ9paoJx51MZWYDqI83Lh)
-3. Use CMake GUI to configure and generate the project
+```bash
+git clone https://github.com/microsoft/vcpkg.git
+move vcpkg C:/dev
+cd C:/dev/vcpkg && bootstrap-vcpkg.bat
+```
 
 ### Linux
-1. for Ubuntu *xenial* (16.04LTS) and later run
 ```bash
-sudo apt-get update
-sudo apt-get -y install make cmake build-essential libglew-dev libglfw3-dev nvidia-opencl-dev
-
-mkdir build
-cd build
-cmake ..
-make
-```
-2. for older versions run
-```bash
-echo "deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list
-sudo apt-get update
-sudo apt-get -y install make cmake build-essential libglew-dev nvidia-opencl-dev
-sudo apt-get -y --allow-unauthenticated install libglfw3-dev
-
-mkdir build
-cd build
-cmake ..
-make
+git clone https://github.com/microsoft/vcpkg.git
+mv vcpkg /home/user
+cd /home/user/vcpkg && ./bootstrap-vcpkg.sh
 ```
 
 ## Credits

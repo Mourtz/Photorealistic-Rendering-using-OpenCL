@@ -21,8 +21,8 @@ GLuint tex0, tex1/*, tex2*/;
 // OpenGL vertex buffer object
 GLuint vbo;
 
-const std::string vert_filepath = "../shaders/vert.glsl";
-const std::string tonemapper_filepath = "../shaders/tonemapper.glsl";
+const std::string vert_filepath = "../../shaders/vert.glsl";
+const std::string tonemapper_filepath = "../../shaders/tonemapper.glsl";
 
 extern std::string env_map_filepath;
 extern unsigned char encoder;

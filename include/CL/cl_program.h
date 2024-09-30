@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iostream>
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 #include <utils.h>
 
 extern cl::Context context;

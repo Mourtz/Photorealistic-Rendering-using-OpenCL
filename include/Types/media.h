@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 
 struct cl_medium {
 	cl_float density;

@@ -14,9 +14,8 @@
 #include <rapidjson/istreamwrapper.h>
 
 #include <GL/glew.h>
-#define CL_VERSION_1_2
-#define __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
+#define CL_HPP_ENABLE_EXCEPTIONS
+#include <CL/opencl.hpp>
 
 #if defined OS_WIN
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -32,8 +31,8 @@
 
 //----------------------------------------------
 
-constexpr char *models_directory = "../resources/models/";
-constexpr char *kernel_filepath = "../kernels/main.cl";
+constexpr const char *models_directory = "../../resources/models/";
+constexpr const char *kernel_filepath = "../../kernels/main.cl";
 
 // @ToDo use the actual buffer size 
 constexpr std::size_t RayI_size = 16 * 7;
@@ -52,9 +51,9 @@ namespace clw = cl_help;
 using namespace CL_RAYTRACER;
 
 // window width
-int window_width = 1280;
+int window_width = 1920;
 // window height
-int window_height = 720;
+int window_height = 1080;
 // enviroment map filepath
 std::string env_map_filepath = "";
 // encoder
@@ -87,7 +86,7 @@ cl_uint framenumber = 0;
 Camera *hostRendercam = nullptr;
 InteractiveCamera *interactiveCamera = nullptr;
 host_scene *scene = nullptr;
-std::string scene_filepath = "../scenes/cornell.json";
+std::string scene_filepath = "../../scenes/cornell.json";
 bool ALPHA_TESTING = false;
 
 std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml, const BVH* bvh)

@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.30)
 
 # Set up CMake variables
-set(VCPKG_ROOT "C:/dev/vcpkg/")
+
+# set VCPKG_ROOT per platform
+if(WIN32)
+    set(VCPKG_ROOT "C:/dev/vcpkg/")
+elseif(UNIX)
+    set(VCPKG_ROOT "/home/user/vcpkg/")
+endif()
+
 set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 set(vcpkg_DIR "${VCPKG_ROOT}")
 set(CMAKE_PREFIX_PATH "${VCPKG_ROOT}")

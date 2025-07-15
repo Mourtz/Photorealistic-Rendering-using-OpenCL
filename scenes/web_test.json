@@ -1,0 +1,72 @@
+{
+  "scene": {
+    "name": "Web Test Scene",
+    "description": "Simple test scene for web version",
+    "camera": {
+      "position": [0.0, 0.0, 3.0],
+      "target": [0.0, 0.0, 0.0],
+      "up": [0.0, 1.0, 0.0],
+      "fov": 45.0,
+      "aperture": 0.0,
+      "focal_distance": 3.0
+    },
+    "materials": [
+      {
+        "name": "red_lambertian",
+        "type": "lambertian",
+        "albedo": [0.7, 0.3, 0.3],
+        "emission": [0.0, 0.0, 0.0]
+      },
+      {
+        "name": "metal",
+        "type": "metal",
+        "albedo": [0.8, 0.8, 0.9],
+        "roughness": 0.0
+      },
+      {
+        "name": "glass",
+        "type": "dielectric",
+        "albedo": [1.0, 1.0, 1.0],
+        "ior": 1.5
+      },
+      {
+        "name": "light",
+        "type": "lambertian",
+        "albedo": [0.0, 0.0, 0.0],
+        "emission": [4.0, 4.0, 4.0]
+      }
+    ],
+    "objects": [
+      {
+        "type": "sphere",
+        "center": [0.0, 0.0, 0.0],
+        "radius": 0.5,
+        "material": "red_lambertian"
+      },
+      {
+        "type": "sphere",
+        "center": [-1.2, 0.0, 0.0],
+        "radius": 0.5,
+        "material": "metal"
+      },
+      {
+        "type": "sphere",
+        "center": [1.2, 0.0, 0.0],
+        "radius": 0.5,
+        "material": "glass"
+      },
+      {
+        "type": "sphere",
+        "center": [0.0, 2.0, 0.0],
+        "radius": 0.3,
+        "material": "light"
+      },
+      {
+        "type": "sphere",
+        "center": [0.0, -100.5, 0.0],
+        "radius": 100.0,
+        "material": "red_lambertian"
+      }
+    ]
+  }
+}

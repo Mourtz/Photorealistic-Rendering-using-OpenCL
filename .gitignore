@@ -28,6 +28,7 @@
 *.app
 
 /build/
+/build_web/
 *.log
 *.mtl
 kernels/bxdf/disney.cl
@@ -38,3 +39,8 @@ include/BVH/bvh_morton_code.h
 *.old
 
 external/AMD APP SDK/
+
+# Web build artifacts
+*.wasm
+*.data
+*.js.mem

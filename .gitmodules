@@ -1,3 +1,6 @@
 [submodule "external/bvh"]
 	path = external/bvh
 	url = https://github.com/madmann91/bvh
+[submodule "external/emsdk"]
+	path = external/emsdk
+	url = https://github.com/emscripten-core/emsdk.git

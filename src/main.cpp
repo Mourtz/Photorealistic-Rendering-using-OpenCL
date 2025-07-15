@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 	global_work_size = window_width * window_height;
 
 	// initialise OpenGL (GLEW and GLUT window + callback functions)
-	initGL();
+	initGL_Desktop();
 
 	// initialise scene
 	scene = new host_scene();

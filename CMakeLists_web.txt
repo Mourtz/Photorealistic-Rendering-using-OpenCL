@@ -1,0 +1,122 @@
+# CMakeLists for Emscripten Web Build
+cmake_minimum_required(VERSION 3.30)
+
+SET(PROJECT_NAME "OpenCL_Pathtracer_Web")
+SET(TRACER_TARGET "OpenCL_Pathtracer_Web")
+
+PROJECT(${TRACER_TARGET})
+
+# Emscripten-specific settings
+if(EMSCRIPTEN)
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    
+    # Emscripten compile flags
+    set(EMSCRIPTEN_COMPILE_FLAGS
+        "-sUSE_WEBGPU=1"
+        "-sUSE_GLFW=3"
+        "-sALLOW_MEMORY_GROWTH=1"
+        "-sINITIAL_MEMORY=256MB"
+        "-sMAXIMUM_MEMORY=2GB"
+        "-sSTACK_SIZE=5MB"
+        "-sFULL_ES3=1"
+        "-sWASM=1"
+        "-sASYNCIFY"
+        "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+        "--preload-file ../resources@/resources"
+        "--preload-file ../kernels@/kernels"
+        "--preload-file ../scenes@/scenes"
+        "--preload-file ../shaders@/shaders"
+    )
+    
+    # Debug vs Release settings
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        list(APPEND EMSCRIPTEN_COMPILE_FLAGS
+            "-O1"
+            "-g"
+            "-sASSERTIONS=1"
+            "-sSAFE_HEAP=1"
+        )
+    else()
+        list(APPEND EMSCRIPTEN_COMPILE_FLAGS
+            "-O3"
+            "-sASSERTIONS=0"
+        )
+    endif()
+    
+    string(REPLACE ";" " " EMSCRIPTEN_COMPILE_FLAGS_STR "${EMSCRIPTEN_COMPILE_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EMSCRIPTEN_COMPILE_FLAGS_STR}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EMSCRIPTEN_COMPILE_FLAGS_STR}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${EMSCRIPTEN_COMPILE_FLAGS_STR}")
+endif()
+
+# Output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/web)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/web)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/web)
+
+# Source files
+FILE(GLOB_RECURSE SRCS "../src/*.cpp")
+FILE(GLOB_RECURSE INC "../include/*.h")
+FILE(GLOB_RECURSE CL_SRCS "../kernels/*.cl")
+FILE(GLOB_RECURSE SHADERS "../shaders/*.glsl")
+FILE(GLOB_RECURSE SCENES "../scenes/*.json")
+
+# Web-specific sources
+FILE(GLOB_RECURSE WEB_SRCS "../src/web/*.cpp")
+
+# Remove desktop-specific main.cpp and add web main
+list(REMOVE_ITEM SRCS "../src/main.cpp")
+list(APPEND SRCS "../src/web/main_web.cpp")
+
+add_executable(${TRACER_TARGET} ${SRCS} ${WEB_SRCS} ${INC} ${CL_SRCS} ${SHADERS} ${SCENES})
+
+# C++ Standard
+SET_TARGET_PROPERTIES(${TRACER_TARGET} PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
+
+# Include directories
+TARGET_INCLUDE_DIRECTORIES(${TRACER_TARGET} PUBLIC 
+    "../include" 
+    "../external"
+    "../src/web"
+)
+
+# Platform definitions
+TARGET_COMPILE_DEFINITIONS(${TRACER_TARGET} PRIVATE -DOS_WEB -DEMSCRIPTEN)
+
+# Compile flags - handle different compilers
+if(MSVC)
+    # MSVC-specific flags
+    TARGET_COMPILE_OPTIONS(${TRACER_TARGET} PRIVATE 
+        /std:c++20
+        /EHsc
+        /GR
+        /W3
+    )
+else()
+    # GCC/Clang flags
+    TARGET_COMPILE_OPTIONS(${TRACER_TARGET} PRIVATE 
+        -std=c++20
+        -fexceptions
+        -frtti
+        -Wall
+    )
+endif()
+
+# BVH library
+add_subdirectory("../external/bvh" "bvh_build")
+target_link_libraries(${TRACER_TARGET} PRIVATE "bvh")
+target_include_directories(${TRACER_TARGET} PRIVATE "../external/bvh/src")
+set_target_properties(bvh PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
+
+# Emscripten provides these automatically
+if(EMSCRIPTEN)
+    # WebGPU and WebGL are provided by Emscripten
+    # GLFW3 is provided by Emscripten
+    # No need for separate OpenCL - we'll use WebGPU compute shaders
+else()
+    # Fallback for non-Emscripten builds (shouldn't happen with this file)
+    message(FATAL_ERROR "This CMakeLists is for Emscripten builds only")
+endif()

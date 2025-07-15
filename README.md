@@ -65,19 +65,50 @@ __Prtsc__ - Export
 
 ## How To Build
 
-### Windows
+### Desktop Version
+
+#### Windows
 ```bash
 git clone https://github.com/microsoft/vcpkg.git
 move vcpkg C:/dev
 cd C:/dev/vcpkg && bootstrap-vcpkg.bat
 ```
 
-### Linux
+#### Linux
 ```bash
 git clone https://github.com/microsoft/vcpkg.git
 mv vcpkg /home/user
 cd /home/user/vcpkg && ./bootstrap-vcpkg.sh
 ```
+
+### Web Version (Emscripten + WebGPU)
+
+The pathtracer can also run in web browsers using WebGPU for compute shaders.
+
+#### Prerequisites
+- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html)
+- WebGPU-enabled browser (Chrome 113+, Edge 113+, or Firefox with WebGPU enabled)
+
+#### Build Steps
+```bash
+# Linux/macOS
+source /path/to/emsdk/emsdk_env.sh
+chmod +x scripts/build_web.sh
+./scripts/build_web.sh
+
+# Windows
+call C:\path\to\emsdk\emsdk_env.bat
+scripts\build_web.bat
+```
+
+#### Running
+```bash
+cd build_web/web
+python3 -m http.server 8080
+# Open http://localhost:8080 in your browser
+```
+
+See [web/README.md](web/README.md) for detailed web version documentation.
 
 ## Credits
 [tunabrain](https://twitter.com/tunabrain) - Benedikt Bitterli\

@@ -3,8 +3,8 @@
 #include <GLFW/glfw3.h>
 #include <Camera/camera.h>
 
-bool buffer_reset(true);
-bool render_to_file(false);
+extern bool buffer_reset;
+extern bool render_to_file;
 
 void initCamera();
 
@@ -37,9 +37,9 @@ inline void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 }
 
 // mouse event handlers
-double lastX = 0, lastY = 0;
-bool updateCamera = false;
-int theButtonState = 0;
+extern double lastX, lastY;
+extern bool updateCamera;
+extern int theButtonState;
 
 // camera mouse controls in X and Y direction
 inline void cursor_pos_callback(GLFWwindow* window, double x, double y)

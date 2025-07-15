@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCL Pathtracer - Web Version</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .header {
+            background-color: #2d2d2d;
+            padding: 10px 20px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .control-group label {
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        .control-group select,
+        .control-group input {
+            background-color: #3d3d3d;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+        
+        canvas {
+            border: 1px solid #444;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            background-color: rgba(45, 45, 45, 0.9);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            font-size: 12px;
+            line-height: 1.4;
+            max-width: 300px;
+            display: none;
+        }
+        
+        .info-panel.visible {
+            display: block;
+        }
+        
+        .info-panel h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .info-panel ul {
+            margin: 0;
+            padding-left: 15px;
+            color: #ccc;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ccc;
+        }
+        
+        .loading .spinner {
+            border: 3px solid #444;
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #ff6b6b;
+            background-color: rgba(255, 107, 107, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ff6b6b;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">OpenCL Pathtracer - Web Version</div>
+            <div class="controls">
+                <div class="control-group">
+                    <label>Scene:</label>
+                    <select id="sceneSelect">
+                        <option value="cornell">Cornell Box</option>
+                        <option value="sphere">Sphere Scene</option>
+                        <option value="custom">Custom Scene</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Quality:</label>
+                    <select id="qualitySelect">
+                        <option value="low">Low (512x384)</option>
+                        <option value="medium" selected>Medium (1280x720)</option>
+                        <option value="high">High (1920x1080)</option>
+                    </select>
+                </div>
+                <button id="helpBtn" style="background-color: #4a90e2; border: none; color: white; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                    Help
+                </button>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas" width="1280" height="720"></canvas>
+            
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <div>Loading pathtracer...</div>
+            </div>
+        </div>
+        
+        <div id="infoPanel" class="info-panel">
+            <h3>Controls</h3>
+            <ul>
+                <li><strong>WASD:</strong> Move camera</li>
+                <li><strong>RF:</strong> Move up/down</li>
+                <li><strong>Mouse + Left Click:</strong> Look around</li>
+                <li><strong>Mouse + Right Click:</strong> Zoom</li>
+                <li><strong>Mouse Wheel:</strong> Change distance</li>
+                <li><strong>Space:</strong> Reset camera</li>
+                <li><strong>G/H:</strong> Aperture diameter</li>
+                <li><strong>T/Y:</strong> Focal distance</li>
+                <li><strong>Print Screen:</strong> Export image</li>
+                <li><strong>Escape:</strong> Exit fullscreen</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let Module = {};
+        let canvas = document.getElementById('canvas');
+        let loading = document.getElementById('loading');
+        let infoPanel = document.getElementById('infoPanel');
+        let helpBtn = document.getElementById('helpBtn');
+        let sceneSelect = document.getElementById('sceneSelect');
+        let qualitySelect = document.getElementById('qualitySelect');
+        
+        // Show/hide help panel
+        helpBtn.addEventListener('click', () => {
+            infoPanel.classList.toggle('visible');
+        });
+        
+        // Quality change handler
+        qualitySelect.addEventListener('change', (e) => {
+            const quality = e.target.value;
+            let width, height;
+            
+            switch(quality) {
+                case 'low':
+                    width = 512;
+                    height = 384;
+                    break;
+                case 'medium':
+                    width = 1280;
+                    height = 720;
+                    break;
+                case 'high':
+                    width = 1920;
+                    height = 1080;
+                    break;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Notify the application about resolution change
+            if (Module.ccall) {
+                try {
+                    Module.ccall('resize_window', null, ['number', 'number'], [width, height]);
+                } catch(e) {
+                    console.log('Resize function not available yet');
+                }
+            }
+        });
+        
+        // Scene change handler
+        sceneSelect.addEventListener('change', (e) => {
+            const scene = e.target.value;
+            
+            // Notify the application about scene change
+            if (Module.ccall) {
+                try {
+                    Module.ccall('load_scene', null, ['string'], [scene]);
+                } catch(e) {
+                    console.log('Scene loading function not available yet');
+                }
+            }
+        });
+        
+        // Emscripten module configuration
+        Module = {
+            canvas: canvas,
+            preRun: [],
+            postRun: [
+                function() {
+                    console.log('Pathtracer loaded successfully');
+                    loading.style.display = 'none';
+                }
+            ],
+            print: function(text) {
+                console.log('stdout: ' + text);
+            },
+            printErr: function(text) {
+                console.error('stderr: ' + text);
+            },
+            onRuntimeInitialized: function() {
+                console.log('Runtime initialized');
+            },
+            onAbort: function(what) {
+                console.error('Aborted: ' + what);
+                loading.innerHTML = '<div class="error">Failed to load pathtracer: ' + what + '</div>';
+            }
+        };
+        
+        // Handle canvas focus for keyboard input
+        canvas.addEventListener('click', () => {
+            canvas.focus();
+        });
+        
+        canvas.tabIndex = 1; // Make canvas focusable
+        
+        // Prevent context menu on right click
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        // Handle fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+        
+        // WebGPU support check
+        if (!navigator.gpu) {
+            loading.innerHTML = '<div class="error">WebGPU is not supported in this browser. Please use a WebGPU-enabled browser like Chrome 113+ or Firefox with WebGPU enabled.</div>';
+        }
+    </script>
+    
+    <!-- The Emscripten-generated JavaScript will be loaded here -->
+    <script src="OpenCL_Pathtracer_Web.js"></script>
+</body>
+</html>

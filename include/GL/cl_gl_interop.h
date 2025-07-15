@@ -10,7 +10,7 @@
 #include <GL/user_interaction.h>
 
 // OpenGL window
-GLFWwindow* window;
+extern GLFWwindow* window;
 
 // quad vertices
 const GLfloat quad_vertices[] = { -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0 };
@@ -27,7 +27,7 @@ const std::string tonemapper_filepath = "../../shaders/tonemapper.glsl";
 extern std::string env_map_filepath;
 extern unsigned char encoder;
 
-bool initGL(){
+bool initGL_Desktop(){
 
 	if(glfwInit()) std::cout << "GLFW initialized!" << std::endl;
 	else return false;

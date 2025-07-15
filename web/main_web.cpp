@@ -1,4 +1,3 @@
-
 /**
  * Web version of OpenCL Pathtracer using WebGPU
  * @author Alex Mourtziapis - 2019 (Desktop version)
@@ -14,8 +13,12 @@
 #include <string>
 #include <memory>
 
+#ifndef EMSCRIPTEN
 #include <rapidjson/document.h>
+#endif
+#ifndef EMSCRIPTEN
 #include <rapidjson/istreamwrapper.h>
+#endif
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
@@ -32,14 +35,27 @@
 //----------------------------------------------
 
 constexpr const char *models_directory = "/resources/models/";
+
+#ifndef EMSCRIPTEN
 constexpr const char *kernel_filepath = "/kernels/main.cl";
 constexpr std::size_t RayI_size = 16 * 7;
+#endif
 
 //----------------------------------------------
 
+#include <Camera/camera.h>
+#include <Scene/scene.h>
+#include <Model/model_loader.h>
+#include <BVH/bvh.h>
 
+#ifdef EMSCRIPTEN
 #include "webgpu_renderer.h"
 #include "web_scene.h"
+#else
+#include <GL/cl_gl_interop.h>
+#include <CL/cl_help.h>
+namespace clw = cl_help;
+#endif
 
 using namespace CL_RAYTRACER;
 
@@ -100,7 +116,9 @@ bool initGL() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    #ifndef EMSCRIPTEN
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+    #endif
     
     window = glfwCreateWindow(window_width, window_height, "OpenCL-Pathtracer Web", NULL, NULL);
     if (!window) {
@@ -108,13 +126,16 @@ bool initGL() {
         glfwTerminate();
         return false;
     }
+    
     glfwMakeContextCurrent(window);
     
-    // Set callbacks (implement these as needed)
-    // glfwSetKeyCallback(window, key_callback);
-    // glfwSetMouseButtonCallback(window, mouse_button_callback);
-    // glfwSetCursorPosCallback(window, cursor_pos_callback);
-    // glfwSetScrollCallback(window, scroll_callback);
+    // Set callbacks
+    #ifndef EMSCRIPTEN
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, cursor_pos_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    #endif
     
 #ifdef EMSCRIPTEN
     // Initialize WebGPU renderer

@@ -54,21 +54,21 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/web)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/web)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/web)
 
-# Source files
-FILE(GLOB_RECURSE SRCS "../src/*.cpp")
-FILE(GLOB_RECURSE INC "../include/*.h")
-FILE(GLOB_RECURSE CL_SRCS "../kernels/*.cl")
-FILE(GLOB_RECURSE SHADERS "../shaders/*.glsl")
-FILE(GLOB_RECURSE SCENES "../scenes/*.json")
 
-# Web-specific sources
-FILE(GLOB_RECURSE WEB_SRCS "../src/web/*.cpp")
+# Only include web-specific sources and shared code that is safe for Emscripten/WebGPU
+FILE(GLOB WEB_SRCS "../web/*.cpp")
+FILE(GLOB WEB_INC "../web/*.h")
 
-# Remove desktop-specific main.cpp and add web main
-list(REMOVE_ITEM SRCS "../src/main.cpp")
-list(APPEND SRCS "../src/web/main_web.cpp")
+# Add only the web entry point and web renderer/scene
+add_executable(${TRACER_TARGET} "../web/main_web.cpp" ${WEB_SRCS} ${WEB_INC})
 
-add_executable(${TRACER_TARGET} ${SRCS} ${WEB_SRCS} ${INC} ${CL_SRCS} ${SHADERS} ${SCENES})
+# Ensure output files are placed in the web directory and have correct suffix
+set_target_properties(${TRACER_TARGET} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/web"
+    OUTPUT_NAME "OpenCL_Pathtracer_Web"
+    SUFFIX ".html"
+    LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}"
+)
 
 # C++ Standard
 SET_TARGET_PROPERTIES(${TRACER_TARGET} PROPERTIES

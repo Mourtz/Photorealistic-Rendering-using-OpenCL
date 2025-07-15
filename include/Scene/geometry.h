@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint> 
+#ifndef EMSCRIPTEN
 #include <CL/opencl.hpp>
+#endif
 
 #include <align.h>
 #include <Types/material.h>

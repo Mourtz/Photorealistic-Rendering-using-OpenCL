@@ -1,6 +1,9 @@
 #pragma once
 
+#ifndef EMSCRIPTEN
 #include <CL/opencl.hpp>
+#include <assimp/Importer.hpp> // C++ importer interface
+#endif
 #include <vector>
 #include <array>
 #include <string>
@@ -10,28 +13,33 @@
 #include <memory>
 
 #include <Math/linear_algebra.h>
-#include <assimp/Importer.hpp> // C++ importer interface
 
+
+
+#ifndef EMSCRIPTEN
 struct aiScene;
 struct aiMesh;
 struct aiNode;
+#endif
 
 namespace CL_RAYTRACER
 {
 namespace IO
 {
-	struct Vertex
-	{
-		cl_float3 pos;
-		cl_float3 nor;
 
-		/*
-		cl_float3 tangent;
-		cl_float2 uv;
-		cl_uint id;
-		*/
-		Vertex() {}
-	};
+struct Vertex
+{
+	cl_float3 pos;
+	cl_float3 nor;
+#ifndef EMSCRIPTEN
+	/*
+	cl_float3 tangent;
+	cl_float2 uv;
+	cl_uint id;
+	*/
+#endif
+	Vertex() {}
+};
 
 	struct Face
 	{
@@ -76,7 +84,11 @@ namespace IO
 		bool ImportFromFile(const std::string &filepath);
 		const std::shared_ptr<SceneData> getData() const
 		{
+#ifdef EMSCRIPTEN
+			return nullptr;
+#else
 			return sceneData;
+#endif
 		}
 		const std::unique_ptr<Scene> getFaces();
 
@@ -100,36 +112,38 @@ namespace IO
 		std::vector<cl_float4> getTangents4() const;
 		// std::vector<float> getTangentsAt(unsigned index) const;
 
-	private:
-		void updateSceneData(aiNode *node, const aiScene *scene);
-		const MeshData assimpGetMeshData(const aiMesh *mesh);
+private:
+#ifndef EMSCRIPTEN
+	void updateSceneData(aiNode *node, const aiScene *scene);
+	const MeshData assimpGetMeshData(const aiMesh *mesh);
 
-		// raw data
-		std::shared_ptr<SceneData> sceneData;
+	// raw data
+	std::shared_ptr<SceneData> sceneData;
 
-		// Create an instance of the Importer class
-		Assimp::Importer importer;
+	// Create an instance of the Importer class
+	Assimp::Importer importer;
 
-		// get pointers to data
-		const void *getPositionsPtr(const MeshData &data);
-		const void *getNormalsPtr(const MeshData &data);
-		const void *getTextureCoordsPtr(const MeshData &data);
-		const void *getTangentsPtr(const MeshData &data);
+	// get pointers to data
+	const void *getPositionsPtr(const MeshData &data);
+	const void *getNormalsPtr(const MeshData &data);
+	const void *getTextureCoordsPtr(const MeshData &data);
+	const void *getTangentsPtr(const MeshData &data);
 
-		std::vector<unsigned int> getIndices(const MeshData &data) const;
-		std::vector<cl_uint4> getIndices4(const MeshData &data) const;
+	std::vector<unsigned int> getIndices(const MeshData &data) const;
+	std::vector<cl_uint4> getIndices4(const MeshData &data) const;
 
-		std::vector<float> getPositions(const MeshData &data) const;
-		std::vector<cl_float4> getPositions4(const MeshData &data) const;
+	std::vector<float> getPositions(const MeshData &data) const;
+	std::vector<cl_float4> getPositions4(const MeshData &data) const;
 
-		std::vector<float> getNormals(const MeshData &data) const;
-		std::vector<cl_float4> getNormals4(const MeshData &data) const;
+	std::vector<float> getNormals(const MeshData &data) const;
+	std::vector<cl_float4> getNormals4(const MeshData &data) const;
 
-		std::vector<float> getTextureCoords(const MeshData &data) const;
-		std::vector<cl_float4> getTextureCoords4(const MeshData &data) const;
+	std::vector<float> getTextureCoords(const MeshData &data) const;
+	std::vector<cl_float4> getTextureCoords4(const MeshData &data) const;
 
-		std::vector<float> getTangents(const MeshData &data) const;
-		std::vector<cl_float4> getTangents4(const MeshData &data) const;
+	std::vector<float> getTangents(const MeshData &data) const;
+	std::vector<cl_float4> getTangents4(const MeshData &data) const;
+#endif
 	};
 } // namespace IO
 } // namespace CL_RAYTRACER

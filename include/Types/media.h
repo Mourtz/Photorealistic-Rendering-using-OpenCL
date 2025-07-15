@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef EMSCRIPTEN
 #include <CL/opencl.hpp>
+#endif
 
 struct cl_medium {
 	cl_float density;

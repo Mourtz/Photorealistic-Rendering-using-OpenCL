@@ -2,7 +2,9 @@
 
 #include <vector>
 #include <memory>
+#ifndef EMSCRIPTEN
 #include <CL/cl_platform.h>
+#endif
 
 #include <bvh/v2/bvh.h>
 #include <bvh/v2/vec.h>

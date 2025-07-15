@@ -4,6 +4,10 @@
 #include <align.h>
 #include <Texture/texture.h>
 
+#ifdef EMSCRIPTEN
+typedef uint8_t cl_uchar;
+#endif
+
 //------------------ MATERIAL TYPES ------------------ 
 // Light
 constexpr uint16_t LIGHT		= 1 << 0;
@@ -74,7 +78,7 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 // @ToDo implement SPDs
 
 // wavelengths
-// 0.74 µm, 0.56 µm, 0.38 µm
+// 0.74 ï¿½m, 0.56 ï¿½m, 0.38 ï¿½m
 
 #define BK7_eta	vec4(1.5121f, 1.5180f, 1.5337f)
 

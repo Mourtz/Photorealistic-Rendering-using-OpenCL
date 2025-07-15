@@ -62,6 +62,7 @@ unsigned char encoder = 0;
 cl::Device device;
 cl::Context context;
 cl::CommandQueue queue;
+GLFWwindow* window = nullptr;
 cl::Kernel kernel;
 cl::Program program;
 // cl::Program bvh_program;
@@ -88,6 +89,12 @@ InteractiveCamera *interactiveCamera = nullptr;
 host_scene *scene = nullptr;
 std::string scene_filepath = "../../scenes/cornell.json";
 bool ALPHA_TESTING = false;
+
+bool buffer_reset = false;
+bool render_to_file = false;
+double lastX = 0, lastY = 0;
+bool updateCamera = false;
+int theButtonState = 0;
 
 std::size_t initOpenCLBuffers_Faces(const std::shared_ptr<IO::ModelLoader>& ml, const BVH* bvh)
 {

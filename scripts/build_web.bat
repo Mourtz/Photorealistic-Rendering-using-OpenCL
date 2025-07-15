@@ -36,8 +36,9 @@ if exist "%BUILD_DIR%" (
 mkdir "%BUILD_DIR%"
 cd "%BUILD_DIR%"
 
-echo Configuring with Emscripten...
 
+
+echo Configuring with Emscripten (Ninja)...
 REM Configure with Emscripten
 REM Copy the web-specific CMakeLists to use as main CMakeLists
 copy ..\CMakeLists_web.txt .\CMakeLists.txt
@@ -45,8 +46,25 @@ emcmake cmake -DCMAKE_BUILD_TYPE=Release .
 
 echo Building...
 
+
+
 REM Build the project
-emmake make
+emmake ninja OpenCL_Pathtracer_Web
+
+REM Debug: List contents of build_web and web directories
+echo Listing build_web directory:
+dir /b
+echo Listing web directory:
+dir /b web
+REM Ensure web output directory exists
+if not exist "web" (
+    mkdir "web"
+)
+
+REM Move generated files to web directory (if any)
+for %%f in (*.html *.js *.wasm *.data *.mem) do (
+    if exist "%%f" move "%%f" "web\"
+)
 
 echo Build complete!
 echo Output files are in: %BUILD_DIR%/web/

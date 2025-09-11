@@ -34,6 +34,7 @@ namespace CL_RAYTRACER
         unsigned int first_child_or_primitive;
         unsigned int primitive_count;
         bool is_leaf;
+        unsigned int miss_link;
     };
 
     namespace IO
@@ -50,6 +51,8 @@ namespace CL_RAYTRACER
         std::vector<Tri> triangles;
         std::unique_ptr<Bvh> bvh;
         const std::shared_ptr<IO::ModelLoader> model_loader;
+
+        void calculateMissLinks(std::vector<uint32_t>& miss_links) const;
 
     public:
         BVH(const std::shared_ptr<IO::ModelLoader> &ml);

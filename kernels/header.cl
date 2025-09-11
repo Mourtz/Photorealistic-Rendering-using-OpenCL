@@ -28,6 +28,8 @@
 #define RAD				 0.01745329251994329576923690768489f
 #define E				 2.71828182845904523536028747135266f
 
+#define UINT_MAX		 0xFFFFFFFFU
+
 #define BIT(N)			 ( 0b1<<N )
 #define HALF_BYTE(N)	 ( 0xF<<(N*4) )
 #define BYTE(N)			 ( 0xFF<<(N*8) )
@@ -258,6 +260,7 @@ typedef struct {
 	uint first_child_or_primitive;
 	uint primitive_count;
 	bool isLeaf;
+	uint miss_link;  // Next node to visit if this node is missed
 } new_bvhNode;
 
 //------------- Light Sampler -------------

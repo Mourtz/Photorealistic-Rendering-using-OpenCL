@@ -14,6 +14,7 @@
 #include <bvh/v2/tri.h>
 
 #include <iostream>
+#include <functional>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -86,6 +87,34 @@ namespace CL_RAYTRACER
         std::cout << "[BVH] Tree built in " << t1 - t0 << " seconds" << std::endl;
     }
 
+    void BVH::calculateMissLinks(std::vector<uint32_t>& miss_links) const
+    {
+        miss_links.resize(bvh->nodes.size());
+        
+        // Use a recursive approach to calculate miss links
+        // The miss link points to the next node to visit when the current node is missed
+        std::function<void(uint32_t, uint32_t)> calculateMissLinksRecursive = 
+            [&](uint32_t node_index, uint32_t parent_miss_link) {
+            
+            const Node& node = bvh->nodes[node_index];
+            
+            if (node.is_leaf()) {
+                miss_links[node_index] = parent_miss_link;
+                return;
+            }
+            
+            uint32_t left_child = node.index.first_id();
+            uint32_t right_child = left_child + 1;
+            
+            miss_links[node_index] = parent_miss_link;
+            
+            calculateMissLinksRecursive(left_child, right_child);
+            calculateMissLinksRecursive(right_child, parent_miss_link);
+        };
+        
+        calculateMissLinksRecursive(0, UINT32_MAX);
+    }
+
     std::unique_ptr<std::vector<cl_ulong>> BVH::GetPrimitiveIndices() const {
         std::unique_ptr<std::vector<cl_ulong>> res = std::make_unique<std::vector<cl_ulong>>();
         for(size_t i = 0; i < triangles.size(); ++i){
@@ -97,6 +126,10 @@ namespace CL_RAYTRACER
     std::unique_ptr<std::vector<cl_BVHnode>> BVH::PrepareData() const
     {
         std::unique_ptr<std::vector<cl_BVHnode>> res = std::make_unique<std::vector<cl_BVHnode>>();
+        
+        std::vector<uint32_t> miss_links(bvh->nodes.size());
+        calculateMissLinks(miss_links);
+        
         for (int i = 0; i < bvh->nodes.size(); ++i)
         {
             const Node &node = bvh->nodes[i];
@@ -111,6 +144,7 @@ namespace CL_RAYTRACER
             bb.is_leaf = node.is_leaf();
             bb.first_child_or_primitive = node.index.first_id();
             bb.primitive_count = node.index.prim_count();
+            bb.miss_link = miss_links[i];
             res->push_back(bb);
         }
         return res;

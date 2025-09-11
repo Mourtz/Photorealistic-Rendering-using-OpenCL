@@ -9,6 +9,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <iomanip>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -239,9 +240,14 @@ void initCLKernel()
 
 //---------------------------------------------------------------------------------------
 
-#ifndef NDEBUG
+// Render statistics tracking
 double acc_time(0);
-#endif
+double last_time = 0;
+double fps_timer = 0;
+int frame_count_for_fps = 0;
+double current_fps = 0;
+double peak_fps = 0;
+double min_fps = 999999.0;
 
 void runKernel()
 {
@@ -252,22 +258,34 @@ void runKernel()
 	queue.enqueueAcquireGLObjects(&cl_screens);
 	queue.finish();
 
-#ifndef NDEBUG
 	double tStart = glfwGetTime();
-#endif
 	// launch the kernel
 	queue.enqueueNDRangeKernel(kernel, NULL, global_work_size, local_work_size); // local_work_size
 	queue.finish();
-#ifndef NDEBUG
-#if 1
-	acc_time += (glfwGetTime() - tStart);
-	// display avg render time per frame
-	std::cout << "\rRender Time: " << (acc_time / framenumber) << "s  " << std::flush;
-#else
-	// display render time per frame
-	cout << "\rRender Time: " << (glfwGetTime() - tStart) << "s  " << std::flush;
-#endif
-#endif
+	
+	double frame_time = glfwGetTime() - tStart;
+	acc_time += frame_time;
+	
+	// Calculate FPS every second
+	frame_count_for_fps++;
+	fps_timer += frame_time;
+	
+	if (fps_timer >= 1.0) { // Update every second
+		current_fps = frame_count_for_fps / fps_timer;
+		if (current_fps > peak_fps) peak_fps = current_fps;
+		if (current_fps < min_fps && frame_count_for_fps > 10) min_fps = current_fps; // Ignore first few frames
+		
+		// Display comprehensive render statistics
+		std::cout << "\r[Frame " << framenumber << "] "
+				  << "FPS: " << std::fixed << std::setprecision(1) << current_fps << " | "
+				  << "Frame Time: " << std::setprecision(3) << (frame_time * 1000) << "ms | "
+				  << "Avg: " << (acc_time / framenumber * 1000) << "ms | "
+				  << "Peak FPS: " << std::setprecision(1) << peak_fps << " | "
+				  << "Min FPS: " << (min_fps < 999999.0 ? min_fps : 0) << "    " << std::flush;
+		
+		frame_count_for_fps = 0;
+		fps_timer = 0.0;
+	}
 
 	//Release the VBOs so OpenGL can play with them
 	queue.enqueueReleaseGLObjects(&cl_screens);
@@ -281,9 +299,14 @@ void render()
 
 	if (buffer_reset)
 	{
-#ifndef NDEBUG
+		// Reset render statistics
 		acc_time = 0;
-#endif
+		fps_timer = 0;
+		frame_count_for_fps = 0;
+		current_fps = 0;
+		peak_fps = 0;
+		min_fps = 999999.0;
+		
 		queue.enqueueFillBuffer(cl_flattenI, 0, 0, window_width * window_height * RayI_size);
 		framenumber = 0;
 	}
@@ -459,6 +482,12 @@ int main(int argc, char **argv)
 	// Ensure the global work size is a multiple of local work size
 	if (global_work_size % local_work_size != 0)
 		global_work_size = (global_work_size / local_work_size + 1) * local_work_size;
+
+	std::cout << "Starting render loop..." << std::endl;
+	std::cout << "Resolution: " << window_width << "x" << window_height << " (" << global_work_size << " work items)" << std::endl;
+	std::cout << "Use WASD/RF to move, Arrow keys to look around, Space to reset camera" << std::endl;
+	std::cout << "Press 'P' to save screenshot" << std::endl;
+	std::cout << "--------------------------------------------------------------" << std::endl;
 
 	// render loop
 	while (!glfwWindowShouldClose(window))

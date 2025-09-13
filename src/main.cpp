@@ -188,7 +188,7 @@ void initOpenCL()
 		program = cl::Program(context, clw::kernel::parse(kernel_filepath, scene).c_str());
 
 		// Build the program for the selected device
-		cl_int result = program.build({device}); // "-cl-fast-relaxed-math"
+		cl_int result = program.build({device}, "-cl-fast-relaxed-math"); // Enable faster math operations
 		if (result)
 			std::cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << std::endl;
 		if (result == CL_BUILD_PROGRAM_FAILURE)
@@ -256,12 +256,15 @@ void runKernel()
 
 	//this passes in the vector of VBO buffer objects
 	queue.enqueueAcquireGLObjects(&cl_screens);
-	queue.finish();
+	cl::Event event;
+	queue.enqueueNDRangeKernel(kernel, NULL, global_work_size, local_work_size, NULL, &event);
+	event.wait();
+
 
 	double tStart = glfwGetTime();
 	// launch the kernel
-	queue.enqueueNDRangeKernel(kernel, NULL, global_work_size, local_work_size); // local_work_size
-	queue.finish();
+	queue.enqueueNDRangeKernel(kernel, NULL, global_work_size, local_work_size, NULL, &event);
+	event.wait();
 	
 	double frame_time = glfwGetTime() - tStart;
 	acc_time += frame_time;
@@ -289,7 +292,7 @@ void runKernel()
 
 	//Release the VBOs so OpenGL can play with them
 	queue.enqueueReleaseGLObjects(&cl_screens);
-	queue.finish();
+	event.wait();
 }
 
 //---------------------------------------------------------------------------------------

@@ -2,11 +2,39 @@ cmake_minimum_required(VERSION 3.30)
 
 # Set up CMake variables
 
-# set VCPKG_ROOT per platform
+# Set VCPKG_ROOT to the submodule location
+set(VCPKG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg")
+
+# Bootstrap vcpkg if it hasn't been bootstrapped yet
 if(WIN32)
-    set(VCPKG_ROOT "C:/dev/vcpkg/")
-elseif(UNIX)
-    set(VCPKG_ROOT "/home/user/vcpkg/")
+    set(VCPKG_EXECUTABLE "${VCPKG_ROOT}/vcpkg.exe")
+    set(VCPKG_BOOTSTRAP_SCRIPT "${VCPKG_ROOT}/bootstrap-vcpkg.bat")
+else()
+    set(VCPKG_EXECUTABLE "${VCPKG_ROOT}/vcpkg")
+    set(VCPKG_BOOTSTRAP_SCRIPT "${VCPKG_ROOT}/bootstrap-vcpkg.sh")
+endif()
+
+# Check if vcpkg executable exists, if not, bootstrap it
+if(NOT EXISTS "${VCPKG_EXECUTABLE}")
+    message(STATUS "Bootstrapping vcpkg...")
+    if(WIN32)
+        execute_process(
+            COMMAND "${VCPKG_BOOTSTRAP_SCRIPT}"
+            WORKING_DIRECTORY "${VCPKG_ROOT}"
+            RESULT_VARIABLE VCPKG_BOOTSTRAP_RESULT
+        )
+    else()
+        execute_process(
+            COMMAND "sh" "${VCPKG_BOOTSTRAP_SCRIPT}"
+            WORKING_DIRECTORY "${VCPKG_ROOT}"
+            RESULT_VARIABLE VCPKG_BOOTSTRAP_RESULT
+        )
+    endif()
+    
+    if(NOT VCPKG_BOOTSTRAP_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to bootstrap vcpkg")
+    endif()
+    message(STATUS "vcpkg bootstrapped successfully")
 endif()
 
 set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")

@@ -1,3 +1,6 @@
 [submodule "external/bvh"]
 	path = external/bvh
 	url = https://github.com/madmann91/bvh
+[submodule "external/vcpkg"]
+	path = external/vcpkg
+	url = https://github.com/Microsoft/vcpkg.git

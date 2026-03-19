@@ -1,94 +1,8 @@
 #ifndef __INTERSECT__
 #define __INTERSECT__
 
-/* Find the closest distance to a specific object */
-bool get_dist(float* dist, const Ray* sray, const Mesh* mesh, const Scene* scene, const bool isOBJ){
-	Ray temp_ray = *sray;
-	temp_ray.t = INF;
-
-	if(isOBJ) {
-		traverse(scene, &temp_ray);
-	} 
-#ifdef __SPHERE__
-	else if(mesh->t & SPHERE){ 
-		intersect_sphere(&temp_ray, mesh);
-	} 
-#endif
-#ifdef __SDF__
-	else if(mesh->t & SDF){ 
-		temp_ray.t = fmin(s_map(mesh, temp_ray.origin), temp_ray.t);
-	} 
-#endif
-#ifdef __BOX__
-	else if(mesh->t & BOX){ 
-		intersect_box(mesh, &temp_ray);
-	}
-#endif
-#ifdef __QUAD__
-	else if (mesh->t & QUAD) {
-		intersect_quad(mesh, &temp_ray);
-	}
-#endif
-
-	*dist = temp_ray.t;
-	return temp_ray.t < INF;
-}
-
 //-------------# LIGHTS
 #ifdef LIGHT
-
-/* Hit a specific object and pass the intesection info to the ray */
-bool intersect_mesh(Ray* sray, const Mesh* mesh, const Scene* scene, const bool isOBJ) {
-	const Ray temp_ray = *sray;
-
-	sray->t = INF;
-
-	if (isOBJ) {
-		traverse(scene, sray);
-		sray->pos = sray->origin + sray->dir * sray->t;
-
-		sray->backside = dot(sray->normal, sray->dir) >= 0.0f;
-		sray->normal = sray->backside ? -sray->normal : sray->normal;
-	}
-#ifdef __SPHERE__
-	else if (mesh->t & SPHERE) {
-		if (intersect_sphere(sray, mesh)) {
-			sray->pos = sray->origin + sray->dir * sray->t;
-			sray->normal = fast_normalize(sray->pos - mesh->pos);
-
-			//sray->backside = dot(sray->normal, sray->dir) >= 0.0f;
-			sray->normal = sray->backside ? -sray->normal : sray->normal;
-		}
-	}
-#endif
-#ifdef __SDF__
-	else if (mesh->t & SDF) {
-		sray->t = fmin(s_map(mesh, sray->origin), sray->t);
-		sray->pos = sray->origin + sray->dir * sray->t;
-		sray->normal = calcNormal(mesh, sray->pos);
-
-		sray->backside = dot(sray->normal, sray->dir) >= 0.0f;
-		sray->normal = sray->backside ? -sray->normal : sray->normal;
-	}
-#endif
-#ifdef __BOX__
-	else if (mesh->t & BOX) {
-		intersect_box(mesh, sray);
-		sray->pos = sray->origin + sray->dir * sray->t;
-	}
-#endif
-#ifdef __QUAD__
-	else if (mesh->t & QUAD) {
-		intersect_quad(mesh, sray);
-	}
-#endif
-
-	if (sray->t >= INF) {
-		*sray = temp_ray;
-		return false;
-	}
-	return true;
-}
 
 /* shadow casting */
 bool shadow(
@@ -106,11 +20,9 @@ bool shadow(
 #endif
 
 #ifdef __SPHERE__
-	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
-
-		Mesh sphere = scene->meshes[i]; /* local copy */
-
-		if (intersect_sphere(ray, &sphere)) {
+	const uint max_sphere_iterations = scene->mesh_count[0];
+	for (uint i = 0; i < max_sphere_iterations; ++i) {
+		if (intersect_sphere(ray, scene->mesh_pos[i].xyz, scene->mesh_joker[i].s0)) {
 			if (ray->t < maxDist) return false;
 		}
 	}
@@ -119,31 +31,34 @@ bool shadow(
 #ifdef __SDF__
 	/* if there are any sdfs in the scene raymarch them */
 	if (scene->mesh_count[1]) {
-		if (shadow_sdf(scene->meshes, ray, scene->mesh_count)) {
+		if (shadow_sdf(scene, ray, scene->mesh_count)) {
 			return false;
 		}
 	}
 #endif
 
 	uint fl = scene->mesh_count[0] + scene->mesh_count[1];
-#ifdef __BOX__
-	for (uint i = 0; i < scene->mesh_count[2]; ++i) {
-		
-		Mesh box = scene->meshes[fl++]; /* local copy */
 
-		if (intersect_box(&box, ray)) {
+#ifdef __BOX__
+	const uint max_box_iterations = scene->mesh_count[2];
+	for (uint i = 0; i < max_box_iterations; ++i) {
+		const uint idx = fl++;
+		if (intersect_box(scene->mesh_pos[idx].xyz, scene->mesh_joker[idx].s012, ray)) {
 			if (ray->t < maxDist) return false;
+			break; /* K4: Early termination - shadow hit found */
 		}
 	}
 #endif
 
 #ifdef __QUAD__
-	for (uint i = 0; i < scene->mesh_count[3]; ++i) {
-	
-		Mesh tquad = scene->meshes[fl++]; /* local copy */
-
-		if (intersect_quad(&tquad, ray)) {
+	const uint max_quad_iterations = scene->mesh_count[3];
+	for (uint i = 0; i < max_quad_iterations; ++i, ++fl) {
+		if (intersect_quad(
+			scene->mesh_joker[fl],
+			ray
+		)) {
 			if (ray->t < maxDist) return false;
+			break; /* K4: Early termination - shadow hit found */
 		}
 	}
 #endif
@@ -171,12 +86,9 @@ bool intersect_scene(
 
 #ifdef __SPHERE__
 	for (uint i = 0; i < scene->mesh_count[0]; ++i) {
-
-		Mesh sphere = scene->meshes[i]; /* local copy */
-
-		if (intersect_sphere(ray, &sphere)) {
+		if (intersect_sphere(ray, scene->mesh_pos[i].xyz, scene->mesh_joker[i].s0)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
-			ray->normal = fast_normalize(ray->pos - sphere.pos);
+			ray->normal = fast_normalize(ray->pos - scene->mesh_pos[i].xyz);
 			*mesh_id = i;
 		}
 	}
@@ -185,10 +97,9 @@ bool intersect_scene(
 #ifdef __SDF__
 	/* if there are any sdfs in the scene raymarch them */
 	if (scene->mesh_count[1]) {
-		if (intesect_sdf(scene->meshes, ray, mesh_id, scene->mesh_count)) {
+		if (intersect_sdf(scene, ray, mesh_id, scene->mesh_count)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
-			Mesh sdf = scene->meshes[*mesh_id]; /* local copy */
-			ray->normal = calcNormal(&sdf, ray->pos);
+			ray->normal = calcNormal(scene, (uint)(*mesh_id), ray->pos);
 		}
 	}
 #endif
@@ -196,10 +107,7 @@ bool intersect_scene(
 	uint fl = scene->mesh_count[0] + scene->mesh_count[1];
 #ifdef __BOX__
 	for (uint i = 0; i < scene->mesh_count[2]; ++i) {
-		
-		Mesh box = scene->meshes[fl]; /* local copy */
-
-		if (intersect_box(&box, ray)) {
+		if (intersect_box(scene->mesh_pos[fl].xyz, scene->mesh_joker[fl].s012, ray)) {
 			ray->pos = ray->origin + ray->dir * ray->t;
 			*mesh_id = fl;
 		}
@@ -209,10 +117,10 @@ bool intersect_scene(
 
 #ifdef __QUAD__
 	for (uint i = 0; i < scene->mesh_count[3]; ++i) {
-		
-		Mesh tquad = scene->meshes[fl]; /* local copy */
-
-		if(intersect_quad(&tquad, ray)){
+		if(intersect_quad(
+			scene->mesh_joker[fl],
+			ray
+		)){
 			*mesh_id = fl;
 		}
 		++fl;
@@ -220,11 +128,11 @@ bool intersect_scene(
 #endif
 
 #if defined DIEL && defined ROUGH_DIEL
-	const bool nTrans = scene->meshes[*mesh_id].mat.t & ~(DIEL | ROUGH_DIEL);
+	const bool nTrans = (*mesh_id >= 0) ? (scene->mesh_mats[*mesh_id].t & ~(DIEL | ROUGH_DIEL)) : true;
 #elif defined DIEL
-	const bool nTrans = scene->meshes[*mesh_id].mat.t & ~DIEL;
+	const bool nTrans = (*mesh_id >= 0) ? (scene->mesh_mats[*mesh_id].t & ~DIEL) : true;
 #elif defined ROUGH_DIEL
-	const bool nTrans = scene->meshes[*mesh_id].mat.t & ~ROUGH_DIEL;
+	const bool nTrans = (*mesh_id >= 0) ? (scene->mesh_mats[*mesh_id].t & ~ROUGH_DIEL) : true;
 #else
 	const bool nTrans = true;
 #endif

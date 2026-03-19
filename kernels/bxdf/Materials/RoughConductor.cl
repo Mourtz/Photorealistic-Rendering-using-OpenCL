@@ -2,32 +2,45 @@
 #define __ROUGH_CONDUCTOR__
 
 bool RoughConductorBSDF(
-	Ray* ray, SurfaceScatterEvent* event,
+	const Ray* ray, SurfaceScatterEvent* event,
 	const Material* mat,
 	RNG_SEED_PARAM
 ) {
 	if (event->wi.z <= 0.0f)
 		return false;
-	
+
 	float alpha = roughnessToAlpha(mat->dist, mat->roughness);
 
-	float3 m = Microfacet_sample(mat->dist, alpha, next2D(RNG_SEED_VALUE));
+	float3 m;
+	if (mat->dist & GGX)
+		m = Microfacet_sampleVNDF_GGX(event->wi, alpha, next2D(RNG_SEED_VALUE));
+	else
+		m = Microfacet_sample(mat->dist, alpha, next2D(RNG_SEED_VALUE));
+
 	float wiDotM = dot(event->wi, m);
 	event->wo = 2.0f * wiDotM * m - event->wi;
 	if (wiDotM <= 0.0f || event->wo.z <= 0.0f)
 		return false;
 
-
-	float G = Microfacet_G(mat->dist, alpha, event->wi, event->wo, m);
-	float D = Microfacet_D(mat->dist, alpha, m);
-	float mPdf = Microfacet_pdf(mat->dist, alpha, m);
-	float pdf = mPdf * 0.25f / wiDotM;
-	float weight = wiDotM * G * D / (event->wi.z * mPdf);
-
 	float3 F = conductorReflectance3(mat->eta, mat->k, wiDotM);
 
-	event->pdf = pdf;
-	event->weight = mat->color * F * weight;
+	float pdf, weightFactor;
+	if (mat->dist & GGX) {
+		float G1_wi = Microfacet_G1(GGX, alpha, event->wi, m);
+		float G1_wo = Microfacet_G1(GGX, alpha, event->wo, m);
+		float D     = Microfacet_D(GGX, alpha, m);
+		pdf          = G1_wi * D / (4.0f * event->wi.z);
+		weightFactor = G1_wo;
+	} else {
+		float G    = Microfacet_G(mat->dist, alpha, event->wi, event->wo, m);
+		float D    = Microfacet_D(mat->dist, alpha, m);
+		float mPdf = Microfacet_pdf(mat->dist, alpha, m);
+		pdf          = mPdf * 0.25f / wiDotM;
+		weightFactor = wiDotM * G * D / (event->wi.z * mPdf);
+	}
+
+	event->pdf    = pdf;
+	event->weight = mat->color * F * weightFactor;
 	event->sampledLobe = GlossyReflectionLobe;
 
 	return true;
@@ -53,12 +66,16 @@ float3 RoughConductorBSDF_eval(const SurfaceScatterEvent* event, const Material*
 
 float RoughConductorBSDF_pdf(const SurfaceScatterEvent* event, const Material* mat){
 	if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
-		return 0.0f; 
-	
-	float sampleAlpha = roughnessToAlpha(mat->dist, mat->roughness);
+		return 0.0f;
 
+	float sampleAlpha = roughnessToAlpha(mat->dist, mat->roughness);
 	float3 hr = normalize(event->wi + event->wo);
-	return Microfacet_pdf(mat->dist, sampleAlpha, hr) * 0.25f / dot(event->wi, hr);
+	float wiDotHr = dot(event->wi, hr);
+
+	if (mat->dist & GGX)
+		return Microfacet_pdfVNDF_GGX(sampleAlpha, event->wi, hr);
+	else
+		return Microfacet_pdf(mat->dist, sampleAlpha, hr) * 0.25f / wiDotHr;
 }
 
 #endif

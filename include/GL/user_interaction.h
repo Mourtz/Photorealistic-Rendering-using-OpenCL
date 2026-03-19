@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 #include <Camera/camera.h>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
 
 bool buffer_reset(true);
 bool render_to_file(false);
@@ -15,6 +17,9 @@ extern int window_height;
 // keyboard interaction
 inline void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+	if (ImGui::GetIO().WantCaptureKeyboard) return;
+
 	switch (key) {
 		case GLFW_KEY_ESCAPE: glfwDestroyWindow(window); glfwTerminate(); exit(0);
 		case GLFW_KEY_SPACE: initCamera(); buffer_reset = true; break;
@@ -44,7 +49,8 @@ int theButtonState = 0;
 // camera mouse controls in X and Y direction
 inline void cursor_pos_callback(GLFWwindow* window, double x, double y)
 {
-	if (!updateCamera) return;
+	ImGui_ImplGlfw_CursorPosCallback(window, x, y);
+	if (ImGui::GetIO().WantCaptureMouse || !updateCamera) return;
 
 	double deltaX = lastX - x;
 	double deltaY = lastY - y;
@@ -75,6 +81,8 @@ inline void cursor_pos_callback(GLFWwindow* window, double x, double y)
 
 inline void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
+	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+	if (ImGui::GetIO().WantCaptureMouse) { updateCamera = false; return; }
 	updateCamera = (action == GLFW_PRESS);
 
 	if (updateCamera) {
@@ -85,6 +93,8 @@ inline void mouse_button_callback(GLFWwindow* window, int button, int action, in
 
 inline void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
+	ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+	if (ImGui::GetIO().WantCaptureMouse) return;
 	interactiveCamera->changeRadius(-yoffset * 0.01);
 	buffer_reset = true;
 }

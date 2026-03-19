@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include <CL/opencl.hpp>
 
 #include <rapidjson/document.h>
@@ -52,6 +53,19 @@ struct host_scene
 	cl_bool BUILD_BVH = false;
 	std::string obj_path;
 	Material *obj_mat = new Material();
+
+	std::vector<std::string> texturePaths;
+
+	std::unordered_map<std::string, int> _texIndex;
+
+	int registerTexture(const std::string& path) {
+		auto it = _texIndex.find(path);
+		if (it != _texIndex.end()) return it->second;
+		int idx = (int)texturePaths.size();
+		texturePaths.push_back(path);
+		_texIndex[path] = idx;
+		return idx;
+	}
 
 	void getLights()
 	{
@@ -129,6 +143,12 @@ struct host_scene
 			}
 		}
 		ACTIVE_MATS |= _mat.t;
+
+		if ((*_doc).HasMember("normalMap") && (*_doc)["normalMap"].IsString())
+			_mat.normalMapIdx = registerTexture((*_doc)["normalMap"].GetString());
+
+		if ((*_doc).HasMember("roughnessMap") && (*_doc)["roughnessMap"].IsString())
+			_mat.roughnessMapIdx = registerTexture((*_doc)["roughnessMap"].GetString());
 	}
 
 	void load()

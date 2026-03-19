@@ -2,11 +2,11 @@
 #define __BOX__
 
 /* box intesection */
-bool intersect_box(const Mesh* box, Ray* ray) {
+inline bool intersect_box(const float3 box_pos, const float3 box_half_extents, Ray* ray) {
 	const float3 invDir = native_recip(ray->dir);
 
-	const float3 tmin = (box->pos + box->joker.s012 - ray->origin) * invDir;
-	const float3 tmax = (box->pos - box->joker.s012 - ray->origin) * invDir;
+	const float3 tmin = (box_pos + box_half_extents - ray->origin) * invDir;
+	const float3 tmax = (box_pos - box_half_extents - ray->origin) * invDir;
 
 	const float3 real_min = fmin(tmin, tmax);
 	const float3 real_max = fmax(tmin, tmax);
@@ -17,10 +17,12 @@ bool intersect_box(const Mesh* box, Ray* ray) {
 	if (minmax <= maxmin)
 		return false;
 
+	float3 sign_dir = (float3)(ray->dir.x < 0.0f ? -1.0f : 1.0f, ray->dir.y < 0.0f ? -1.0f : 1.0f, ray->dir.z < 0.0f ? -1.0f : 1.0f);
+
 	if (maxmin > 0.0f) // outside the box
 	{
 		if(maxmin < ray->t){ 
-			ray->normal = -sign(ray->dir) * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
+			ray->normal = -sign_dir * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
 			ray->t = maxmin;
 			ray->backside = false;
 			return true;
@@ -29,7 +31,7 @@ bool intersect_box(const Mesh* box, Ray* ray) {
 	else if (minmax > 0.0f) // inside the box
 	{
 		if (minmax < ray->t) {
-			ray->normal = -sign(ray->dir) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
+			ray->normal = -sign_dir * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
 			ray->t = minmax;
 			ray->backside = true;
 			return true;

@@ -8,43 +8,48 @@
 #FILE:geometry/triangle.cl
 #FILE:geometry/bvh.cl
 
-bool sampleDirect(
-	const Mesh* mesh, 
-	const float3* p, 
-	LightSample* lightSample, 
+bool sampleDirectScene(
+	const Scene* scene,
+	const uint mesh_id,
+	const float3* p,
+	LightSample* lightSample,
 	RNG_SEED_PARAM
 ) {
+	const uint mesh_type = scene->mesh_type[mesh_id];
+
 #ifdef __SPHERE__
-	if (mesh->t & SPHERE)
-#else
-	if (false)
-#endif
-	{
-		return sphere_sampleDirect(mesh, p, lightSample, RNG_SEED_VALUE);
+	if (mesh_type & SPHERE){
+		return sphere_sampleDirect(scene->mesh_pos[mesh_id].xyz, scene->mesh_joker[mesh_id].x, p, lightSample, RNG_SEED_VALUE);
 	}
+#else
+	if (false) {}
+#endif
 #ifdef __QUAD__
-	else if (mesh->t & QUAD) {
-		return quad_sampleDirect(mesh, p, lightSample, RNG_SEED_VALUE);
+	else if (mesh_type & QUAD) {
+		float16 j = scene->mesh_joker[mesh_id];
+		return quad_sampleDirect(j.s012, j.s345, j.s678, j.s9ab, j.sC, p, lightSample, RNG_SEED_VALUE);
 	}
 #endif
 
 	return false;
 }
 
-float directPdf(const Mesh* mesh, const float3* dir, const float3* p) {
+float directPdfScene(const Scene* scene, const uint mesh_id, const float3* dir, const float3* p) {
+	const uint mesh_type = scene->mesh_type[mesh_id];
 	float dPdf = 0.0f;
 
 #ifdef __SPHERE__
-	if (mesh->t & SPHERE)
-#else
-	if (false)
-#endif
+	if (mesh_type & SPHERE)
 	{
-		dPdf = sphere_directPdf(mesh, p);
+		dPdf = sphere_directPdf(scene->mesh_pos[mesh_id].xyz, scene->mesh_joker[mesh_id].x, p);
 	}
+#else
+	if (false){}
+#endif
 #ifdef __QUAD__
-	else if (mesh->t & QUAD) {
-		dPdf = quad_directPdf(dir, mesh, p);
+	else if (mesh_type & QUAD) {
+		float16 j = scene->mesh_joker[mesh_id];
+		dPdf = quad_directPdf(j.s012, j.s9ab, j.sC, dir, p);
 	}
 #endif
 

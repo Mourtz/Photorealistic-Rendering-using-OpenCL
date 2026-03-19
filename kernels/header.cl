@@ -28,7 +28,9 @@
 #define RAD				 0.01745329251994329576923690768489f
 #define E				 2.71828182845904523536028747135266f
 
+#ifndef UINT_MAX
 #define UINT_MAX		 0xFFFFFFFFU
+#endif
 
 #define BIT(N)			 ( 0b1<<N )
 #define HALF_BYTE(N)	 ( 0xF<<(N*4) )
@@ -156,8 +158,10 @@ typedef struct {
 typedef struct {
 	float3 origin;			// origin
 	float3 dir;				// direction
-	float3 normal;			// normal
-	float3 pos;				// position
+	float3 normal;			// shading normal (may be perturbed by normal map)
+	float3 pos;				// world-space hit position
+	float2 uv;				// texture coordinates at hit point
+	float3 tangent;			// geometry tangent (for TBN normal mapping)
 	union {
 		float t;				// dist from origin
 		float dist;
@@ -168,7 +172,6 @@ typedef struct {
 #if VIEW_OPTION == VIEW_STACK_INDEX
 	uchar bvh_stackIndex;
 #endif
-	// int hitFace;			// hitface id
 } Ray;
 
 //------------- Tangent Frame -------------
@@ -233,19 +236,20 @@ typedef struct {
 	ushort t;			// mesh type
 	uchar lobes;		// asigned lobe/s
 	uchar dist;			// distribution
+	int normalMapIdx;
+	int roughnessMapIdx;
 } Material;
 
 //------------- MESH -------------
 
 typedef struct {
-	Material mat;	// assigned material
-	float3 pos;		// position
+	__constant Material* mat;	// assigned material
+	__constant float3* pos;		// position
 	union {			// generic data
-		float16 joker;	
-		float* value;
-		float radius;
+		__constant float16* joker;	
+		__constant float* value;
 	};
-	uchar t;		// type
+	__constant uchar* t;		// type
 } Mesh;
 
 //------------- BVH -------------
@@ -256,11 +260,12 @@ typedef struct {
 } bvhNode;
 
 typedef struct {
-	float bounds[6];
+	float4 bbMin;
+	float4 bbMax;
 	uint first_child_or_primitive;
 	uint primitive_count;
-	bool isLeaf;
-	uint miss_link;  // Next node to visit if this node is missed
+	uint miss_link;                  // stackless: next node index on miss (UINT_MAX = done)
+	uint _pad;                       // 16-byte alignment padding
 } new_bvhNode;
 
 //------------- Light Sampler -------------
@@ -280,13 +285,42 @@ typedef struct {
 #endif
 
 typedef struct {
-	__constant Mesh* meshes;
-	__constant ulong* indices;
+	__constant Material* mesh_mats;
+	__constant float4* mesh_pos;
+	__constant float16* mesh_joker;
+	__constant uchar* mesh_type;
+	__constant uint* indices;
 	__constant new_bvhNode* new_nodes;
 	const uint* mesh_count;
 	__constant float4* vertices;
 	__constant float4* normals;
-	__constant Material* mat;
 } Scene;
+
+//------------- Runtime Render Parameters -------------
+
+typedef uint RenderParams;
+
+#define RP_NEE(p)         (((p) >> 0u) & 1u)
+#define RP_MIS(p)         (((p) >> 1u) & 1u)
+#define RP_RIS(p)         (((p) >> 2u) & 1u)
+#define RP_ENVMAP_IS(p)   (((p) >> 3u) & 1u)
+#define RP_RIS_M(p)       ((int)(((p) >> 8u) & 0x1Fu) + 1)
+
+typedef struct {
+	__global const float* marginalCdf;   // H floats
+	__global const float* conditionalCdf; // W*H floats
+	__global const float* pdf;            // W*H floats (solid-angle normalised)
+	int width;
+	int height;
+} EnvMapIS;
+
+inline Mesh sceneGetMesh(const Scene* scene, const uint idx) {
+	Mesh mesh;
+	mesh.mat = &scene->mesh_mats[idx];
+	mesh.pos = (__constant float3*)(scene->mesh_pos + idx);
+	mesh.joker = scene->mesh_joker + idx;
+	mesh.t = scene->mesh_type + idx;
+	return mesh;
+}
 
 #endif

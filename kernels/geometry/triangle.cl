@@ -9,34 +9,47 @@ bool intersectTriangle(
 	const float3 p1 = scene->vertices[fv+1].xyz;
 	const float3 p2 = scene->vertices[fv+2].xyz;
 
-	const float3 e1 = p0 - p1;
+	const float3 e1 = p1 - p0;
 	const float3 e2 = p2 - p0;
+	
+	const float3 h = cross(ray->dir, e2);
+	float a = dot(e1, h);
+	
+	if (a > -EPS && a < EPS) {
+		return false;
+	}
+	
+	const float f = native_recip(a);
+	
+	const float3 s = ray->origin - p0;
+	float u = f * dot(s, h);
+	
+	if (u < 0.0f || u > 1.0f) {
+		return false;
+	}
+	
+	const float3 q = cross(s, e1);
+	float v = f * dot(ray->dir, q);
+	
+	if (v < 0.0f || u + v > 1.0f) {
+		return false;
+	}
+	
+	const float t = f * dot(e2, q);
+	
+	if (t > EPS && t < ray->t) {
+		ray->t = t;
+#if 1  /* smooth shading */
+		const float3 n0 = scene->normals[fv+0].xyz;
+		const float3 n1 = scene->normals[fv+1].xyz;
+		const float3 n2 = scene->normals[fv+2].xyz;
 
-	const float3 n = cross(e1, e2);
-
-	float3 c = p0 - ray->origin;
-	float3 r = cross(ray->dir, c);
-	float inv_det = native_recip(dot(n, ray->dir));
-
-	float u = dot(r, e2) * inv_det;
-	float v = dot(r, e1) * inv_det;
-	float w = 1.0f - u - v;
-
-	if(u >= 0 && v >= 0 && w >= 0){
-		float t = dot(n, c) * inv_det;
-		if(t > EPS && t < ray->t){
-			ray->t = t;
-#if 1  // smooth shading
-			const float3 n0 = scene->normals[fv+0].xyz;
-			const float3 n1 = scene->normals[fv+1].xyz;
-			const float3 n2 = scene->normals[fv+2].xyz;
-
-			ray->normal = w * n0 + u * n1 + v * n2;
+		float w = 1.0f - u - v;
+		ray->normal = w * n0 + u * n1 + v * n2;
 #else
-			ray->normal = n;
+		ray->normal = e1; /* fallback to edge normal */
 #endif
-			return true;
-		}
+		return true;
 	}
 
 	return false;

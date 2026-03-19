@@ -27,7 +27,7 @@ float LambertBSDF_pdf(const SurfaceScatterEvent* event) {
 	if (event->wi.z <= 0.0f || event->wo.z <= 0.0f)
 		return 0.0f;
 
-	cosineHemispherePdf(event->wo);
+	return cosineHemispherePdf(event->wo);
 }
 
 #endif

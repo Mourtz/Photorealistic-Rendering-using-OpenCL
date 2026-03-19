@@ -172,3 +172,6 @@ target_link_libraries(${TRACER_TARGET} PRIVATE assimp::assimp)
 
 find_package(RapidJSON CONFIG REQUIRED)
 target_link_libraries(${TRACER_TARGET} PRIVATE rapidjson)
+
+find_package(imgui CONFIG REQUIRED)
+target_link_libraries(${TRACER_TARGET} PRIVATE imgui::imgui)

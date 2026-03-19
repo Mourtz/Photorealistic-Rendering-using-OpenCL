@@ -61,40 +61,40 @@ bool BSDF(
 	const Material* mat,
 	RNG_SEED_PARAM
 ) {
+	const ushort matType = mat->t;
 
 #ifdef DIFF
-	if (mat->t & DIFF)
-#else
-	if (false)
-#endif
-	{
+	if (matType & DIFF)	{
 		return LambertBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
+#else
+	if (false){}
+#endif
 #ifdef COND
-	else if (mat->t & COND)
+	else if (matType & COND)
 	{
 		return ConductorBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
 #endif
 #ifdef ROUGH_COND
-	else if (mat->t & ROUGH_COND)
+	else if (matType & ROUGH_COND)
 	{
 		return RoughConductorBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
 #endif
 #ifdef DIEL
-	else if (mat->t & DIEL)
+	else if (matType & DIEL)
 	{
 		return DielectricBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
 #endif
 #ifdef ROUGH_DIEL
-	else if (mat->t & ROUGH_DIEL) {
+	else if (matType & ROUGH_DIEL) {
 		return RoughDielectricBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
 #endif
 #ifdef COAT
-	else if (mat->t & COAT) {
+	else if (matType & COAT) {
 		return CoatBSDF(ray, event, mat, RNG_SEED_VALUE);
 	}
 #endif
@@ -121,21 +121,22 @@ bool BSDF2(
 #if defined(DIEL) || defined(ROUGH_DIEL)
 	else {
 		float eta = 1.0f;
+		const ushort matType = mat->t;
 #ifdef DIEL
-		if (mat->t & DIEL)
+		if (matType & DIEL)
 #else
-		if (false)
+		if (false){}
 #endif
 		{
 			eta = DielectricBSDF_eta(event, mat);
 		}
 #ifdef ROUGH_DIEL
-		else if (mat->t & ROUGH_DIEL) {
+		else if (matType & ROUGH_DIEL) {
 			eta = RoughDielectricBSDF_eta(event, mat);
 		}
 #endif
 
-		event->weight *= pow(eta, 2.0f);
+		event->weight *= eta * eta;
 	}
 #endif
 
@@ -148,40 +149,40 @@ float3 BSDF_eval(
 	const SurfaceScatterEvent* event,
 	const Material* mat
 ) {
+	const ushort matType = mat->t;
 
 #ifdef DIFF
-	if (mat->t & DIFF)
-#else
-	if (false)
-#endif
-	{
+	if (matType & DIFF)	{
 		return LambertBSDF_eval(event, mat);
 	}
+#else
+	if (false){}
+#endif
 #ifdef COND
-	else if (mat->t & COND)
+	else if (matType & COND)
 	{
 		return ConductorBSDF_eval(event, mat);
 	}
 #endif
 #ifdef ROUGH_COND
-	else if (mat->t & ROUGH_COND)
+	else if (matType & ROUGH_COND)
 	{
 		return RoughConductorBSDF_eval(event, mat);
 	}
 #endif
 #ifdef DIEL
-	else if (mat->t & DIEL)
+	else if (matType & DIEL)
 	{
 		return DielectricBSDF_eval(event, mat);
 	}
 #endif
 #ifdef ROUGH_DIEL
-	else if (mat->t & ROUGH_DIEL) {
+	else if (matType & ROUGH_DIEL) {
 		return RoughDielectricBSDF_eval(event, mat);
 	}
 #endif
 #ifdef COAT
-	else if (mat->t & COAT) {
+	else if (matType & COAT) {
 		return CoatBSDF_eval(event, mat);
 	}
 #endif
@@ -204,8 +205,9 @@ float3 BSDF_eval2(
 #if defined(DIEL) || defined(ROUGH_DIEL)
 	else {
 		float eta = 1.0f;
+		const ushort matType = mat->t;
 #ifdef DIEL
-		if (mat->t & DIEL)
+		if (matType & DIEL)
 #else
 		if(false)
 #endif
@@ -213,12 +215,12 @@ float3 BSDF_eval2(
 			eta = DielectricBSDF_eta(event, mat);
 		}
 #ifdef ROUGH_DIEL
-		else if (mat->t & ROUGH_DIEL) {
+		else if (matType & ROUGH_DIEL) {
 			eta = RoughDielectricBSDF_eta(event, mat);
 		}
 #endif
 
-		f *= pow(eta, 2.0f);
+		f *= eta * eta;
 	}
 #endif
 
@@ -232,39 +234,40 @@ float BSDF_pdf(
 	const SurfaceScatterEvent* event,
 	const Material* mat
 ) {
+	const ushort matType = mat->t;
 #ifdef DIFF
-	if (mat->t & DIFF)
-#else
-	if (false)
-#endif
+	if (matType & DIFF)
 	{
 		return LambertBSDF_pdf(event);
 	}
+#else
+	if (false){}
+#endif
 #ifdef COND
-	else if (mat->t & COND)
+	else if (matType & COND)
 	{
 		return ConductorBSDF_pdf(event);
 	}
 #endif
 #ifdef ROUGH_COND
-	else if (mat->t & ROUGH_COND)
+	else if (matType & ROUGH_COND)
 	{
 		return RoughConductorBSDF_pdf(event, mat);
 	}
 #endif
 #ifdef DIEL
-	else if (mat->t & DIEL)
+	else if (matType & DIEL)
 	{
 		return DielectricBSDF_pdf(event, mat);
 	}
 #endif
 #ifdef ROUGH_DIEL
-	else if (mat->t & ROUGH_DIEL) {
+	else if (matType & ROUGH_DIEL) {
 		return RoughDielectricBSDF_pdf(event, mat);
 	}
 #endif
 #ifdef COAT
-	else if (mat->t & COAT) {
+	else if (matType & COAT) {
 		return CoatBSDF_pdf(event, mat);
 	}
 #endif

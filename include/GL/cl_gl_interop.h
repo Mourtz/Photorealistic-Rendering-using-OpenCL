@@ -12,6 +12,9 @@
 // OpenGL window
 GLFWwindow* window;
 
+GLuint g_shaderProgram = 0;
+GLint  g_uExposureLoc  = -1;
+
 // quad vertices
 const GLfloat quad_vertices[] = { -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0 };
 
@@ -110,6 +113,9 @@ bool initGL(){
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertSrc, NULL);
 	glCompileShader(vertexShader);
+	{ GLint ok; glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &ok);
+	  if (!ok) { char buf[512]; glGetShaderInfoLog(vertexShader, 512, nullptr, buf);
+	             std::cerr << "[GL] Vertex shader error:\n" << buf << std::endl; } }
 
 	// Create and compile the fragment shader
 	std::string fragmentStr = utils::ReadFile(tonemapper_filepath);
@@ -118,19 +124,24 @@ bool initGL(){
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSrc, NULL);
 	glCompileShader(fragmentShader);
+	{ GLint ok; glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &ok);
+	  if (!ok) { char buf[512]; glGetShaderInfoLog(fragmentShader, 512, nullptr, buf);
+	             std::cerr << "[GL] Fragment shader error:\n" << buf << std::endl; } }
 
 	// Link the vertex and fragment shader into a shader program
-	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	glUseProgram(shaderProgram);
+	g_shaderProgram = glCreateProgram();
+	glAttachShader(g_shaderProgram, vertexShader);
+	glAttachShader(g_shaderProgram, fragmentShader);
+	glLinkProgram(g_shaderProgram);
+	glUseProgram(g_shaderProgram);
 
-	glUniform1i(glGetUniformLocation(shaderProgram, "u_tex"), 0);
-	glUniform2f(glGetUniformLocation(shaderProgram, "u_resolution"), window_width, window_height);
+	glUniform1i(glGetUniformLocation(g_shaderProgram, "u_tex"), 0);
+	glUniform2f(glGetUniformLocation(g_shaderProgram, "u_resolution"), window_width, window_height);
+	g_uExposureLoc = glGetUniformLocation(g_shaderProgram, "u_exposure");
+	glUniform1f(g_uExposureLoc, 1.0f);
 
 	// load vbo
-	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+	GLint posAttrib = glGetAttribLocation(g_shaderProgram, "position");
 	glEnableVertexAttribArray(posAttrib);
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 

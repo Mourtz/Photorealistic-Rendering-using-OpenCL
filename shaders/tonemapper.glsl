@@ -4,6 +4,7 @@ out vec4 FragColor;
 
 uniform sampler2D u_tex;
 uniform vec2 u_resolution;
+uniform float u_exposure;
 
 // linear white point
 const float W = 1.2;
@@ -46,7 +47,7 @@ vec3 ca(sampler2D t, vec2 UV, vec4 sampl) {
 
 void main()
 {
-	const float brightness = 1.0;
+	float brightness = u_exposure;
 	vec2 pp = gl_FragCoord.xy / u_resolution.xy;
 	vec2 p = 1. - 2. * gl_FragCoord.xy / u_resolution.xy;
 

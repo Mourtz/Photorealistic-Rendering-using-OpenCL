@@ -6,6 +6,7 @@
     "glfw3",
     "opencl",
     "rapidjson",
-    "opengl"
+    "opengl",
+    { "name": "imgui", "features": ["glfw-binding", "opengl3-binding"] }
   ]
 }

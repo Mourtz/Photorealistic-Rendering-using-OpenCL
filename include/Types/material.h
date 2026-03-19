@@ -74,7 +74,7 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 // @ToDo implement SPDs
 
 // wavelengths
-// 0.74 µm, 0.56 µm, 0.38 µm
+// 0.74 ï¿½m, 0.56 ï¿½m, 0.38 ï¿½m
 
 #define BK7_eta	vec4(1.5121f, 1.5180f, 1.5337f)
 
@@ -101,12 +101,14 @@ struct Material
 	cl_ushort t;
 	cl_uchar lobes;
 	cl_uchar dist;
+	int normalMapIdx    = -1;
+	int roughnessMapIdx = -1;
 
 	Material() : color(vec4(1.0f, 1.0f, 1.0f, 0.0f)),
 		eta(Au_eta),
 		k(Au_k),
 		roughness(0.0f),
-		t(DIFF), 
+		t(DIFF),
 		lobes(DiffuseLobe),
 		dist(BECKMANN) {}
 
@@ -114,7 +116,7 @@ struct Material
 		eta(Au_eta),
 		k(Au_k),
 		roughness(_roughness),
-		t(_t), 
+		t(_t),
 		lobes(NullLobe),
 		dist(BECKMANN) {}
 };

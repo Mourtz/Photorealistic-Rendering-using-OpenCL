@@ -5,30 +5,30 @@
 #define traverseShadows traverseShadowsStackless
 #define traverse traverseStackless
 
+typedef struct {
+	float3 invDir;
+	float3 scaled_origin;  // = -ray->origin * invDir
+} TraversalRayData;
 
-float intersectAxis(int axis, const float p, const Ray* ray){
-	const float3 invDir = native_recip(ray->dir);
-	const float3 scaled_origin = -ray->origin*invDir;
-
-	return fma(p, ((float*)(&invDir))[axis], ((float*)(&scaled_origin))[axis]);
+inline TraversalRayData makeTraversalRayData(const Ray* ray) {
+	TraversalRayData data;
+	data.invDir = native_recip(ray->dir);
+	data.scaled_origin = -ray->origin * data.invDir;
+	return data;
 }
 
-float2 intersectNode(__constant new_bvhNode* node, const Ray* ray){
-	int3 octant = (int3)(ray->dir.x < 0.0f, ray->dir.y < 0.0f, ray->dir.z < 0.0f);
-	
-	float entry0 = intersectAxis(0, node->bounds[0 * 2 + octant.x], ray);
-	float entry1 = intersectAxis(1, node->bounds[1 * 2 + octant.y], ray);
-	float entry2 = intersectAxis(2, node->bounds[2 * 2 + octant.z], ray);
+inline float2 intersectNode(__constant new_bvhNode* node, const Ray* ray, const TraversalRayData* data) {
+	float3 t1 = fma(node->bbMin.xyz, data->invDir, data->scaled_origin);
+	float3 t2 = fma(node->bbMax.xyz, data->invDir, data->scaled_origin);
 
-	float exit0 = intersectAxis(0, node->bounds[0 * 2 + 1 - octant.x], ray);
-	float exit1 = intersectAxis(1, node->bounds[1 * 2 + 1 - octant.y], ray);
-	float exit2 = intersectAxis(2, node->bounds[2 * 2 + 1 - octant.z], ray);
+	float3 tmin3 = fmin(t1, t2);
+	float3 tmax3 = fmax(t1, t2);
 
 	return (float2)(
-		fmax(entry0, fmax(entry1, fmax(entry2, EPS))),
-		fmin(exit0, fmin(exit1, fmin(exit2, ray->t)))
+		fmax(fmax(tmin3.x, tmin3.y), fmax(tmin3.z, EPS)),
+		fmin(fmin(tmax3.x, tmax3.y), fmin(tmax3.z, ray->t))
 	);
-} 
+}
 
 bool intersectLeafShadows(const Scene* scene, 
 	__constant new_bvhNode* node, 
@@ -46,20 +46,19 @@ bool intersectLeafShadows(const Scene* scene,
 
 bool traverseShadowsStackless(const Scene* scene, Ray* ray) {
 	uint current_node_idx = 0;
-	__constant new_bvhNode* current_node = &scene->new_nodes[current_node_idx];
-	
+	__constant new_bvhNode* current_node;
+	const TraversalRayData rayData = makeTraversalRayData(ray);
+
 	while(current_node_idx != UINT_MAX) {
 		current_node = &scene->new_nodes[current_node_idx];
-		
-		float2 t_bounds = intersectNode(current_node, ray);
-		
-        // Miss - follow miss link
+		float2 t_bounds = intersectNode(current_node, ray, &rayData);
+
 		if(t_bounds.x > t_bounds.y) {
 			current_node_idx = current_node->miss_link;
 			continue;
 		}
-		
-		if(current_node->isLeaf) {
+
+		if(current_node->primitive_count != 0) {
 			if(intersectLeafShadows(scene, current_node, ray)) {
 				return true;
 			}
@@ -68,8 +67,8 @@ bool traverseShadowsStackless(const Scene* scene, Ray* ray) {
 			current_node_idx = current_node->first_child_or_primitive;
 		}
 	}
-	
-	return false; // No intersection found
+
+	return false;
 }
 
 bool intersectLeaf(const Scene* scene, 
@@ -90,19 +89,19 @@ bool traverseStackless(const Scene* scene, Ray* ray) {
 	uint current_node_idx = 0;
 	__constant new_bvhNode* current_node;
 	bool found_intersection = false;
-	
+	const TraversalRayData rayData = makeTraversalRayData(ray);
+
 	while(current_node_idx != UINT_MAX) {
 		current_node = &scene->new_nodes[current_node_idx];
-		
-		float2 t_bounds = intersectNode(current_node, ray);
-		
-        // Miss - follow miss link
+
+		float2 t_bounds = intersectNode(current_node, ray, &rayData);
+
 		if(t_bounds.x > t_bounds.y) {
 			current_node_idx = current_node->miss_link;
 			continue;
 		}
-		
-		if(current_node->isLeaf) {
+
+		if(current_node->primitive_count != 0) {
 			if(intersectLeaf(scene, current_node, ray)) {
 				found_intersection = true;
 			}
@@ -111,7 +110,7 @@ bool traverseStackless(const Scene* scene, Ray* ray) {
 			current_node_idx = current_node->first_child_or_primitive;
 		}
 	}
-	
+
 	return found_intersection;
 }
 

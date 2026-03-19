@@ -115,10 +115,10 @@ namespace CL_RAYTRACER
         calculateMissLinksRecursive(0, UINT32_MAX);
     }
 
-    std::unique_ptr<std::vector<cl_ulong>> BVH::GetPrimitiveIndices() const {
-        std::unique_ptr<std::vector<cl_ulong>> res = std::make_unique<std::vector<cl_ulong>>();
+    std::unique_ptr<std::vector<cl_uint>> BVH::GetPrimitiveIndices() const {
+        std::unique_ptr<std::vector<cl_uint>> res = std::make_unique<std::vector<cl_uint>>();
         for(size_t i = 0; i < triangles.size(); ++i){
-            res->emplace_back(bvh->prim_ids[i]);
+            res->emplace_back(static_cast<cl_uint>(bvh->prim_ids[i]));
         }
         return res;
     }
@@ -135,16 +135,19 @@ namespace CL_RAYTRACER
             const Node &node = bvh->nodes[i];
             
             cl_BVHnode bb;
-            bb.bounds[0] = node.bounds[0];
-            bb.bounds[1] = node.bounds[1];
-            bb.bounds[2] = node.bounds[2];
-            bb.bounds[3] = node.bounds[3];
-            bb.bounds[4] = node.bounds[4];
-            bb.bounds[5] = node.bounds[5];
-            bb.is_leaf = node.is_leaf();
+            // bvh/v2 stores bounds as [minX, maxX, minY, maxY, minZ, maxZ]
+            bb.bbMin[0] = node.bounds[0]; // minX
+            bb.bbMin[1] = node.bounds[2]; // minY
+            bb.bbMin[2] = node.bounds[4]; // minZ
+            bb.bbMin[3] = 0.0f;
+            bb.bbMax[0] = node.bounds[1]; // maxX
+            bb.bbMax[1] = node.bounds[3]; // maxY
+            bb.bbMax[2] = node.bounds[5]; // maxZ
+            bb.bbMax[3] = 0.0f;
             bb.first_child_or_primitive = node.index.first_id();
-            bb.primitive_count = node.index.prim_count();
+            bb.primitive_count = node.index.prim_count(); // 0 = interior, >0 = leaf
             bb.miss_link = miss_links[i];
+            bb._pad = 0;
             res->push_back(bb);
         }
         return res;

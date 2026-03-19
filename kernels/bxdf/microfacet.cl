@@ -107,4 +107,31 @@ float3 Microfacet_sample(int dist, float alpha, float2 xi)
     return (float3)(cos(phi) * r, sin(phi) * r, cosTheta);
 }
 
+float3 Microfacet_sampleVNDF_GGX(float3 wi, float alpha, float2 xi)
+{
+    float3 Vh = fast_normalize((float3)(alpha * wi.x, alpha * wi.y, wi.z));
+
+    float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    float3 T1 = (lensq > 0.0f) ? (float3)(-Vh.y, Vh.x, 0.0f) * native_rsqrt(lensq)
+                                 : (float3)(1.0f, 0.0f, 0.0f);
+    float3 T2 = cross(Vh, T1);
+
+    float r   = sqrt(xi.x);
+    float phi = TWO_PI * xi.y;
+    float t1  = r * cos(phi);
+    float t2  = r * sin(phi);
+    float s   = 0.5f * (1.0f + Vh.z);
+    t2 = fma(1.0f - s, sqrt(fmax(1.0f - t1 * t1, 0.0f)), s * t2);
+
+    float3 Nh = fma(t1, T1, fma(t2, T2, sqrt(fmax(0.0f, 1.0f - t1*t1 - t2*t2)) * Vh));
+    return fast_normalize((float3)(alpha * Nh.x, alpha * Nh.y, fmax(0.0f, Nh.z)));
+}
+
+float Microfacet_pdfVNDF_GGX(float alpha, float3 wi, float3 m)
+{
+    float G1 = Microfacet_G1(GGX, alpha, wi, m);
+    float D  = Microfacet_D(GGX, alpha, m);
+    return G1 * D / (4.0f * fmax(wi.z, 1e-6f));
+}
+
 #endif

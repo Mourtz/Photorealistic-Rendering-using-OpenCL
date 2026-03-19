@@ -30,11 +30,12 @@ namespace CL_RAYTRACER
     struct cl_Mesh;
     struct cl_BVHnode
     {
-        float bounds[6];
-        unsigned int first_child_or_primitive;
-        unsigned int primitive_count;
-        bool is_leaf;
-        unsigned int miss_link;
+        float bbMin[4];                        // xyz = AABB min, w unused
+        float bbMax[4];                        // xyz = AABB max, w unused
+        unsigned int first_child_or_primitive; // interior: left-child index; leaf: first primitive
+        unsigned int primitive_count;          // 0 = interior node, >0 = leaf
+        unsigned int miss_link;                // stackless traversal: next node on miss
+        unsigned int _pad;                     // keep 16-byte alignment
     };
 
     namespace IO
@@ -60,7 +61,7 @@ namespace CL_RAYTRACER
 
         void buildTree(const std::shared_ptr<IO::ModelLoader> &ml);
 
-        std::unique_ptr<std::vector<cl_ulong>> GetPrimitiveIndices() const;
+        std::unique_ptr<std::vector<cl_uint>> GetPrimitiveIndices() const;
 
         std::unique_ptr<std::vector<cl_BVHnode>> PrepareData() const;
     };

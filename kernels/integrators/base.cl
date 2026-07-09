@@ -43,7 +43,7 @@ float selectLight_WRS(
 			uint light_id = LIGHT_INDICES[idx];
 
 			// Target function: luminance of emission (proposal is uniform = 1/LIGHT_COUNT)
-			float3 em  = scene->mesh_mats[light_id].color;
+			float3 em  = loadMaterial(scene, light_id).color;
 			float tgt  = 0.2126f * em.x + 0.7152f * em.y + 0.0722f * em.z;
 			float w    = tgt * (float)LIGHT_COUNT; // w_i = tgt / (1/LIGHT_COUNT)
 
@@ -103,7 +103,7 @@ float3 bsdfSample(
 		if (intersect_scene(ray, &mesh_id, scene)) {
 			if (mesh_id < 0)
 				return (float3)(0.0f);
-			const Material lightMat = scene->mesh_mats[mesh_id];
+			const Material lightMat = loadMaterial(scene, mesh_id);
 
 			if (lightMat.t & LIGHT) {
 				float neePdf = directPdfScene(scene, (uint)mesh_id, &ray->dir, &ray->pos) * INV_LIGHT_COUNT;
@@ -144,7 +144,7 @@ float3 lightSample(
 ) {
 	uint light_id;
 	float W_ris = selectLight_WRS(scene, params, &light_id, RNG_SEED_VALUE);
-	const Material lightMat = scene->mesh_mats[light_id];
+	const Material lightMat = loadMaterial(scene, light_id);
 
 	LightSample rec;
 	if (!sampleDirectScene(scene, light_id, &ray->pos, &rec, RNG_SEED_VALUE))
@@ -259,7 +259,7 @@ float3 volumeLightSample(
 ){
 	uint light_id;
 	float W_ris = selectLight_WRS(scene, params, &light_id, RNG_SEED_VALUE);
-	const Material lightMat = scene->mesh_mats[light_id];
+	const Material lightMat = loadMaterial(scene, light_id);
 
 	LightSample rec;
 	if(!sampleDirectScene(scene, light_id, &ray->pos, &rec, RNG_SEED_VALUE))
@@ -309,7 +309,7 @@ float3 volumePhaseSample(
 		if (mesh_id < 0)
 			return (float3)(0.0f);
 
-		const Material lightMat = scene->mesh_mats[mesh_id];
+		const Material lightMat = loadMaterial(scene, mesh_id);
 
 		if (lightMat.t & LIGHT) {
 			float3 contribution = native_exp(-medium->sigmaT * sRay.t) * lightMat.color * phaseSample->weight;

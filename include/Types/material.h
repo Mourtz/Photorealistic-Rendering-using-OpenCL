@@ -3,6 +3,7 @@
 #include <cstdint> 
 #include <align.h>
 #include <Texture/texture.h>
+#include <vector>
 
 //------------------ MATERIAL TYPES ------------------ 
 // Light
@@ -74,7 +75,7 @@ constexpr cl_uchar TEX_4		= 1 << 3;
 // @ToDo implement SPDs
 
 // wavelengths
-// 0.74 �m, 0.56 �m, 0.38 �m
+// 0.74 μm, 0.56 μm, 0.38 μm
 
 #define BK7_eta	vec4(1.5121f, 1.5180f, 1.5337f)
 
@@ -119,4 +120,55 @@ struct Material
 		t(_t),
 		lobes(NullLobe),
 		dist(BECKMANN) {}
+};
+
+struct MaterialSoA
+{
+    std::vector<vec4> color;           // always used: albedo / emission
+    std::vector<vec4> eta;             // only DIEL/ROUGH_DIEL need this
+    std::vector<vec4> k;               // only COND/ROUGH_COND need this
+    std::vector<float> roughness;      // all non-light materials
+    std::vector<uint16_t> t;           // material type flags
+    std::vector<cl_uchar> lobes;       // lobe flags
+    std::vector<cl_uchar> dist;        // distribution
+    std::vector<int> normalMapIdx;     // texture slot or -1
+    std::vector<int> roughnessMapIdx;  // texture slot or -1
+
+    void reserve(size_t n) {
+        color.reserve(n);
+        eta.reserve(n);
+        k.reserve(n);
+        roughness.reserve(n);
+        t.reserve(n);
+        lobes.reserve(n);
+        dist.reserve(n);
+        normalMapIdx.reserve(n);
+        roughnessMapIdx.reserve(n);
+    }
+
+    void push_back(const Material& m) {
+        color.push_back(m.color);
+        eta.push_back(m.eta);
+        k.push_back(m.k);
+        roughness.push_back(m.roughness);
+        t.push_back(m.t);
+        lobes.push_back(m.lobes);
+        dist.push_back(m.dist);
+        normalMapIdx.push_back(m.normalMapIdx);
+        roughnessMapIdx.push_back(m.roughnessMapIdx);
+    }
+
+    void push_back(vec4 _color, vec4 _eta, vec4 _k, float _roughness, uint16_t _t, cl_uchar _lobes, cl_uchar _dist, int _normalMapIdx, int _roughnessMapIdx) {
+        color.push_back(_color);
+        eta.push_back(_eta);
+        k.push_back(_k);
+        roughness.push_back(_roughness);
+        t.push_back(_t);
+        lobes.push_back(_lobes);
+        dist.push_back(_dist);
+        normalMapIdx.push_back(_normalMapIdx);
+        roughnessMapIdx.push_back(_roughnessMapIdx);
+    }
+
+    size_t size() const { return color.size(); }
 };

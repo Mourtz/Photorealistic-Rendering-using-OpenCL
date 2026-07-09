@@ -46,11 +46,10 @@ bool intersectLeafShadows(const Scene* scene,
 
 bool traverseShadowsStackless(const Scene* scene, Ray* ray) {
 	uint current_node_idx = 0;
-	__constant new_bvhNode* current_node;
 	const TraversalRayData rayData = makeTraversalRayData(ray);
 
 	while(current_node_idx != UINT_MAX) {
-		current_node = &scene->new_nodes[current_node_idx];
+		__constant new_bvhNode* current_node = &scene->new_nodes[current_node_idx];
 		float2 t_bounds = intersectNode(current_node, ray, &rayData);
 
 		if(t_bounds.x > t_bounds.y) {
@@ -87,12 +86,11 @@ bool intersectLeaf(const Scene* scene,
 
 bool traverseStackless(const Scene* scene, Ray* ray) {
 	uint current_node_idx = 0;
-	__constant new_bvhNode* current_node;
 	bool found_intersection = false;
 	const TraversalRayData rayData = makeTraversalRayData(ray);
 
 	while(current_node_idx != UINT_MAX) {
-		current_node = &scene->new_nodes[current_node_idx];
+		__constant new_bvhNode* current_node = &scene->new_nodes[current_node_idx];
 
 		float2 t_bounds = intersectNode(current_node, ray, &rayData);
 

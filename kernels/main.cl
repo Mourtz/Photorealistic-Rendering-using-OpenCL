@@ -64,8 +64,18 @@ typedef struct {
 #FILE:integrators/pathtracing.cl
 
 __kernel void render_kernel(
+	/* scene material SoA — each field is a separate coalesced buffer */
+	__constant float4* mat_color,
+	__constant float4* mat_eta,
+	__constant float4* mat_k,
+	__constant float* mat_roughness,
+	__constant ushort* mat_t,
+	__constant uchar* mat_lobes,
+	__constant uchar* mat_dist,
+	__constant int* mat_normalMapIdx,
+	__constant int* mat_roughnessMapIdx,
+
 	/* scene mesh SoA */
-	__constant Material* mesh_mats,
 	__constant float4* mesh_pos,
 	__constant float16* mesh_joker,
 	__constant uchar* mesh_type,
@@ -187,9 +197,9 @@ __kernel void render_kernel(
 	}
 	RLH* rlh = &rlh_val;
 
-	const Scene scene = { mesh_mats, mesh_pos, mesh_joker, mesh_type, primitive_indices, new_bvh_node, (const uint* )&mesh_count, vertices, normals };
+		const Scene scene = { mat_color, mat_eta, mat_k, mat_roughness, mat_t, mat_lobes, mat_dist, mat_normalMapIdx, mat_roughnessMapIdx, mesh_pos, mesh_joker, mesh_type, primitive_indices, new_bvh_node, (const uint* )&mesh_count, vertices, normals };
 
-	const EnvMapIS envIS = { env_marginal_cdf, env_conditional_cdf, env_pdf, env_map_width, env_map_height };
+		const EnvMapIS envIS = { env_marginal_cdf, env_conditional_cdf, env_pdf, env_map_width, env_map_height };
 
 #if defined(VIEW_OPTION)
 #if VIEW_OPTION == VIEW_RESULTS

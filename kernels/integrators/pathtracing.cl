@@ -34,7 +34,7 @@ float4 radiance(
 
 	const Mesh mesh = sceneGetMesh(scene, mesh_id);
 
-	Material mat = (mesh_id + 1) ? scene->mesh_mats[mesh_id] : scene->mesh_mats[scene->mesh_count[7]];
+	Material mat = (mesh_id + 1) ? loadMaterial(scene, mesh_id) : loadMaterial(scene, scene->mesh_count[7]);
 
 #ifdef GLOBAL_MEDIUM
 	MediumSample mediumSample;

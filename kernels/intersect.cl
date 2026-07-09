@@ -128,11 +128,11 @@ bool intersect_scene(
 #endif
 
 #if defined DIEL && defined ROUGH_DIEL
-	const bool nTrans = (*mesh_id >= 0) ? (scene->mesh_mats[*mesh_id].t & ~(DIEL | ROUGH_DIEL)) : true;
+	const bool nTrans = (*mesh_id >= 0) ? (loadMaterial(scene, *mesh_id).t & ~(DIEL | ROUGH_DIEL)) : true;
 #elif defined DIEL
-	const bool nTrans = (*mesh_id >= 0) ? (scene->mesh_mats[*mesh_id].t & ~DIEL) : true;
+	const bool nTrans = (*mesh_id >= 0) ? (loadMaterial(scene, *mesh_id).t & ~DIEL) : true;
 #elif defined ROUGH_DIEL
-	const bool nTrans = (*mesh_id >= 0) ? (scene->mesh_mats[*mesh_id].t & ~ROUGH_DIEL) : true;
+	const bool nTrans = (*mesh_id >= 0) ? (loadMaterial(scene, *mesh_id).t & ~ROUGH_DIEL) : true;
 #else
 	const bool nTrans = true;
 #endif

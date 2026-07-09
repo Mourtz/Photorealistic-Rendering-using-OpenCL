@@ -65,19 +65,31 @@ __Prtsc__ - Export
 
 ## How To Build
 
-### Windows
+### Prerequisites
+- CMake 3.30 or later
+- A C++20 compatible compiler (GCC, Clang, or MSVC)
+- Git
+
+### Clone the Repository
 ```bash
-git clone https://github.com/microsoft/vcpkg.git
-move vcpkg C:/dev
-cd C:/dev/vcpkg && bootstrap-vcpkg.bat
+git clone --recursive https://github.com/Mourtz/Photorealistic-Rendering-using-OpenCL.git
+cd Photorealistic-Rendering-using-OpenCL
 ```
 
-### Linux
+If you have already cloned the repository without this flag, run:
 ```bash
-git clone https://github.com/microsoft/vcpkg.git
-mv vcpkg /home/user
-cd /home/user/vcpkg && ./bootstrap-vcpkg.sh
+git submodule update --init --recursive
 ```
+
+### Build
+```bash
+cmake -B build
+cmake --build build --config Release
+```
+
+The binary will be located in `build/bin/`.
+
+> vcpkg is used as a package manager via manifest mode (`vcpkg.json`). Dependencies are resolved automatically during the CMake configure step. The first build may take some time as vcpkg downloads and builds required libraries.
 
 ## Credits
 [tunabrain](https://twitter.com/tunabrain) - Benedikt Bitterli\

@@ -219,31 +219,9 @@ typedef struct {
 	TangentFrame frame;
 } SurfaceScatterEvent;
 
-//------------- Material -------------
-
-typedef struct {
-	union {
-		float3 color;
-		float3 emission;
-		float3 albedo;
-	};
-	union {
-		float3 eta;
-		float3 eta_t;
-	};
-	float3 k;
-	float roughness;	// surface roughness
-	ushort t;			// mesh type
-	uchar lobes;		// asigned lobe/s
-	uchar dist;			// distribution
-	int normalMapIdx;
-	int roughnessMapIdx;
-} Material;
-
 //------------- MESH -------------
 
 typedef struct {
-	__constant Material* mat;	// assigned material
 	__constant float3* pos;		// position
 	union {			// generic data
 		__constant float16* joker;	
@@ -285,7 +263,17 @@ typedef struct {
 #endif
 
 typedef struct {
-	__constant Material* mesh_mats;
+    /* SoA material arrays */
+    __constant float4* mat_color;
+    __constant float4* mat_eta;
+    __constant float4* mat_k;
+    __constant float* mat_roughness;
+    __constant ushort* mat_t;
+    __constant uchar* mat_lobes;
+    __constant uchar* mat_dist;
+    __constant int* mat_normalMapIdx;
+    __constant int* mat_roughnessMapIdx;
+
 	__constant float4* mesh_pos;
 	__constant float16* mesh_joker;
 	__constant uchar* mesh_type;
@@ -316,11 +304,45 @@ typedef struct {
 
 inline Mesh sceneGetMesh(const Scene* scene, const uint idx) {
 	Mesh mesh;
-	mesh.mat = &scene->mesh_mats[idx];
 	mesh.pos = (__constant float3*)(scene->mesh_pos + idx);
 	mesh.joker = scene->mesh_joker + idx;
 	mesh.t = scene->mesh_type + idx;
 	return mesh;
+}
+
+/* Inline helper: load material fields from SoA at index into a local struct.
+ * Callers use this to get a Material-like view without AoS memory access. */
+typedef struct {
+    union {
+        float3 color;           // albedo / emission (always used)
+        float3 albedo;          // alias for BSDF kernels
+        float3 emission;        // alias for light materials
+    };
+    union {
+        float3 eta;             // refractive index (DIEL/ROUGH_DIEL only)
+        float3 eta_t;           // alias used in dielectric/conductor kernels
+    };
+    float3 k;               // extinction coeff (COND/ROUGH_COND only)
+    float roughness;
+    ushort t;
+    uchar lobes;
+    uchar dist;
+    int normalMapIdx;
+    int roughnessMapIdx;
+} Material;
+
+inline Material loadMaterial(const Scene* scene, const uint idx) {
+    Material m;
+    m.color         = scene->mat_color[idx].xyz;
+    m.eta           = scene->mat_eta[idx].xyz;
+    m.k             = scene->mat_k[idx].xyz;
+    m.roughness     = scene->mat_roughness[idx];
+    m.t             = scene->mat_t[idx];
+    m.lobes         = scene->mat_lobes[idx];
+    m.dist          = scene->mat_dist[idx];
+    m.normalMapIdx  = scene->mat_normalMapIdx[idx];
+    m.roughnessMapIdx = scene->mat_roughnessMapIdx[idx];
+    return m;
 }
 
 #endif

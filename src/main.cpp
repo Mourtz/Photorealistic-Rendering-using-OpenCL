@@ -67,7 +67,16 @@ cl::Kernel kernel;
 cl::Program program;
 // cl::Program bvh_program;
 cl::Buffer cl_output;
-cl::Buffer mBufMeshMatSOA;
+cl::Buffer mBufMeshMatColor;     // SoA: material color (vec4)
+cl::Buffer mBufMeshMatEta;       // SoA: material eta (float4)
+cl::Buffer mBufMeshMatK;         // SoA: material k (float4)
+cl::Buffer mBufMeshMatRoughness; // SoA: material roughness (float)
+cl::Buffer mBufMeshMatT;         // SoA: material type flags (ushort)
+cl::Buffer mBufMeshMatLobes;     // SoA: material lobe flags (uchar)
+cl::Buffer mBufMeshMatDist;      // SoA: material distribution (uchar)
+cl::Buffer mBufMeshMatNormalMapIdx;    // SoA: normal map texture index (int)
+cl::Buffer mBufMeshMatRoughnessMapIdx; // SoA: roughness map texture index (int)
+
 cl::Buffer mBufMeshPosSOA;
 cl::Buffer mBufMeshJokerSOA;
 cl::Buffer mBufMeshTypeSOA;
@@ -143,7 +152,10 @@ std::size_t initOpenCLBuffers_MeshSoA(const host_scene* hostScene)
 	const std::size_t count = hostScene->object_count.s[7];
 	const bool hasBvhFallbackMat = hostScene->BUILD_BVH;
 	const std::size_t matsCount = count + (hasBvhFallbackMat ? 1 : 0);
-	std::vector<Material> mats(matsCount);
+
+	MaterialSoA soaMats;
+	soaMats.reserve(matsCount);
+
 	std::vector<cl_float4> pos(count);
 	std::vector<cl_float16> joker(count);
 	std::vector<cl_uchar> types(count);
@@ -151,7 +163,7 @@ std::size_t initOpenCLBuffers_MeshSoA(const host_scene* hostScene)
 	for (std::size_t i = 0; i < count; ++i)
 	{
 		const Mesh& m = hostScene->cpu_meshes[i];
-		mats[i] = m.mat;
+		soaMats.push_back(m.mat);
 		pos[i] = {m.position.x, m.position.y, m.position.z, 0.0f};
 		joker[i] = m.joker;
 		types[i] = m.t;
@@ -159,14 +171,39 @@ std::size_t initOpenCLBuffers_MeshSoA(const host_scene* hostScene)
 
 	// Reserve one trailing material slot for BVH triangle hits (mesh_id == -1).
 	if (hasBvhFallbackMat)
-		mats[count] = *hostScene->obj_mat;
+		soaMats.push_back(*hostScene->obj_mat);
 
-	mBufMeshMatSOA = clw::buffer::create(mats, sizeof(Material) * matsCount);
+	mBufMeshMatColor = clw::buffer::create(soaMats.color, sizeof(vec4) * matsCount);
+
+	std::vector<cl_float> etaFlat(matsCount * 4);
+	for (std::size_t i = 0; i < matsCount; ++i) {
+		etaFlat[i*4+0] = soaMats.eta[i].x; etaFlat[i*4+1] = soaMats.eta[i].y;
+		etaFlat[i*4+2] = soaMats.eta[i].z; etaFlat[i*4+3] = 0.0f;
+	}
+	mBufMeshMatEta = clw::buffer::create(etaFlat, sizeof(cl_float) * matsCount * 4);
+
+	std::vector<cl_float> kFlat(matsCount * 4);
+	for (std::size_t i = 0; i < matsCount; ++i) {
+		kFlat[i*4+0] = soaMats.k[i].x; kFlat[i*4+1] = soaMats.k[i].y;
+		kFlat[i*4+2] = soaMats.k[i].z; kFlat[i*4+3] = 0.0f;
+	}
+	mBufMeshMatK = clw::buffer::create(kFlat, sizeof(cl_float) * matsCount * 4);
+
+	mBufMeshMatRoughness = clw::buffer::create(soaMats.roughness, sizeof(float) * matsCount);
+	mBufMeshMatT = clw::buffer::create(soaMats.t, sizeof(uint16_t) * matsCount);
+	mBufMeshMatLobes = clw::buffer::create(soaMats.lobes, sizeof(cl_uchar) * matsCount);
+	mBufMeshMatDist = clw::buffer::create(soaMats.dist, sizeof(cl_uchar) * matsCount);
+	mBufMeshMatNormalMapIdx = clw::buffer::create(soaMats.normalMapIdx, sizeof(int) * matsCount);
+	mBufMeshMatRoughnessMapIdx = clw::buffer::create(soaMats.roughnessMapIdx, sizeof(int) * matsCount);
+
 	mBufMeshPosSOA = clw::buffer::create(pos, sizeof(cl_float4) * count);
 	mBufMeshJokerSOA = clw::buffer::create(joker, sizeof(cl_float16) * count);
 	mBufMeshTypeSOA = clw::buffer::create(types, sizeof(cl_uchar) * count);
 
-	return sizeof(Material) * matsCount + sizeof(cl_float4) * count + sizeof(cl_float16) * count + sizeof(cl_uchar) * count;
+	return sizeof(vec4) * matsCount + sizeof(cl_float) * matsCount * 8 +
+		sizeof(float) * matsCount + sizeof(uint16_t) * matsCount +
+		sizeof(cl_uchar) * matsCount * 2 + sizeof(int) * matsCount * 2 +
+		sizeof(cl_float4) * count + sizeof(cl_float16) * count + sizeof(cl_uchar) * count;
 }
 
 static constexpr int TEX_SIZE      = 1024;
@@ -431,42 +468,53 @@ void initCLKernel()
 	// Create a kernel (entry point in the OpenCL source program)
 	kernel = cl::Kernel(program, "render_kernel");
 
-	// specify OpenCL kernel arguments
-	kernel.setArg(0, mBufMeshMatSOA);
-	kernel.setArg(1, mBufMeshPosSOA);
-	kernel.setArg(2, mBufMeshJokerSOA);
-	kernel.setArg(3, mBufMeshTypeSOA);
-	kernel.setArg(4, window_width);
-	kernel.setArg(5, window_height);
-	kernel.setArg(6, scene->object_count);
-	kernel.setArg(7, framenumber);
-	kernel.setArg(8, cl_camera);
-	kernel.setArg(9, rand());
-	kernel.setArg(10, rand());
-	kernel.setArg(11, cl_screen);
+	/* SoA material buffers — 9 separate pointers for coalesced access */
+	kernel.setArg(0, mBufMeshMatColor);
+	kernel.setArg(1, mBufMeshMatEta);
+	kernel.setArg(2, mBufMeshMatK);
+	kernel.setArg(3, mBufMeshMatRoughness);
+	kernel.setArg(4, mBufMeshMatT);
+	kernel.setArg(5, mBufMeshMatLobes);
+	kernel.setArg(6, mBufMeshMatDist);
+	kernel.setArg(7, mBufMeshMatNormalMapIdx);
+	kernel.setArg(8, mBufMeshMatRoughnessMapIdx);
 
-	kernel.setArg(12, mNewBufIndices);
-	kernel.setArg(13, mBufVertices);
-	kernel.setArg(14, mBufNormals);
+	/* scene mesh SoA */
+	kernel.setArg(9, mBufMeshPosSOA);
+	kernel.setArg(10, mBufMeshJokerSOA);
+	kernel.setArg(11, mBufMeshTypeSOA);
 
-	kernel.setArg(15, cl_env_map);
-	// SoA path-state buffers (args 16–21)
-	kernel.setArg(16, soa_ray_org_t);
-	kernel.setArg(17, soa_ray_dir_time);
-	kernel.setArg(18, soa_rlh_acc);
-	kernel.setArg(19, soa_rlh_mask_pdf);
-	kernel.setArg(20, soa_bounce);
-	kernel.setArg(21, soa_flags);
-	// Remaining args shifted by +5
-	kernel.setArg(22, mNewBufBVH);
-	kernel.setArg(23, cl_renderParams);
-	kernel.setArg(24, g_settings.enableClamping ? (cl_float)g_settings.clampThreshold : 0.0f);
-	kernel.setArg(25, cl_envMarginalCdf);
-	kernel.setArg(26, cl_envConditionalCdf);
-	kernel.setArg(27, cl_envPdf);
-	kernel.setArg(28, (cl_int)g_envMapWidth);
-	kernel.setArg(29, (cl_int)g_envMapHeight);
-	kernel.setArg(30, cl_matTextures);
+	kernel.setArg(12, window_width);
+	kernel.setArg(13, window_height);
+	kernel.setArg(14, scene->object_count);
+	kernel.setArg(15, framenumber);
+	kernel.setArg(16, cl_camera);
+	kernel.setArg(17, rand());
+	kernel.setArg(18, rand());
+	kernel.setArg(19, cl_screen);
+
+	kernel.setArg(20, mNewBufIndices);
+	kernel.setArg(21, mBufVertices);
+	kernel.setArg(22, mBufNormals);
+
+	kernel.setArg(23, cl_env_map);
+	// SoA path-state buffers (args 24–29)
+	kernel.setArg(24, soa_ray_org_t);
+	kernel.setArg(25, soa_ray_dir_time);
+	kernel.setArg(26, soa_rlh_acc);
+	kernel.setArg(27, soa_rlh_mask_pdf);
+	kernel.setArg(28, soa_bounce);
+	kernel.setArg(29, soa_flags);
+
+	kernel.setArg(30, mNewBufBVH);
+	kernel.setArg(31, cl_renderParams);
+	kernel.setArg(32, g_settings.enableClamping ? (cl_float)g_settings.clampThreshold : 0.0f);
+	kernel.setArg(33, cl_envMarginalCdf);
+	kernel.setArg(34, cl_envConditionalCdf);
+	kernel.setArg(35, cl_envPdf);
+	kernel.setArg(36, (cl_int)g_envMapWidth);
+	kernel.setArg(37, (cl_int)g_envMapHeight);
+	kernel.setArg(38, cl_matTextures);
 }
 
 //---------------------------------------------------------------------------------------
@@ -604,11 +652,12 @@ void render()
 	// upload runtime render parameters to GPU
 	queue.enqueueWriteBuffer(cl_renderParams, CL_FALSE, 0, sizeof(RenderParams), &g_settings.params);
 
-	kernel.setArg(7, ++framenumber);
-	kernel.setArg(8, cl_camera);
-	kernel.setArg(9, rand());
-	kernel.setArg(10, rand());
-	kernel.setArg(24, g_settings.enableClamping ? (cl_float)g_settings.clampThreshold : 0.0f);
+	/* Per-frame kernel argument updates — indices shifted by +8 due to SoA material buffers */
+	kernel.setArg(15, ++framenumber);
+	kernel.setArg(16, cl_camera);
+	kernel.setArg(17, rand());
+	kernel.setArg(18, rand());
+	kernel.setArg(32, g_settings.enableClamping ? (cl_float)g_settings.clampThreshold : 0.0f);
 
 	runKernel();
 

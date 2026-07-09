@@ -54,10 +54,6 @@ inline float sphere_solidAngle(const Mesh* sphere, const float3* p) {
 	return TWO_PI * (1.0f - cosTheta);
 }
 
-inline float sphere_approximateRadiance(const Mesh* sphere, const float3* p){
-	return sphere_solidAngle(sphere, p) * fmax3(sphere->mat->color);
-}
-
 inline float sphere_area(const Mesh* sphere){
 	return FOUR_PI * sphere->value[0] * sphere->value[0];
 }
